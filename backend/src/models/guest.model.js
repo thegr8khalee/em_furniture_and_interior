@@ -1,12 +1,9 @@
-// models/GuestSession.js
 import mongoose from 'mongoose';
 
 const guestCartItemSchema = new mongoose.Schema({
-  productId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product',
-    required: true,
-  },
+  // Updated to support both Product and Collection in guest cart
+  item: { type: mongoose.Schema.Types.ObjectId, required: true },
+  itemType: { type: String, required: true, enum: ['Product', 'Collection'] },
   quantity: { type: Number, required: true, min: 1, default: 1 },
 });
 

@@ -2,10 +2,12 @@
 import mongoose from 'mongoose';
 
 const cartItemSchema = new mongoose.Schema({
-  productId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product',
+  // Changed productId to item to support both Product and Collection in cart
+  item: { type: mongoose.Schema.Types.ObjectId, required: true },
+  itemType: {
+    type: String,
     required: true,
+    enum: ['Product', 'Collection'],
   },
   quantity: { type: Number, required: true, min: 1, default: 1 },
 });

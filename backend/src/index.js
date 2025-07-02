@@ -10,6 +10,8 @@ import adminRoutes from './routes/admin.routes.js';
 import collectionRoutes from './routes/collection.routes.js'
 import productRoutes from './routes/product.routes.js'
 import reviewRoutes from './routes/review.routes.js'
+import cartRoutes from './routes/cart.routes.js'
+import wishlistRoutes from './routes/wishlist.routes.js'
 
 const app = express();
 
@@ -31,6 +33,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/collections', collectionRoutes);
 app.use('/api/review', reviewRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/wishlist', wishlistRoutes);
 
 app.listen(PORT, () => {
   console.log('Server running on port: ', PORT);
