@@ -10,7 +10,6 @@ const AdminLoginPage = () => {
     email: '',
     password: '',
   });
-  
 
   // React Router hook for navigation
   const navigate = useNavigate();
@@ -29,7 +28,7 @@ const AdminLoginPage = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    adminLogin(formData);
+    await adminLogin(formData);
   };
 
   // If loading, show a simple loading message
@@ -37,7 +36,7 @@ const AdminLoginPage = () => {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <span className="loading loading-spinner loading-lg"></span>
-        <Loader2 className='animate-spin'/>
+        <Loader2 className="animate-spin" />
       </div>
     );
   }

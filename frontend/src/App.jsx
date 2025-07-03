@@ -14,11 +14,14 @@ import { useProductsStore } from './store/useProductsStore';
 import { useCollectionStore } from './store/useCollectionStore';
 import AdminAddProductPage from './pages/AddProductPage';
 import AdminEditProductPage from './pages/EditProductPage';
+import AddCollection from './pages/AddCollection';
+import EditCollection from './pages/EditCollection';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   const { authUser, checkAuth } = useAuthStore();
-  const { getProducts, products } = useProductsStore();
-  const { getCollections, collections } = useCollectionStore();
+  const { getProducts } = useProductsStore();
+  const { getCollections } = useCollectionStore();
   // Initialize auth state when the component mounts
   useEffect(() => {
     checkAuth();
@@ -26,7 +29,7 @@ function App() {
     getCollections();
   }, [checkAuth, getProducts, getCollections]); // Dependency array ensures it runs once on mount
 
-  // console.log('AuthUser', authUser);
+  console.log('AuthUser', authUser);
   // console.log('Products', products);
   // console.log('Collections', collections);
   return (
@@ -51,10 +54,16 @@ function App() {
               element={<AdminAddProductPage />}
             />
             <Route path="/admin/products/edit/:productId" element={<AdminEditProductPage />} />
+            <Route
+              path="/admin/collections/new"
+              element={<AddCollection />}
+            />
+            <Route path="/admin/collections/edit/:collectionId" element={<EditCollection />} />
           </Route>
 
           <Route path="*" element={<div>404 Not Found</div>} />
-        </Routes>
+         
+        </Routes> <Toaster/>
       </main>
       {/* ... other layout components */}
     </div>

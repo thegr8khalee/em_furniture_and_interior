@@ -3,6 +3,7 @@ import { axiosInstance } from '../lib/axios.js';
 import toast from 'react-hot-toast';
 import { useAuthStore } from './useAuthStore.js';
 import { useProductsStore } from './useProductsStore.js';
+import { useCollectionStore } from './useCollectionStore.js';
 
 export const useAdminStore = create((set) => ({
   authUser: null,
@@ -11,6 +12,9 @@ export const useAdminStore = create((set) => ({
   isAddingProduct: false,
   isUpdatingProduct: false,
   isDeletingProduct: false,
+  isAddingCollection: false,
+  isDeletingCollection: false,
+  isUpdatingCollection: false,
   // Action to toggle sidebar visibility
   toggleSidebar: () =>
     set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
@@ -26,8 +30,8 @@ export const useAdminStore = create((set) => ({
     try {
       console.log('Sending login request with data:', data); // Add this
       const res = await axiosInstance.post('/admin/login', data);
-      console.log('Login response:', res); // Add this
-      useAuthStore.setState({ authUser: res.data.user });
+      console.log('Login response:', res);
+      useAuthStore.setState({ authUser: res.data, isAdmin: res.data?.role === 'admin' });
       toast.success('Logged in successfully');
     } catch (error) {
       console.error('Login error:', error); // Add this
@@ -51,8 +55,13 @@ export const useAdminStore = create((set) => ({
   addProduct: async (data) => {
     try {
       set({ isAddingProduct: true });
-      const res = await axiosInstance.post('/admin/operations/addProduct', data);
-      useProductsStore.setState((state) => ({ products: [...state.products, res.data] }))
+      const res = await axiosInstance.post(
+        '/admin/operations/addProduct',
+        data
+      );
+      useProductsStore.setState((state) => ({
+        products: [...state.products, res.data],
+      }));
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -63,25 +72,83 @@ export const useAdminStore = create((set) => ({
   updateProduct: async (productId, data) => {
     try {
       set({ isUpdatingProduct: true });
-      const res = await axiosInstance.put(`admin/operations/updateProduct/${productId}`, data);
-      useProductsStore.setState((state) => ({ products: state.products.map((p) => (p._id === productId ? res.data : p)),
-                product: res.data, }))
+      const res = await axiosInstance.put(
+        `admin/operations/updateProduct/${productId}`,
+        data
+      );
+      useProductsStore.setState((state) => ({
+        products: state.products.map((p) =>
+          p._id === productId ? res.data : p
+        ),
+        product: res.data,
+      }));
     } catch (error) {
       toast.error(error.message);
     } finally {
       set({ isUpdatingProduct: false });
     }
-  }, 
-  
+  },
+
   delProduct: async (Id) => {
     try {
       set({ isDeletingProduct: true });
       await axiosInstance.delete(`admin/operations/delProduct/${Id}`);
-      useProductsStore.setState((state) => ({ products: state.products.filter((p) => p._id !== Id), }))
+      useProductsStore.setState((state) => ({
+        products: state.products.filter((p) => p._id !== Id),
+      }));
     } catch (error) {
       toast.error(error.message);
     } finally {
       set({ isDeletingProduct: false });
     }
-  }
+  },
+
+  addCollection: async (data) => {
+    try {
+      set({ isAddingCollection: true });
+      const res = await axiosInstance.post(
+        '/admin/operations/addCollection',
+        data
+      );
+      useCollectionStore.setState((state) => ({
+        collections: [...state.collections, res.data],
+      }));
+    } catch (error) {
+      console.log(error.message);
+    } finally {
+      set({ isAddingCollection: false });
+    }
+  },
+
+  delCollection: async (Id) => {
+    try {
+      set({ isDeletingCollection: true });
+      await axiosInstance.delete(`/admin/operations/delCollection/${Id}`);
+      useCollectionStore.setState((state) => ({
+        collections: state.collections.filter((p) => p._id !== Id),
+      }));
+    } catch (error) {
+      console.log(error.message);
+    } finally {
+      set({ isDeletingCollection: false });
+    }
+  },
+
+  updateCollection: async (Id, data) => {
+    try {
+      set({ isUpdatingCollection: true });
+      const res = await axiosInstance.put(
+        `/admin/operations/updateCollection/${Id}`, data
+      );
+      useCollectionStore.setState((state) => ({
+        collections: state.collections.map((p) =>
+          p._id === Id ? res.data : p
+        ),
+      }));
+    } catch (error) {
+      console.log(error.message);
+    } finally {
+      set({ isUpdatingCollection: false });
+    }
+  },
 }));

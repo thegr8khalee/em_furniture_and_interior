@@ -60,7 +60,7 @@ const AdminDashboard = () => {
             {/* Main Content Area */}
             <div className="w-screen pt-10 flex-1 p-4 lg:p-8">
                 <h1 className="text-3xl lg:text-4xl font-bold mb-4 lg:mb-8 mt-12 lg:mt-0 font-['poppins']">
-                    Welcome, {authUser.user.username || authUser.user.email}!
+                    Welcome, {authUser.username || authUser.email}!
                 </h1>
                 <div className="bg-base-200 p-4 lg:p-6 rounded-lg shadow-xl">
                     {renderContent()}

@@ -2,6 +2,7 @@
 import React, { useEffect } from 'react';
 import { useProductsStore } from '../../store/useProductsStore';
 import { useCollectionStore } from '../../store/useCollectionStore';
+import { useNavigate } from 'react-router-dom';
 
 const AdminDashboardContent = () => {
   // In a real application, you would fetch these stats from your backend
@@ -15,11 +16,21 @@ const AdminDashboardContent = () => {
     { label: 'New Users (Last 7 Days)', value: '10' },
     { label: 'Pending Reviews', value: '7' },
   ];
-  
+
+  const navigate = useNavigate();
+
   useEffect(() => {
     getProducts();
     getCollections();
   }, [getProducts, getCollections]);
+
+  const handleAddNew = () => {
+    navigate("/admin/products/new")
+  }
+
+  const handleAddNewC = () => {
+    navigate("/admin/collections/new")
+  }
 
   if (isGettingProducts || isGettingCollections) {
     // Show a loading indicator while authentication status is being determined
@@ -48,10 +59,15 @@ const AdminDashboardContent = () => {
           Quick Actions
         </h3>
         <div className="flex flex-col sm:flex-row gap-4">
-          <button className="flex-4 btn btn-xl btn-outline btn-primary rounded-md text-lg">
+          <button
+            className="flex-4 btn btn-xl btn-outline btn-primary rounded-md text-lg"
+            onClick={handleAddNew}
+          >
             Add New Product
           </button>
-          <button className="flex-4 btn btn-xl btn-outline btn-primary rounded-md text-lg">
+          <button className="flex-4 btn btn-xl btn-outline btn-primary rounded-md text-lg"
+          onClick={handleAddNewC}
+          >
             Add New Collection
           </button>
           <button className="flex-4 btn btn-xl btn-outline btn-primary rounded-md text-lg">

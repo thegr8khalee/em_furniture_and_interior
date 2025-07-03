@@ -61,9 +61,6 @@ const ProductManagement = () => {
         Add New Product
       </button>
 
-      {/* {loading && <p>Loading products...</p>}
-      {error && <p className="text-error">{error}</p>} */}
-
       <div className="overflow-x-auto">
         <table className="table w-full">
           <thead>
@@ -75,13 +72,6 @@ const ProductManagement = () => {
             </tr>
           </thead>
           <tbody>
-            {/* {products.length === 0 && !loading && !error && (
-              <tr>
-                <td colSpan="4" className="text-center">
-                  No products found.
-                </td>
-              </tr>
-            )} */}
             {products.map((product) => (
               <tr key={product._id}>
                 <td>{product.name}</td>

@@ -1,10 +1,14 @@
 // src/components/Admin/AdminLoginProtectedRoute.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 
 const AdminLoginProtectedRoute = () => {
-    const { authUser, isLoading, isAdmin } = useAuthStore(); // Access state from Zustand store
+    const { authUser, isLoading, isAdmin, checkAuth } = useAuthStore(); // Access state from Zustand store
+
+    useEffect(() => {
+        checkAuth();
+      }, [checkAuth]);
 
     if (isLoading) {
         // Show a loading indicator while authentication status is being determined
