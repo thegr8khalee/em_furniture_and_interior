@@ -4,7 +4,8 @@ import User from '../models/user.model.js'; // Ensure correct path and .js exten
 import bcrypt from 'bcryptjs';
 import { generateToken } from '../lib/utils.js'; // Assuming generateToken is in utils/jwt.js
 import { mergeGuestDataToUser } from './guest.controller.js'; // Import the new merge function
-
+import jwt from 'jsonwebtoken';
+import Admin from '../models/admin.model.js';
 /**
  * @desc Registers a new user
  * @route POST /api/auth/signup
@@ -147,33 +148,99 @@ export const logout = (req, res) => {
   }
 };
 
-/**
- * @desc Checks if the user is authenticated
- * @route GET /api/auth/checkAuth
- * @access Private (requires authMiddleware to populate req.user)
- */
-export const checkAuth = (req, res) => {
+export const checkAuth = async (req, res) => {
   try {
-    // If authMiddleware successfully populated req.user, the user is authenticated
-    if (req.user) {
-      // Respond with user data (excluding sensitive fields like passwordHash)
-      res.status(200).json({
-        _id: req.user._id,
-        username: req.user.username,
-        email: req.user.email,
-        phoneNumber: req.user.phoneNumber,
-        cart: req.user.cart,
-        wishlist: req.user.wishlist,
-        createdAt: req.user.createdAt,
-        updatedAt: req.user.updatedAt,
-      });
-    } else {
-      // This case should ideally be caught by authMiddleware if it's a protected route
-      // But as a fallback, if req.user is somehow not set, respond with unauthenticated
-      res.status(401).json({ message: 'Not authenticated' });
+    const token = req.cookies.jwt; // Get JWT from cookie
+
+    if (!token) {
+      // No JWT token found, user is not authenticated.
+      return res
+        .status(401)
+        .json({ message: 'Not authenticated: No token provided.' });
     }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtError) {
+      // Token is invalid or expired. Clear the cookie.
+      res.clearCookie('jwt', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+      });
+      return res
+        .status(401)
+        .json({ message: 'Not authenticated: Invalid or expired token.' });
+    }
+
+    // NEW OPTIMIZED LOGIC: Use the role from the decoded token to perform a single, targeted lookup.
+    let authenticatedEntity = null;
+    let role = decoded.role; // Get role directly from the token
+
+    if (role === 'admin') {
+      authenticatedEntity = await Admin.findById(decoded.userId).select(
+        '-passwordHash'
+      );
+    } else if (role === 'user') {
+      authenticatedEntity = await User.findById(decoded.userId).select(
+        '-passwordHash'
+      );
+    } else {
+      // Handle unexpected or invalid roles in the token
+      res.clearCookie('jwt', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+      });
+      return res
+        .status(401)
+        .json({ message: 'Not authenticated: Invalid role in token.' });
+    }
+
+    if (!authenticatedEntity) {
+      // Entity not found in DB despite valid token and role (e.g., account deleted). Clear cookie.
+      res.clearCookie('jwt', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+      });
+      return res
+        .status(401)
+        .json({
+          message:
+            'Not authenticated: User/Admin account not found in database.',
+        });
+    }
+
+    // Authenticated entity found, send their details including role
+    return res.status(200).json({
+      user: {
+        // Using 'user' key for consistency with frontend auth store
+        _id: authenticatedEntity._id,
+        username: authenticatedEntity.username,
+        email: authenticatedEntity.email,
+        role: role, // Use the role determined from the token
+        // Conditionally include fields specific to User or Admin models
+        ...(role === 'user' && {
+          phoneNumber: authenticatedEntity.phoneNumber,
+          cart: authenticatedEntity.cart,
+          wishlist: authenticatedEntity.wishlist,
+        }),
+        createdAt: authenticatedEntity.createdAt,
+        updatedAt: authenticatedEntity.updatedAt,
+      },
+    });
   } catch (error) {
-    console.error('Error in Check Auth controller: ', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error in checkAuth controller:', error);
+    if (res.headersSent) {
+      console.warn(
+        'Headers already sent, cannot send error response from checkAuth catch block.'
+      );
+      return;
+    }
+    return res
+      .status(500)
+      .json({ message: 'Internal Server Error during authentication check.' });
   }
 };

@@ -64,6 +64,8 @@ export const adminSignup = async (req, res) => {
 export const adminLogin = async (req, res) => {
   const { email, password } = req.body;
 
+  console.log(email);
+
   try {
     // Input validation
     if (!email || !password) {
@@ -121,43 +123,27 @@ export const adminLogout = (req, res) => {
   }
 };
 
-export const adminCheckAuth = (req, res) => {
-  try {
-    // If protectAdminRoute successfully populated req.admin, the admin is authenticated
-    if (req.admin) {
-      // Respond with admin data (excluding sensitive fields like passwordHash)
-      res.status(200).json({
-        _id: req.admin._id,
-        username: req.admin.username,
-        email: req.admin.email,
-        createdAt: req.admin.createdAt,
-        updatedAt: req.admin.updatedAt,
-        message: 'Admin session active.',
-      });
-    } else {
-      // This case should ideally be caught by protectAdminRoute if it's a protected route
-      res.status(401).json({ message: 'Not authenticated as admin.' });
-    }
-  } catch (error) {
-    console.error('Error in adminCheckAuth controller: ', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
 export const addProduct = async (req, res) => {
   const {
     name,
     description,
-    price,
+
     category,
     collectionId,
-    images,
+    images, // This will be an array of Base64 strings from the frontend
     isBestSeller,
-    isPromo,
-    discountedPrice,
+    isPromo, // This will be a number or undefined from frontend
     isForeign,
     origin,
   } = req.body;
+
+  let price = parseFloat(req.body.price);
+  let discountedPrice =
+    req.body.discountedPrice !== ''
+      ? parseFloat(req.body.discountedPrice)
+      : undefined;
+
+  // Basic validation using the parsed numeric values
 
   // Basic validation
   if (!name || !description || !price || !category) {
@@ -168,11 +154,19 @@ export const addProduct = async (req, res) => {
           'Please enter all required product fields: name, description, price, category.',
       });
   }
-  if (isPromo && (discountedPrice === undefined || discountedPrice === null)) {
+  // Frontend should already ensure discountedPrice is a number or undefined when isPromo is true
+  // Backend validation for discountedPrice when isPromo is true
+  if (
+    isPromo &&
+    (discountedPrice === undefined ||
+      discountedPrice === null ||
+      isNaN(discountedPrice))
+  ) {
     return res
       .status(400)
       .json({
-        message: 'Discounted price is required if product is on promotion.',
+        message:
+          'Discounted price is required and must be a valid number if product is on promotion.',
       });
   }
   if (discountedPrice !== undefined && discountedPrice >= price) {
@@ -210,14 +204,19 @@ export const addProduct = async (req, res) => {
     const uploadedImages = [];
     if (images && images.length > 0) {
       for (const imageData of images) {
-        // Assuming imageData is a Base64 string or a direct URL
-        // Cloudinary's uploader.upload can handle Base64 strings directly
+        if (
+          typeof imageData !== 'string' ||
+          !imageData.startsWith('data:image')
+        ) {
+          console.warn('Skipping invalid image data:', imageData);
+          continue;
+        }
         const uploadResponse = await cloudinary.uploader.upload(imageData, {
-          folder: 'furniture_products', // Optional: specify a folder in Cloudinary
+          folder: 'furniture_products',
         });
         uploadedImages.push({
           url: uploadResponse.secure_url,
-          public_id: uploadResponse.public_id, // Store public_id for future deletion
+          public_id: uploadResponse.public_id,
         });
       }
     }
@@ -227,194 +226,179 @@ export const addProduct = async (req, res) => {
       description,
       price,
       category,
-      collectionId: collectionId || null, // Set to null if not provided
-      images: uploadedImages, // Store array of { url, public_id } objects
+      collectionId: collectionId || null,
+      images: uploadedImages,
       isBestSeller: isBestSeller || false,
       isPromo: isPromo || false,
-      discountedPrice: isPromo ? discountedPrice : undefined, // Only save if isPromo is true
+      // FIX: Ensure discountedPrice is a valid number when isPromo is true, otherwise undefined
+      discountedPrice:
+        isPromo &&
+        typeof discountedPrice === 'number' &&
+        !isNaN(discountedPrice)
+          ? discountedPrice
+          : undefined,
       isForeign: isForeign || false,
-      origin: isForeign ? origin : undefined, // Only save origin if isForeign is true
+      origin: isForeign ? origin : undefined,
     });
 
     const savedProduct = await newProduct.save();
     res.status(201).json(savedProduct);
   } catch (error) {
     console.error('Error in addProduct controller: ', error.message);
+    // Check for Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map((err) => err.message);
+      return res
+        .status(400)
+        .json({ message: 'Product validation failed', errors });
+    }
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
 export const updateProduct = async (req, res) => {
-  const { productId } = req.params;
-  const {
-    name,
-    description,
-    price,
-    category,
-    collectionId,
-    images,
-    isBestSeller,
-    isPromo,
-    discountedPrice,
-    isForeign,
-    origin,
-  } = req.body;
+    const { productId } = req.params;
+    const { name, description, category, collectionId, images, isBestSeller, isPromo, isForeign, origin } = req.body;
 
-  if (!mongoose.Types.ObjectId.isValid(productId)) {
-    return res.status(400).json({ message: 'Invalid Product ID format.' });
-  }
+    // Parse price and discountedPrice from string to number for update
+    let price = req.body.price !== undefined ? parseFloat(req.body.price) : undefined;
+    let discountedPrice = req.body.discountedPrice !== undefined && req.body.discountedPrice !== '' ? parseFloat(req.body.discountedPrice) : undefined;
 
-  // Validation for update fields
-  if (price !== undefined && price < 0) {
-    return res.status(400).json({ message: 'Price must be non-negative.' });
-  }
-  if (
-    isPromo !== undefined &&
-    isPromo &&
-    (discountedPrice === undefined || discountedPrice === null)
-  ) {
-    return res
-      .status(400)
-      .json({
-        message: 'Discounted price is required if product is set to promotion.',
-      });
-  }
-  if (
-    discountedPrice !== undefined &&
-    price !== undefined &&
-    discountedPrice >= price
-  ) {
-    return res
-      .status(400)
-      .json({
-        message: 'Discounted price must be less than the original price.',
-      });
-  }
-  if (discountedPrice !== undefined && discountedPrice < 0) {
-    return res
-      .status(400)
-      .json({ message: 'Discounted price must be non-negative.' });
-  }
 
-  try {
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found.' });
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+        return res.status(400).json({ message: 'Invalid Product ID format.' });
     }
 
-    // Validate collectionId if provided and different
-    if (collectionId && product.collectionId?.toString() !== collectionId) {
-      if (!mongoose.Types.ObjectId.isValid(collectionId)) {
-        return res
-          .status(400)
-          .json({ message: 'Invalid Collection ID format.' });
-      }
-      const collectionExists = await Collection.findById(collectionId);
-      if (!collectionExists) {
-        return res
-          .status(404)
-          .json({ message: 'Collection not found with the provided ID.' });
-      }
+    // Validation for update fields
+    if (price !== undefined && (isNaN(price) || price < 0)) {
+        return res.status(400).json({ message: 'Price must be a non-negative number.' });
     }
-
-    // --- Image Handling for Update ---
-    const newImageUrls = [];
-    const existingImagePublicIds = product.images
-      .map((img) => img.public_id)
-      .filter(Boolean);
-    const imagesToKeep = []; // To store images that are already in Cloudinary and should remain
-
-    if (images && images.length > 0) {
-      for (const imageData of images) {
-        if (
-          typeof imageData === 'object' &&
-          imageData.url &&
-          imageData.public_id
-        ) {
-          // This is an existing image object, keep it
-          imagesToKeep.push(imageData);
-        } else {
-          // This is new image data (Base64 string), upload it
-          const uploadResponse = await cloudinary.uploader.upload(imageData, {
-            folder: 'furniture_products',
-          });
-          newImageUrls.push({
-            url: uploadResponse.secure_url,
-            public_id: uploadResponse.public_id,
-          });
+    if (isPromo !== undefined && isPromo) {
+        if (isNaN(discountedPrice) || discountedPrice === null || discountedPrice === undefined) {
+            return res.status(400).json({ message: 'Discounted price is required and must be a valid number if product is set to promotion.' });
         }
-      }
+    }
+    if (discountedPrice !== undefined && price !== undefined && discountedPrice >= price) {
+        return res.status(400).json({ message: 'Discounted price must be less than the original price.' });
+    }
+    if (discountedPrice !== undefined && (isNaN(discountedPrice) || discountedPrice < 0)) {
+        return res.status(400).json({ message: 'Discounted price must be non-negative.' });
     }
 
-    // Combine existing and new images
-    const finalImages = [...imagesToKeep, ...newImageUrls];
+    try {
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found.' });
+        }
 
-    // Identify images to delete from Cloudinary (those in DB but not in finalImages)
-    const publicIdsToDelete = existingImagePublicIds.filter(
-      (publicId) => !finalImages.some((img) => img.public_id === publicId)
-    );
+        // Validate collectionId if provided and different
+        if (collectionId && product.collectionId?.toString() !== collectionId) {
+            if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+                return res.status(400).json({ message: 'Invalid Collection ID format.' });
+            }
+            const collectionExists = await Collection.findById(collectionId);
+            if (!collectionExists) {
+                return res.status(404).json({ message: 'Collection not found with the provided ID.' });
+            }
+        }
 
-    // Delete images from Cloudinary that are no longer needed
-    for (const publicId of publicIdsToDelete) {
-      await cloudinary.uploader.destroy(publicId);
-      console.log(`Deleted image from Cloudinary: ${publicId}`);
+        // --- Image Handling for Update ---
+        const newImageUploads = []; // Store results of new uploads
+        const imagesToKeep = []; // Store existing images that are retained
+
+        if (images && images.length > 0) {
+            for (const imageData of images) {
+                // Check if it's an existing image object (from DB) or a new Base64 image
+                if (typeof imageData === 'object' && imageData.url && imageData.public_id) {
+                    // This is an existing image object, keep it
+                    imagesToKeep.push(imageData);
+                } else if (typeof imageData === 'object' && imageData.url && imageData.isNew) { // NEW: Handle new images from frontend
+                    // This is a new image (Base64 string wrapped in {url, isNew: true})
+                    const base64String = imageData.url; // Extract the Base64 string
+                    if (typeof base64String === 'string' && base64String.startsWith('data:image')) {
+                        const uploadResponse = await cloudinary.uploader.upload(base64String, {
+                            folder: 'furniture_products',
+                        });
+                        newImageUploads.push({
+                            url: uploadResponse.secure_url,
+                            public_id: uploadResponse.public_id,
+                        });
+                    } else {
+                        console.warn('Skipping invalid new image data (not a Base64 string):', imageData);
+                    }
+                } else {
+                    console.warn('Skipping unrecognized image data format:', imageData);
+                }
+            }
+        }
+
+        // Combine existing and newly uploaded images
+        const finalImages = [...imagesToKeep, ...newImageUploads];
+
+        // Identify images to delete from Cloudinary (those in DB but not in finalImages)
+        const publicIdsToDelete = product.images
+            .map(img => img.public_id)
+            .filter(publicId => publicId && !finalImages.some(img => img.public_id === publicId));
+
+        // Delete images from Cloudinary that are no longer needed
+        for (const publicId of publicIdsToDelete) {
+            try {
+                await cloudinary.uploader.destroy(publicId);
+                console.log(`Deleted image from Cloudinary: ${publicId}`);
+            } catch (deleteError) {
+                console.error(`Error deleting image ${publicId} from Cloudinary:`, deleteError);
+            }
+        }
+        // --- End Image Handling ---
+
+
+        // Update fields dynamically
+        if (name !== undefined) product.name = name;
+        if (description !== undefined) product.description = description;
+        if (price !== undefined && !isNaN(price)) product.price = price; // Use parsed price
+        if (category !== undefined) product.category = category;
+        // Handle collectionId: if it's an empty string, set to null
+        product.collectionId = collectionId === '' ? null : collectionId;
+        product.images = finalImages; // Assign the processed images
+        if (isBestSeller !== undefined) product.isBestSeller = isBestSeller;
+        if (isPromo !== undefined) product.isPromo = isPromo;
+        if (isForeign !== undefined) product.isForeign = isForeign;
+
+        // Handle discountedPrice logic based on isPromo
+        if (product.isPromo) {
+            if (discountedPrice !== undefined && !isNaN(discountedPrice)) {
+                product.discountedPrice = discountedPrice;
+            } else {
+                // If isPromo is true but discountedPrice is invalid or missing
+                return res.status(400).json({ message: 'Discounted price is required and must be a valid number when product is on promotion.' });
+            }
+        } else {
+            // If isPromo is false, ensure discountedPrice is not set
+            product.discountedPrice = undefined;
+        }
+
+        // Handle origin logic based on isForeign
+        if (product.isForeign) {
+            if (origin !== undefined) {
+                product.origin = origin;
+            } else {
+                return res.status(400).json({ message: 'Origin is required when product is foreign.' });
+            }
+        } else {
+            product.origin = undefined;
+        }
+
+
+        const updatedProduct = await product.save();
+        res.status(200).json(updatedProduct);
+    } catch (error) {
+            console.error('Error in updateProduct controller: ', error.message);
+            if (error.name === 'ValidationError') {
+                const errors = Object.values(error.errors).map(err => err.message);
+                return res.status(400).json({ message: 'Product validation failed', errors });
+            }
+            res.status(500).json({ message: 'Internal Server Error' });
     }
-    // --- End Image Handling ---
-
-    // Update fields dynamically
-    if (name !== undefined) product.name = name;
-    if (description !== undefined) product.description = description;
-    if (price !== undefined) product.price = price;
-    if (category !== undefined) product.category = category;
-    if (collectionId !== undefined) product.collectionId = collectionId; // Can be null to remove from collection
-    product.images = finalImages; // Assign the processed images
-    if (isBestSeller !== undefined) product.isBestSeller = isBestSeller;
-    if (isPromo !== undefined) product.isPromo = isPromo;
-    if (isForeign !== undefined) product.isForeign = isForeign;
-
-    // Handle discountedPrice logic based on isPromo
-    if (product.isPromo) {
-      if (discountedPrice !== undefined) {
-        product.discountedPrice = discountedPrice;
-      } else if (
-        product.discountedPrice === undefined ||
-        product.discountedPrice === null
-      ) {
-        // If isPromo is true but discountedPrice is being removed or was never set
-        return res
-          .status(400)
-          .json({
-            message:
-              'Discounted price is required when product is on promotion.',
-          });
-      }
-    } else {
-      // If isPromo is false, ensure discountedPrice is not set
-      product.discountedPrice = undefined;
-    }
-
-    // Handle origin logic based on isForeign
-    if (product.isForeign) {
-      if (origin !== undefined) {
-        // Allow updating origin if isForeign is true
-        product.origin = origin;
-      } else if (product.origin === undefined || product.origin === null) {
-        // If isForeign is true but origin is being removed or was never set
-        return res
-          .status(400)
-          .json({ message: 'Origin is required when product is foreign.' });
-      }
-    } else {
-      // If isForeign is false, ensure origin is not set
-      product.origin = undefined;
-    }
-
-    const updatedProduct = await product.save(); // .save() will trigger pre-save hooks (like averageRating)
-    res.status(200).json(updatedProduct);
-  } catch (error) {
-    console.error('Error in updateProduct controller: ', error.message);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
 };
 
 export const delProduct = async (req, res) => {
@@ -464,26 +448,20 @@ export const addCollection = async (req, res) => {
 
   // Basic validation
   if (!name || !description || !price) {
-    return res
-      .status(400)
-      .json({
-        message:
-          'Please enter all required collection fields: name, description, price.',
-      });
+    return res.status(400).json({
+      message:
+        'Please enter all required collection fields: name, description, price.',
+    });
   }
   if (isPromo && (discountedPrice === undefined || discountedPrice === null)) {
-    return res
-      .status(400)
-      .json({
-        message: 'Discounted price is required if collection is on promotion.',
-      });
+    return res.status(400).json({
+      message: 'Discounted price is required if collection is on promotion.',
+    });
   }
   if (discountedPrice !== undefined && discountedPrice >= price) {
-    return res
-      .status(400)
-      .json({
-        message: 'Discounted price must be less than the original price.',
-      });
+    return res.status(400).json({
+      message: 'Discounted price must be less than the original price.',
+    });
   }
   if (price < 0 || (discountedPrice !== undefined && discountedPrice < 0)) {
     return res
@@ -575,23 +553,19 @@ export const updateCollection = async (req, res) => {
     isPromo &&
     (discountedPrice === undefined || discountedPrice === null)
   ) {
-    return res
-      .status(400)
-      .json({
-        message:
-          'Discounted price is required if collection is set to promotion.',
-      });
+    return res.status(400).json({
+      message:
+        'Discounted price is required if collection is set to promotion.',
+    });
   }
   if (
     discountedPrice !== undefined &&
     price !== undefined &&
     discountedPrice >= price
   ) {
-    return res
-      .status(400)
-      .json({
-        message: 'Discounted price must be less than the original price.',
-      });
+    return res.status(400).json({
+      message: 'Discounted price must be less than the original price.',
+    });
   }
   if (discountedPrice !== undefined && discountedPrice < 0) {
     return res
@@ -684,12 +658,10 @@ export const updateCollection = async (req, res) => {
         collection.discountedPrice === undefined ||
         collection.discountedPrice === null
       ) {
-        return res
-          .status(400)
-          .json({
-            message:
-              'Discounted price is required when collection is on promotion.',
-          });
+        return res.status(400).json({
+          message:
+            'Discounted price is required when collection is on promotion.',
+        });
       }
     } else {
       collection.discountedPrice = undefined;

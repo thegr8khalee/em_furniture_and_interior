@@ -8,30 +8,46 @@ const reviewSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
+// UPDATED: Define a schema for image objects with only 'url'
+const imageSchema = new mongoose.Schema(
+  {
+    url: { type: String, required: true },
+  },
+  { _id: false }
+); // _id: false means Mongoose won't add an _id to subdocuments
+
 const productSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
-    description: { type: String, required: true },
+    name: { type: String, required: true, trim: true },
+    description: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
-    category: { type: String, required: true }, // e.g., 'Living Room', 'Bedroom', 'Dining Room'
+    category: { type: String, required: true, trim: true }, // e.g., 'Living Room', 'Bedroom', 'Dining Room'
     collectionId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Collection',
       required: false,
     }, // Link to Collection
-    images: [{ type: String }], // Array of image URLs
-    // stock: { type: Number, required: true, min: 0, default: 0 },
+    images: [imageSchema], // Array of image objects { url }
+    // stock: { type: Number, required: true, min: 0, default: 0 }, // Uncomment if you track stock
     reviews: [reviewSchema], // Embedded reviews
     averageRating: { type: Number, default: 0, min: 0, max: 5 }, // Calculated average rating
-    isBestSeller: { type: Boolean, default: false }, // NEW: Indicates if product is a best seller
-    isPromo: { type: Boolean, default: false }, // NEW: Indicates if product is on promotion
+    isBestSeller: { type: Boolean, default: false },
+    isPromo: { type: Boolean, default: false },
     discountedPrice: {
       type: Number,
       min: 0,
       required: function () {
         return this.isPromo;
       },
-    }, // NEW: Discounted price, required if isPromo is true
+    },
+    isForeign: { type: Boolean, default: false },
+    origin: {
+      type: String,
+      trim: true,
+      required: function () {
+        return this.isForeign;
+      },
+    },
   },
   { timestamps: true }
 );
