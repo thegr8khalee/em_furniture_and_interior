@@ -101,7 +101,6 @@ export const adminLogin = async (req, res) => {
       createdAt: admin.createdAt,
       updatedAt: admin.updatedAt,
       message: 'Admin logged in successfully.',
-      
     });
   } catch (error) {
     console.error('Error in adminLogin controller: ', error.message);

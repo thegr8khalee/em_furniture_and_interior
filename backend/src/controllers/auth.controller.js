@@ -215,8 +215,6 @@ export const checkAuth = async (req, res) => {
 
     // Authenticated entity found, send their details including role
     return res.status(200).json({
-      user: {
-        // Using 'user' key for consistency with frontend auth store
         _id: authenticatedEntity._id,
         username: authenticatedEntity.username,
         email: authenticatedEntity.email,
@@ -229,7 +227,6 @@ export const checkAuth = async (req, res) => {
         }),
         createdAt: authenticatedEntity.createdAt,
         updatedAt: authenticatedEntity.updatedAt,
-      },
     });
   } catch (error) {
     console.error('Error in checkAuth controller:', error);
