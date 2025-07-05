@@ -9,6 +9,12 @@ const AdminDashboardContent = () => {
   const { isGettingProducts, products, getProducts } = useProductsStore();
   const { isGettingCollections, collections, getCollections } =
     useCollectionStore();
+
+  useEffect(() => {
+    getProducts();
+    getCollections();
+  }, [getProducts, getCollections]);
+
   const stats = [
     { label: 'Total Products', value: products.length },
     { label: 'Total Collections', value: collections.length },
@@ -19,18 +25,13 @@ const AdminDashboardContent = () => {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    getProducts();
-    getCollections();
-  }, [getProducts, getCollections]);
-
   const handleAddNew = () => {
-    navigate("/admin/products/new")
-  }
+    navigate('/admin/products/new');
+  };
 
   const handleAddNewC = () => {
-    navigate("/admin/collections/new")
-  }
+    navigate('/admin/collections/new');
+  };
 
   if (isGettingProducts || isGettingCollections) {
     // Show a loading indicator while authentication status is being determined
@@ -65,8 +66,9 @@ const AdminDashboardContent = () => {
           >
             Add New Product
           </button>
-          <button className="flex-4 btn btn-xl btn-outline btn-primary rounded-md text-lg"
-          onClick={handleAddNewC}
+          <button
+            className="flex-4 btn btn-xl btn-outline btn-primary rounded-md text-lg"
+            onClick={handleAddNewC}
           >
             Add New Collection
           </button>

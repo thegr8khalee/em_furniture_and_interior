@@ -15,6 +15,7 @@ const AdminAddProductPage = () => {
     description: '',
     price: '',
     category: '',
+    style: '',
     collectionId: '',
     images: [], // Will now store Base64 strings
     isBestSeller: false,
@@ -198,9 +199,34 @@ const AdminAddProductPage = () => {
             >
               <option value="">Select a category</option>
               <option value="Living Room">Living Room</option>
+              <option value="Armchair">Armchair</option>
               <option value="Bedroom">Bedroom</option>
               <option value="Dining Room">Dining Room</option>
-              {/* Add more categories as needed */}
+              <option value="Center Table">Center Table</option>
+              <option value="Wardrobe">Wardrobe</option>
+              <option value="TV Unit">TV Unit</option>
+              <option value="Carpet">Carpet</option>
+            </select>
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Style</span>
+            </label>
+            <select
+              name="style"
+              className="select select-bordered w-full rounded-md"
+              value={formData.style}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select a style</option>
+              <option value="Modern">Modern</option>
+              <option value="Contemporay">Contemporay</option>
+              <option value="Antique/Royal">Antique/Royal</option>
+              <option value="Bespoke">Bespoke</option>
+              <option value="Minimalist">Minimalist</option>
+              <option value="Glam">Glam</option>
             </select>
           </div>
 

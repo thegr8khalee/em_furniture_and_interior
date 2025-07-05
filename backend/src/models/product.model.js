@@ -21,7 +21,8 @@ const productSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
-    category: { type: String, required: true, trim: true }, // e.g., 'Living Room', 'Bedroom', 'Dining Room'
+    category: { type: String, required: true, trim: true },
+    style: { type: String, required: true, trim: true }, // e.g., 'Living Room', 'Bedroom', 'Dining Room'
     collectionId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Collection',

@@ -19,6 +19,7 @@ const EditCollection = () => {
     name: '',
     description: '',
     price: '',
+    style: '',
     productIds: [], // Array to hold selected product IDs
     isBestSeller: false,
     isPromo: false,
@@ -47,6 +48,7 @@ const EditCollection = () => {
         if (collectionData) {
           setFormData({
             name: collectionData.name || '',
+            style: collectionData.style || '',
             description: collectionData.description || '',
             price: collectionData.price || '', // Keep as string for input
             // NEW: Ensure productIds is always an array before mapping
@@ -280,6 +282,27 @@ const EditCollection = () => {
               onChange={handleChange}
               required
             />
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Style</span>
+            </label>
+            <select
+              name="style"
+              className="select select-bordered w-full rounded-md"
+              value={formData.style}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select a style</option>
+              <option value="Modern">Modern</option>
+              <option value="Contemporay">Contemporay</option>
+              <option value="Antique/Royal">Antique/Royal</option>
+              <option value="Bespoke">Bespoke</option>
+              <option value="Minimalist">Minimalist</option>
+              <option value="Glam">Glam</option>
+            </select>
           </div>
 
           {/* Product Selection Dropdown */}

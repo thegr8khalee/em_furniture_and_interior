@@ -10,3 +10,7 @@
   --color-accent: #dbc735;
 
 }
+
+.text-xxs {
+  font-size: 0.6rem; /* 10px */
+}

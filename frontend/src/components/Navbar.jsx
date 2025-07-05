@@ -14,6 +14,7 @@ import { useAuthStore } from '../store/useAuthStore'; // Import auth store to ch
 import { useAdminStore } from '../store/useAdminStore'; // Import new admin dashboard UI store
 
 const Navbar = () => {
+    const isDashboard = location.pathname === '/admin/dashboard';
     const { authUser, isAdmin } = useAuthStore(); // Get auth status and admin role
     const { toggleSidebar, closeSidebar } = useAdminStore(); // Get sidebar toggle action
 
@@ -29,21 +30,20 @@ const Navbar = () => {
     return (
         <div className="">
             {/* Mobile View Navbar (visible on lg screens and smaller) */}
-            {/* This drawer is for general site navigation, separate from admin sidebar */}
-            <div className="lg:hidden drawer drawer-start z-30"> {/* Adjusted z-index */}
+            <div className="lg:hidden flex drawer drawer-start z-30">
                 <input
                     id="my-drawer"
                     type="checkbox"
                     className="drawer-toggle"
                     onChange={handleDrawerCheckboxChange}
                 />
-                <div className="px-4 navbar bg-base-100 items-center fixed w-full top-0 z-20 drawer-content"> {/* Adjusted z-index */}
+                <div className="px-4 fixed navbar bg-base-100 items-center w-full top-0 z-20 drawer-content"> {/* Adjusted z-index */}
                     <div className="navbar-start">
                         {/* Conditional rendering for the MenuIcon:
                             - If isAdmin, it toggles the AdminSidebar.
                             - Otherwise, it toggles the general mobile drawer.
                         */}
-                        {isAdmin ? (
+                        {isAdmin && isDashboard ? (
                             <button
                                 className="btn bg-base-100 border-none"
                                 onClick={toggleSidebar} // Toggle admin sidebar
@@ -80,35 +80,25 @@ const Navbar = () => {
                         className="drawer-overlay"
                     ></label>
                     <ul className="menu bg-base-200 text-base-content min-h-full w-80 p-4">
-                        {/* Sidebar content here for general users */}
-                        <li><Link to="/orders" className="btn btn-xl border-0 justify-start">Orders</Link></li>
-                        <li><Link to="/menus" className="btn btn-xl border-0 justify-start">Menus</Link></li>
-                        <li><Link to="/settings" className="btn btn-xl border-0 justify-start">Settings</Link></li>
-                        {/* Add other general navigation links */}
-                        <li><Link to="/cart" className="btn btn-xl border-0 justify-start">Cart <ShoppingCart size={20} /></Link></li>
-                        <li><Link to="/wishlist" className="btn btn-xl border-0 justify-start">Wishlist <HeartIcon size={20} /></Link></li>
-                        <li><Link to="/login" className="btn btn-xl border-0 justify-start">Login</Link></li>
-                        <li><Link to="/signup" className="btn btn-xl border-0 justify-start">Signup</Link></li>
+                        <li><Link to="/" className="btn btn-xl border-0 justify-start">Home</Link></li>
+                        <li><Link to="/menus" className="btn btn-xl border-0 justify-start">Sofas</Link></li>
+                        <li><Link to="/menus" className="btn btn-xl border-0 justify-start">Armchairs</Link></li>
+                        <li><Link to="/menus" className="btn btn-xl border-0 justify-start">Living Rooms</Link></li>
+                        <li><Link to="/menus" className="btn btn-xl border-0 justify-start">Bed Rooms</Link></li>
+                        <li><Link to="/menus" className="btn btn-xl border-0 justify-start">Dining Rooms</Link></li>
+                        <li><Link to="/menus" className="btn btn-xl border-0 justify-start">Center Tables</Link></li>
+                        <li><Link to="/menus" className="btn btn-xl border-0 justify-start">Wardrobes</Link></li>
+                        <li><Link to="/menus" className="btn btn-xl border-0 justify-start">TV Units</Link></li>
+                        <li><Link to="/menus" className="btn btn-xl border-0 justify-start">Carpets</Link></li>
                     </ul>
                 </div>
             </div>
 
             {/* Desktop View Navbar (hidden on lg screens and smaller) */}
-            <div className="hidden lg:flex navbar bg-base-100 shadow-sm">
+            <div className="hidden lg:flex fixed navbar bg-base-100 shadow-sm z-100">
                 <div className="navbar-start">
-                    {/* Admin sidebar toggle for desktop (optional, if you want a desktop toggle here too) */}
-                    {/* {isAdmin && (
-                        <button
-                            className="btn btn-ghost btn-circle mr-2"
-                            onClick={toggleSidebar}
-                            aria-label="Toggle admin sidebar"
-                        >
-                            <MenuIcon />
-                        </button>
-                    )} */}
                     <Link to="/">
                         <img src={LogoLightMode} alt="Logo" className="h-10" />
-                        {/* <img src={LogoDarkMode} alt="Logo" className="h-10 hidden dark:flex" /> */}
                     </Link>
                 </div>
                 <div className="navbar-center">

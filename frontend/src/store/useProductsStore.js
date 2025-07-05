@@ -24,6 +24,7 @@ export const useProductsStore = create((set) => ({
     set({ isGettingProducts: true });
     try {
       const res = await axiosInstance.get(`/products/${Id}`);
+      set({product: res.data})
       return res.data;
     } catch (error) {
       console.log('Error in getProductbyID store:', error);

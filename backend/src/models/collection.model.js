@@ -31,6 +31,15 @@ const collectionSchema = new mongoose.Schema(
         return this.isPromo;
       },
     }, // NEW: Discounted price, required if isPromo is true
+    isForeign: { type: Boolean, default: false },
+    origin: {
+      type: String,
+      trim: true,
+      required: function () {
+        return this.isForeign;
+      },
+    },
+    style: { type: String, required: true, trim: true },
   },
   { timestamps: true }
 );

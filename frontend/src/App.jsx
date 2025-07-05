@@ -17,9 +17,17 @@ import AdminEditProductPage from './pages/EditProductPage';
 import AddCollection from './pages/AddCollection';
 import EditCollection from './pages/EditCollection';
 import { Toaster } from 'react-hot-toast';
+import BottomNavbar from './components/BottomNavbar';
+import Footer from './components/Footer';
+import whatsapp from '../src/images/whatsapp_4401461.png';
+import Shop from './pages/Shop';
+import AdminSidebar from './components/admin/AdminSideBar';
+import ProductPage from './pages/ProductPage';
+import CollectionDetailsPage from './pages/CollectionDetailPage';
+import Styles from './pages/Styles';
 
 function App() {
-  const { authUser, checkAuth } = useAuthStore();
+  const { checkAuth } = useAuthStore();
   const { getProducts } = useProductsStore();
   const { getCollections } = useCollectionStore();
   // Initialize auth state when the component mounts
@@ -29,18 +37,22 @@ function App() {
     getCollections();
   }, [checkAuth, getProducts, getCollections]); // Dependency array ensures it runs once on mount
 
-  console.log('AuthUser', authUser);
+  // console.log('AuthUser', authUser);
   // console.log('Products', products);
   // console.log('Collections', collections);
   return (
     <div className="max-h-screen">
       <Navbar />
-      <main className="">
+      <BottomNavbar />
+      <main className=''>
         <Routes>
           {/* Public product/collection/cart/wishlist routes */}
           {/* ... */}
-
-          <Route path="/" element={authUser ? <HomePage /> : <LoginPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/styles/:style" element={<Styles />} />
+          <Route path="/product/:productId" element={<ProductPage />} />
+          <Route path="/collection/:collectionId" element={<CollectionDetailsPage />} />
 
           <Route element={<AdminLoginProtectedRoute />}>
             <Route path="/admin/login" element={<AdminLoginPage />} />
@@ -53,18 +65,25 @@ function App() {
               path="/admin/products/new"
               element={<AdminAddProductPage />}
             />
-            <Route path="/admin/products/edit/:productId" element={<AdminEditProductPage />} />
             <Route
-              path="/admin/collections/new"
-              element={<AddCollection />}
+              path="/admin/products/edit/:productId"
+              element={<AdminEditProductPage />}
             />
-            <Route path="/admin/collections/edit/:collectionId" element={<EditCollection />} />
+            <Route path="/admin/collections/new" element={<AddCollection />} />
+            <Route
+              path="/admin/collections/edit/:collectionId"
+              element={<EditCollection />}
+            />
           </Route>
 
           <Route path="*" element={<div>404 Not Found</div>} />
-         
-        </Routes> <Toaster/>
+        </Routes>{' '}
       </main>
+      <Footer />
+      <button className="bg-none size-20 border-none fixed bottom-25 lg:bottom-6 right-6 rounded-full shadow-lg transition-colors duration-200 z-40 flex items-center justify-center">
+        <img src={whatsapp} alt="" className="" />
+      </button>
+      <Toaster />
       {/* ... other layout components */}
     </div>
   );

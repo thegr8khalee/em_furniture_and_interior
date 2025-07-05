@@ -34,6 +34,8 @@ export const getCollectionById = async (req, res) => {
       return res.status(404).json({ message: 'Collection not found.' });
     }
 
+    // console.log(collection)
+
     res.status(200).json(collection);
   } catch (error) {
     console.error('Error in getCollectionById controller: ', error.message);

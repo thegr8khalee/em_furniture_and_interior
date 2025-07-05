@@ -1,14 +1,14 @@
 // src/pages/AdminEditProductPage.jsx
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom'; // NEW: Import useParams
-// import { toast } from 'react-toastify'; // For notifications
-import { Loader2, XCircle } from 'lucide-react'; // For loading spinner and remove icon
-import { useCollectionStore } from '../store/useCollectionStore';
-import { useAdminStore } from '../store/useAdminStore'; // Import useAdminStore
-import { useProductsStore } from '../store/useProductsStore';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+// import { toast } from 'react-toastify';
+import { ChevronDown, ChevronUp, Loader2, XCircle } from 'lucide-react';
+import { useCollectionStore } from '../store/useCollectionStore'; // Assuming this provides collections
+import { useAdminStore } from '../store/useAdminStore'; // Assuming this provides updateProduct
+import { useProductsStore } from '../store/useProductsStore'; // Assuming this provides getProductById
 
 const AdminEditProductPage = () => {
-  const { productId } = useParams(); // Get product ID from URL
+  const { productId } = useParams();
   const { updateProduct, isUpdatingProduct } = useAdminStore();
   const { getProductById, isGettingProducts } = useProductsStore();
   const navigate = useNavigate();
@@ -18,8 +18,9 @@ const AdminEditProductPage = () => {
     description: '',
     price: '',
     category: '',
+    style: '',
     collectionId: '',
-    images: [],
+    images: [], // This will store a mix of {url, public_id} and {url: base64, isNew: true}
     isBestSeller: false,
     isPromo: false,
     discountedPrice: '',
@@ -27,10 +28,16 @@ const AdminEditProductPage = () => {
     origin: '',
   });
   const [error, setError] = useState(null);
-  const [imagePreviews, setImagePreviews] = useState([]); // For displaying image previews
+  const [imagePreviews, setImagePreviews] = useState([]); // Stores URLs for display
 
   const { collections, isGettingCollections, getCollections } =
     useCollectionStore();
+
+  // For collection dropdown (if you still want the search/dropdown functionality)
+  const [isCollectionDropdownOpen, setIsCollectionDropdownOpen] =
+    useState(false);
+  const [collectionSearchQuery, setCollectionSearchQuery] = useState('');
+  const dropdownRef = useRef(null);
 
   // Effect to fetch collections for the dropdown
   useEffect(() => {
@@ -40,34 +47,46 @@ const AdminEditProductPage = () => {
   // Effect to fetch product data when component mounts or productId changes
   useEffect(() => {
     const fetchProductData = async () => {
-        console.log(productId)
       if (productId) {
         const productData = await getProductById(productId);
         if (productData) {
           setFormData({
             name: productData.name || '',
             description: productData.description || '',
-            price: productData.price || '', // Keep as string for input
+            price: productData.price || '',
             category: productData.category || '',
-            collectionId: productData.collectionId?._id || '', // Use _id if populated
-            images: productData.images || [], // Backend sends {url, public_id} objects
+            style: productData.style || '',
+            collectionId: productData.collectionId?._id || '',
+            images: productData.images || [], // Initialize with existing images from DB
             isBestSeller: productData.isBestSeller || false,
             isPromo: productData.isPromo || false,
-            discountedPrice: productData.discountedPrice || '', // Keep as string for input
+            discountedPrice: productData.discountedPrice || '',
             isForeign: productData.isForeign || false,
             origin: productData.origin || '',
           });
           // Set image previews from existing image URLs
-          setImagePreviews(productData.images.map((img) => img.url));
+          setImagePreviews(productData.images?.map((img) => img.url) || []);
         } else {
-          // Product not found or error fetching
-          navigate('/admin/dashboard?section=products'); // Redirect back
+          navigate('/admin/dashboard?section=products');
           // toast.error('Product not found or failed to load.');
         }
       }
     };
     fetchProductData();
   }, [productId, getProductById, navigate]);
+
+  // Close collection dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsCollectionDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -89,35 +108,63 @@ const AdminEditProductPage = () => {
     setError(null);
   };
 
-  // Handles adding a new image (Base64)
+  // Corrected handleImageChange to handle multiple files and manage existing/new images
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files); // Get all selected files
+    if (files.length === 0) return;
 
-    e.target.value = null; // Reset input for next selection
+    setError(null); // Clear previous error
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFormData((prevData) => ({
-        ...prevData,
-        images: [...prevData.images, { url: reader.result, isNew: true }], // Mark new images
-      }));
-      setImagePreviews((prevPreviews) => [...prevPreviews, reader.result]);
-      setError(null);
-    };
-    reader.onerror = () => {
-      setError('Failed to read image file.');
-      // toast.error('Failed to read image file.');
-    };
-    reader.readAsDataURL(file);
+    const newImagesToProcess = [];
+    const newPreviewsToProcess = [];
+    let filesProcessedCount = 0;
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newImagesToProcess.push({ url: reader.result, isNew: true }); // Mark as new Base64 image
+        newPreviewsToProcess.push(reader.result);
+        filesProcessedCount++;
+
+        // If all files are processed, update state
+        if (filesProcessedCount === files.length) {
+          setFormData((prevData) => {
+            // Filter out any *previous* new Base64 images that might have been selected
+            // before this current selection. Keep only original Cloudinary images.
+            const existingCloudinaryImages = prevData.images.filter(
+              (img) => !img.isNew
+            );
+            return {
+              ...prevData,
+              images: [...existingCloudinaryImages, ...newImagesToProcess], // Combine existing and new
+            };
+          });
+          setImagePreviews((prevPreviews) => {
+            // Filter out any *previous* Base64 previews. Keep only original Cloudinary URLs.
+            const existingCloudinaryPreviews = prevPreviews.filter(
+              (url) => !url.startsWith('data:image')
+            );
+            return [...existingCloudinaryPreviews, ...newPreviewsToProcess]; // Combine existing and new previews
+          });
+        }
+      };
+      reader.onerror = () => {
+        setError('Failed to read image file.');
+        // toast.error('Failed to read image file.');
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = null; // Clear the input so same file(s) can be selected again
   };
 
   // Handles removing an image by its index
   const handleRemoveImage = (indexToRemove) => {
-    setFormData((prevData) => ({
-      ...prevData,
-      images: prevData.images.filter((_, index) => index !== indexToRemove),
-    }));
+    setFormData((prevData) => {
+      const updatedImages = prevData.images.filter(
+        (_, index) => index !== indexToRemove
+      );
+      return { ...prevData, images: updatedImages };
+    });
     setImagePreviews((prevPreviews) =>
       prevPreviews.filter((_, index) => index !== indexToRemove)
     );
@@ -152,7 +199,7 @@ const AdminEditProductPage = () => {
       }
       dataToSubmit.discountedPrice = parsedDiscountedPrice;
     } else {
-      dataToSubmit.discountedPrice = undefined;
+      dataToSubmit.discountedPrice = undefined; // Set to undefined, not empty string
     }
 
     if (
@@ -162,7 +209,7 @@ const AdminEditProductPage = () => {
       setError('Origin is required if product is marked as foreign.');
       return;
     } else if (!dataToSubmit.isForeign) {
-      dataToSubmit.origin = undefined;
+      dataToSubmit.origin = undefined; // Set to undefined if not foreign
     }
 
     if (dataToSubmit.collectionId === '') {
@@ -170,21 +217,36 @@ const AdminEditProductPage = () => {
     }
 
     // Prepare images for submission: new images as Base64, existing images as {url, public_id}
+    // This mapping is correct IF formData.images is correctly structured
     dataToSubmit.images = formData.images.map((img) => {
       if (img.isNew) {
-        return img.url; // Send Base64 for new images
+        return { url: img.url, isNew: true }; // Send {url: base64, isNew: true} for new images
       }
       return { url: img.url, public_id: img.public_id }; // Send existing objects
     });
 
-    await updateProduct(productId, dataToSubmit); // Call updateProduct
+    console.log(
+      'Data to submit (images field) from frontend:',
+      JSON.stringify(dataToSubmit.images)
+    ); // DEBUG LOG
 
-    
-    navigate(-1);
-    
+    const success = await updateProduct(productId, dataToSubmit);
+
+    if (success) {
+      navigate(-1); // Go back to previous page (e.g., admin dashboard)
+    }
   };
 
-  if (isGettingProducts) {
+  // For collection dropdown filtering
+  const filteredCollections = collections.filter((collection) =>
+    collection.name.toLowerCase().includes(collectionSearchQuery.toLowerCase())
+  );
+
+  const selectedCollectionName =
+    collections.find((c) => c._id === formData.collectionId)?.name ||
+    'Select a collection (Optional)';
+
+  if (isGettingProducts || isGettingCollections) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -195,7 +257,7 @@ const AdminEditProductPage = () => {
 
   return (
     <div className="flex justify-center items-start min-h-screen py-8 bg-base-200">
-      <div className="px-4 py-12  bg-base-100 rounded-lg shadow-xl w-full max-w-3xl">
+      <div className="px-4 py-12 bg-base-100 rounded-lg shadow-xl w-full max-w-3xl">
         <h2 className="text-3xl font-bold mb-6 text-primary font-[poppins]">
           Edit Product
         </h2>
@@ -265,67 +327,183 @@ const AdminEditProductPage = () => {
             >
               <option value="">Select a category</option>
               <option value="Living Room">Living Room</option>
+              <option value="Armchair">Armchair</option>
               <option value="Bedroom">Bedroom</option>
               <option value="Dining Room">Dining Room</option>
+              <option value="Center Table">Center Table</option>
+              <option value="Wardrobe">Wardrobe</option>
+              <option value="TV Unit">TV Unit</option>
+              <option value="Carpet">Carpet</option>
               {/* Add more categories as needed */}
             </select>
           </div>
 
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Collection (Optional)</span>
+              <span className="label-text">Style</span>
             </label>
             <select
-              name="collectionId"
+              name="style"
               className="select select-bordered w-full rounded-md"
-              value={formData.collectionId}
+              value={formData.style}
               onChange={handleChange}
+              required
             >
-              <option value="">None</option>
-              {isGettingCollections ? (
-                <option disabled>Loading collections...</option>
-              ) : collections && collections.length > 0 ? (
-                collections.map((collection) => (
-                  <option key={collection._id} value={collection._id}>
-                    {collection.name}
-                  </option>
-                ))
-              ) : (
-                <option disabled>No collections available</option>
-              )}
+              <option value="">Select a style</option>
+              <option value="Modern">Modern</option>
+              <option value="Contemporary">Contemporary</option>
+              <option value="Antique/Royal">Antique/Royal</option>
+              <option value="Bespoke">Bespoke</option>
+              <option value="Minimalist">Minimalist</option>
+              <option value="Glam">Glam</option>
+              {/* Add more categories as needed */}
             </select>
           </div>
+
+          {/* Collection Selection Dropdown (using previous dropdown style) */}
+          <div className="form-control relative" ref={dropdownRef}>
+            <label className="label">
+              <span className="label-text">
+                Assign to Collection (Optional)
+              </span>
+            </label>
+            <div
+              className="input input-bordered w-full rounded-md flex items-center justify-between cursor-pointer"
+              onClick={() =>
+                setIsCollectionDropdownOpen(!isCollectionDropdownOpen)
+              }
+              tabIndex="0"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setIsCollectionDropdownOpen(!isCollectionDropdownOpen);
+                }
+              }}
+            >
+              <span>{selectedCollectionName}</span>
+              {isCollectionDropdownOpen ? (
+                <ChevronUp size={20} />
+              ) : (
+                <ChevronDown size={20} />
+              )}
+            </div>
+
+            {isCollectionDropdownOpen && (
+              <div className="absolute z-10 w-full bg-base-100 border border-base-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
+                <div className="p-2 sticky top-0 bg-base-100 border-b border-base-300 z-20">
+                  <div className="relative">
+                    <Search
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      size={18}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Search collections..."
+                      className="input input-bordered w-full pl-10 pr-3 rounded-md"
+                      value={collectionSearchQuery}
+                      onChange={(e) => setCollectionSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {isGettingCollections ? (
+                  <div className="p-4 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
+                    <p>Loading collections...</p>
+                  </div>
+                ) : collections && collections.length > 0 ? (
+                  <ul className="menu p-0">
+                    <li>
+                      <button
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            collectionId: '',
+                          }));
+                          setIsCollectionDropdownOpen(false);
+                          setCollectionSearchQuery('');
+                        }}
+                        className={`w-full text-left p-2 hover:bg-base-200 rounded-none ${
+                          formData.collectionId === ''
+                            ? 'font-bold bg-base-200'
+                            : ''
+                        }`}
+                      >
+                        No Collection
+                      </button>
+                    </li>
+                    {filteredCollections.map((collection) => (
+                      <li key={collection._id}>
+                        <button
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              collectionId: collection._id,
+                            }));
+                            setIsCollectionDropdownOpen(false);
+                            setCollectionSearchQuery('');
+                          }}
+                          className={`w-full text-left p-2 hover:bg-base-200 rounded-none ${
+                            formData.collectionId === collection._id
+                              ? 'font-bold bg-base-200'
+                              : ''
+                          }`}
+                        >
+                          {collection.name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="p-4 text-center text-gray-500">
+                    No collections available
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {formData.collectionId && (
+            <p className="text-sm text-gray-500 mt-2">
+              Selected: {selectedCollectionName}
+            </p>
+          )}
 
           {/* Images Field */}
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Add Product Image</span>
+              <span className="label-text">Product Images</span>
             </label>
             <input
               type="file"
               name="images"
               accept="image/*"
+              multiple // Keep multiple attribute
               className="file-input file-input-bordered w-full rounded-md"
               onChange={handleImageChange}
             />
             <p className="text-sm text-gray-500 mt-1">
-              Select an image file. You can add multiple images one by one.
+              Select one or more images. New selections will replace previously
+              added *new* images, but existing Cloudinary images will be
+              retained.
             </p>
 
             {imagePreviews.length > 0 && (
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {imagePreviews.map((src, index) => (
-                  <div key={index} className="relative group">
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {imagePreviews.map((previewUrl, index) => (
+                  <div
+                    key={index}
+                    className="relative group w-full h-24 sm:h-32 rounded-md overflow-hidden shadow-sm border border-gray-200"
+                  >
                     <img
-                      src={src}
-                      alt={`Product preview ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-md shadow-sm border border-gray-200"
+                      src={previewUrl}
+                      alt={`Product Preview ${index + 1}`}
+                      className="w-full h-full object-cover"
                     />
                     <button
                       type="button"
                       onClick={() => handleRemoveImage(index)}
                       className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                      aria-label={`Remove image ${index + 1}`}
+                      aria-label="Remove image"
                     >
                       <XCircle size={20} />
                     </button>
@@ -369,7 +547,7 @@ const AdminEditProductPage = () => {
               <input
                 type="number"
                 name="discountedPrice"
-                placeholder="e.g., 799.99"
+                placeholder="e.g., 399.99"
                 step="0.01"
                 className="input input-bordered w-full rounded-md"
                 value={formData.discountedPrice}
@@ -413,7 +591,7 @@ const AdminEditProductPage = () => {
             <button
               type="submit"
               className="btn btn-primary w-full text-lg font-semibold py-3 rounded-md shadow-md hover:shadow-lg transition duration-200 text-black font-[poppins]"
-              disabled={isUpdatingProduct} // Use isUpdatingProduct
+              disabled={isUpdatingProduct}
             >
               {isUpdatingProduct ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
