@@ -269,6 +269,21 @@ const Styles = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      //   setIsCategoryDropdownOpen(false);
+      // }
+      if (StyledropdownRef.current && !StyledropdownRef.current.contains(event.target)) {
+        setIsStyleDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // Handle category selection and close dropdown
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
@@ -474,7 +489,7 @@ const Styles = () => {
             {
               <div
                 className="form-control relative w-full max-w-xs"
-                ref={dropdownRef}
+                ref={StyledropdownRef}
               >
                 <div
                   className="input border-0 w-full bg-transparent rounded-md flex items-center justify-center cursor-pointer shadow-none"
