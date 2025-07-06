@@ -136,19 +136,19 @@ export const logout = (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    console.log(req.user)
+    // console.log(req.user._id)
     // req.user is exp
     // ected to be populated by an authentication middleware
     // that verifies the JWT and attaches the user/admin object to the request.
-    // if (!req.user || !req.user._id || !req.user.role) {
-    //   return res
-    //     .status(401)
-    //     .json({ message: 'Not authenticated: User information missing.' });
-    // }
+    if (!req.user || !req.user._id) {
+      return res
+        .status(401)
+        .json({ message: 'Not authenticated: User information missing.' });
+    }
 
-    const { username, email, phoneNumber, id } = req.body;
-    const userId = id;
-    console.log(userId)
+    const { username, email, phoneNumber } = req.body;
+    const userId = req.user._id;
+    // console.log(userId)
 
     let authenticatedEntity = null;
 

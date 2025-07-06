@@ -12,7 +12,7 @@ const ProfilePage = () => {
     isUpdatingProfile,
     profileUpdateError,
     updateProfile,
-    logout
+    logout,
   } = useAuthStore();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -38,18 +38,17 @@ const ProfilePage = () => {
     setSuccessMessage(''); // Clear previous success messages
 
     const updatedData = { username, email, phoneNumber, id: authUser._id };
-    const success = await updateProfile(updatedData);
+    await updateProfile(updatedData);
 
-    if (success) {
-      setSuccessMessage('Profile updated successfully!');
-      setIsEditing(false); // Exit edit mode on success
-    }
+    setSuccessMessage('Profile updated successfully!');
+    setIsEditing(false); // Exit edit mode on success
+
     // Error message will be handled by profileUpdateError state in authStore
   };
 
   const handleLogOut = () => {
     logout();
-  }
+  };
 
   if (isLoading) {
     return (
@@ -151,9 +150,7 @@ const ProfilePage = () => {
                 {isUpdatingProfile ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  <>
-                 Save Changes
-                  </>
+                  <>Save Changes</>
                 )}
               </button>
             </div>
