@@ -201,7 +201,6 @@ const ShopPage = () => {
     isPromoFilterProduct,
     isForeignFilterProduct,
     isPriceFilterAppliedProduct,
-    filteredProducts,
   ]);
 
   // Effect to filter COLLECTIONS based on all criteria
