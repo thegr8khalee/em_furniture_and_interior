@@ -43,7 +43,7 @@ export const getCart = async (req, res) => {
 export const addToCart = async (req, res) => {
   // const { itemId } = req.params;
   const { itemId, quantity = 1 } = req.body; // Default quantity to 1
-    console.log(req.body)
+    // console.log(req.body)
   if (!mongoose.Types.ObjectId.isValid(itemId)) {
     return res.status(400).json({ message: 'Invalid Item ID format.' });
   }
