@@ -6,11 +6,7 @@ import { generateToken } from '../lib/utils.js'; // Assuming generateToken is in
 import { mergeGuestDataToUser } from './guest.controller.js'; // Import the new merge function
 import jwt from 'jsonwebtoken';
 import Admin from '../models/admin.model.js';
-/**
- * @desc Registers a new user
- * @route POST /api/auth/signup
- * @access Public
- */
+
 export const signup = async (req, res) => {
   // Destructure fullName from req.body, but map to username for the User model
   const { fullName, email, password, phoneNumber, anonymousId } = req.body; // Added anonymousId
@@ -75,11 +71,6 @@ export const signup = async (req, res) => {
   }
 };
 
-/**
- * @desc Authenticates a user and provides a JWT
- * @route POST /api/auth/login
- * @access Public
- */
 export const login = async (req, res) => {
   const { email, password, anonymousId } = req.body; // Added anonymousId
 
@@ -128,11 +119,6 @@ export const login = async (req, res) => {
   }
 };
 
-/**
- * @desc Logs out the current user by clearing the JWT cookie
- * @route POST /api/auth/logout
- * @access Private
- */
 export const logout = (req, res) => {
   try {
     // Clear the JWT cookie by setting its maxAge to 0
@@ -145,6 +131,84 @@ export const logout = (req, res) => {
   } catch (error) {
     console.error('Error in logout controller: ', error.message);
     res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+    console.log(req.user)
+    // req.user is exp
+    // ected to be populated by an authentication middleware
+    // that verifies the JWT and attaches the user/admin object to the request.
+    // if (!req.user || !req.user._id || !req.user.role) {
+    //   return res
+    //     .status(401)
+    //     .json({ message: 'Not authenticated: User information missing.' });
+    // }
+
+    const { username, email, phoneNumber, id } = req.body;
+    const userId = id;
+    console.log(userId)
+
+    let authenticatedEntity = null;
+
+    // Determine which model to use based on the user's role
+
+    authenticatedEntity = await User.findById(userId);
+
+    if (!authenticatedEntity) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Update fields if they are provided in the request body
+    if (username !== undefined) {
+      authenticatedEntity.username = username;
+    }
+    if (email !== undefined) {
+      // Basic email validation and uniqueness check (more robust validation should be done)
+      if (email !== authenticatedEntity.email) {
+        // Check if email is actually changing
+        const emailExists = await User.findOne({ email });
+        if (emailExists && emailExists._id.toString() !== userId.toString()) {
+          return res
+            .status(400)
+            .json({ message: 'Email already in use by another user.' });
+        }
+      }
+      authenticatedEntity.email = email;
+    }
+    if (phoneNumber !== undefined) {
+      authenticatedEntity.phoneNumber = phoneNumber;
+    }
+
+    // Save the updated entity to the database
+    await authenticatedEntity.save();
+
+    // Prepare the response data, excluding sensitive information like password hash
+    const responseData = {
+      _id: authenticatedEntity._id,
+      username: authenticatedEntity.username,
+      email: authenticatedEntity.email,
+      phoneNumber: authenticatedEntity.phoneNumber,
+      createdAt: authenticatedEntity.createdAt,
+      updatedAt: authenticatedEntity.updatedAt,
+    };
+
+    res
+      .status(200)
+      .json(responseData);
+  } catch (error) {
+    console.error('Error in updateProfile controller:', error);
+    // Check if headers have already been sent before attempting to send response
+    if (res.headersSent) {
+      console.warn(
+        'Headers already sent, cannot send error response from updateProfile catch block.'
+      );
+      return;
+    }
+    res
+      .status(500)
+      .json({ message: 'Internal Server Error during profile update.' });
   }
 };
 
@@ -205,28 +269,25 @@ export const checkAuth = async (req, res) => {
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
       });
-      return res
-        .status(401)
-        .json({
-          message:
-            'Not authenticated: User/Admin account not found in database.',
-        });
+      return res.status(401).json({
+        message: 'Not authenticated: User/Admin account not found in database.',
+      });
     }
 
     // Authenticated entity found, send their details including role
     return res.status(200).json({
-        _id: authenticatedEntity._id,
-        username: authenticatedEntity.username,
-        email: authenticatedEntity.email,
-        role: role, // Use the role determined from the token
-        // Conditionally include fields specific to User or Admin models
-        ...(role === 'user' && {
-          phoneNumber: authenticatedEntity.phoneNumber,
-          cart: authenticatedEntity.cart,
-          wishlist: authenticatedEntity.wishlist,
-        }),
-        createdAt: authenticatedEntity.createdAt,
-        updatedAt: authenticatedEntity.updatedAt,
+      _id: authenticatedEntity._id,
+      username: authenticatedEntity.username,
+      email: authenticatedEntity.email,
+      role: role, // Use the role determined from the token
+      // Conditionally include fields specific to User or Admin models
+      ...(role === 'user' && {
+        phoneNumber: authenticatedEntity.phoneNumber,
+        cart: authenticatedEntity.cart,
+        wishlist: authenticatedEntity.wishlist,
+      }),
+      createdAt: authenticatedEntity.createdAt,
+      updatedAt: authenticatedEntity.updatedAt,
     });
   } catch (error) {
     console.error('Error in checkAuth controller:', error);

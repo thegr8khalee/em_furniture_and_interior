@@ -34,7 +34,7 @@ export const useAuthStore = create((set, get) => ({
     } catch (error) {
       toast.error(error.response.data.message);
     } finally {
-      structuredClone({ isLoading: false });
+      set({ isLoading: false });
     }
   },
 
@@ -44,7 +44,6 @@ export const useAuthStore = create((set, get) => ({
       const res = await axiosInstance.post('/auth/login', data);
       set({ authUser: res.data });
       toast.success('Logged in successfully');
-      get().connectSocket();
     } catch (error) {
       toast.error(error.response.data.message);
     } finally {
@@ -60,6 +59,20 @@ export const useAuthStore = create((set, get) => ({
       get().disconnectSocket();
     } catch (error) {
       toast.error(error.response.data.message);
+    }
+  },
+
+  updateProfile: async (data) => {
+    set({ isLoading: true });
+    try {
+      const res = await axiosInstance.put('/auth/update', data);
+      set({ authUser: res.data });
+      toast.success('Profile updated successfully');
+    } catch (error) {
+      console.log(error.message);
+      toast.error(error.message);
+    } finally {
+      set({ isLoading: false });
     }
   },
 }));

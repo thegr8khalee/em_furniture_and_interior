@@ -1,6 +1,6 @@
 // src/App.jsx
 import React, { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 // ... other imports
 import AdminProtectedRoute from './components/AdminProtectedRoutes';
 import { useAuthStore } from './store/useAuthStore'; // Import Zustand store
@@ -25,9 +25,11 @@ import AdminSidebar from './components/admin/AdminSideBar';
 import ProductPage from './pages/ProductPage';
 import CollectionDetailsPage from './pages/CollectionDetailPage';
 import Styles from './pages/Styles';
+import SignupPage from './pages/Signup';
+import ProfilePage from './pages/Profile';
 
 function App() {
-  const { checkAuth } = useAuthStore();
+  const { checkAuth, authUser, isAdmin } = useAuthStore();
   const { getProducts } = useProductsStore();
   const { getCollections } = useCollectionStore();
   // Initialize auth state when the component mounts
@@ -44,7 +46,7 @@ function App() {
     <div className="max-h-screen">
       <Navbar />
       <BottomNavbar />
-      <main className=''>
+      <main className="">
         <Routes>
           {/* Public product/collection/cart/wishlist routes */}
           {/* ... */}
@@ -52,7 +54,24 @@ function App() {
           <Route path="/shop" element={<Shop />} />
           <Route path="/styles/:style" element={<Styles />} />
           <Route path="/product/:productId" element={<ProductPage />} />
-          <Route path="/collection/:collectionId" element={<CollectionDetailsPage />} />
+          <Route
+            path="/collection/:collectionId"
+            element={<CollectionDetailsPage />}
+          />
+          <Route
+            path="/profile"
+            element={
+              isAdmin ? (
+                <Navigate to="/admin/dashboard" />
+              ) : authUser ? (
+                <ProfilePage />
+              ) : (
+                <LoginPage />
+              )
+            }
+          />
+
+          <Route path="/signup" element={<SignupPage />} />
 
           <Route element={<AdminLoginProtectedRoute />}>
             <Route path="/admin/login" element={<AdminLoginPage />} />

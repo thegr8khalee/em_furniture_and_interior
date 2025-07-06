@@ -1,13 +1,15 @@
-// src/pages/AdminLoginPage.jsx
+// src/pages/AdminSignupPage.jsx
 import React, { useState } from 'react';
 // import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore'; // Import your Zustand auth store
 import { Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const LoginPage = () => {
+const SignupPage = () => {
   const [formData, setFormData] = useState({
+    fullName: '',
     email: '',
+    phoneNumber: '',
     password: '',
     anonymousId: '',
   });
@@ -16,25 +18,25 @@ const LoginPage = () => {
   //   const navigate = useNavigate();
 
   // Access authUser and isAdmin from the store to handle redirection if already logged in as admin
-  const { login, isLoading } = useAuthStore();
+  const { signup, isLoading } = useAuthStore();
   // Effect to redirect if an admin is already logged in
   // This handles cases where an admin manually navigates to /admin/login while already authenticated
 
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await login(formData);
+    await signup(formData);
   };
 
   // If loading, show a simple loading message
-//   if (isLoading) {
-//     return (
-//       <div className="flex justify-center items-center min-h-screen">
-//         <span className="loading loading-spinner loading-lg"></span>
-//         <Loader2 className="animate-spin" />
-//       </div>
-//     );
-//   }
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <span className="loading loading-spinner loading-lg"></span>
+        <Loader2 className="animate-spin" />
+      </div>
+    );
+  }
 
   // Render the login form
   return (
@@ -42,24 +44,56 @@ const LoginPage = () => {
       <div className="card w-md bg-base-100 shadow-xl rounded-xl">
         <div className="card-body p-8">
           <h2 className="card-title text-center text-3xl font-bold mb-6">
-            Welocome back!
+            Welcome!
           </h2>
 
           <form onSubmit={handleSubmit}>
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text text-lg font-medium">Name</span>
+              </label>
+              <input
+                type="name"
+                placeholder="Name Surname"
+                className="input input-bordered w-full rounded-md"
+                value={formData.fullName}
+                onChange={(e) =>
+                  setFormData({ ...formData, fullName: e.target.value })
+                }
+                required
+                aria-label="full name"
+              />
+            </div>
             <div className="form-control mb-4">
               <label className="label">
                 <span className="label-text text-lg font-medium">Email</span>
               </label>
               <input
                 type="email"
-                placeholder="admin@example.com"
+                placeholder="Enter your email"
                 className="input input-bordered w-full rounded-md"
                 value={formData.email}
                 onChange={(e) =>
                   setFormData({ ...formData, email: e.target.value })
                 }
                 required
-                aria-label="Admin Email"
+                aria-label="Email"
+              />
+            </div>
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text text-lg font-medium">Phone number</span>
+              </label>
+              <input
+                type="phoneNumber"
+                placeholder="Enter your phone number"
+                className="input input-bordered w-full rounded-md"
+                value={formData.phoneNumber}
+                onChange={(e) =>
+                  setFormData({ ...formData, phoneNumber: e.target.value })
+                }
+                required
+                aria-label="phone number"
               />
             </div>
             <div className="form-control mb-6">
@@ -87,12 +121,12 @@ const LoginPage = () => {
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  'Login'
+                  'Sign Up'
                 )}
               </button>
               <div className="w-full text-center mt-2">
-                <Link to="/signup" className="hover:underline">
-                  Sign Up
+                <Link to="/profile" className="hover:underline">
+                  Login
                 </Link>
               </div>
             </div>
@@ -103,4 +137,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default SignupPage;

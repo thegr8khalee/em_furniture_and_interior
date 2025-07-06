@@ -23,8 +23,11 @@ const ShopPage = () => {
   const { collections, getCollections, isGettingCollections } =
     useCollectionStore();
 
+  const navigate = useNavigate();
+
   const [viewMode, setViewMode] = useState('products');
 
+  const productSearchInputRef = useRef(null);
   // Product-specific states
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -39,7 +42,8 @@ const ShopPage = () => {
     useState(false);
   const [isPromoFilterProduct, setIsPromoFilterProduct] = useState(false);
   const [isForeignFilterProduct, setIsForeignFilterProduct] = useState(false);
-  const [isForeignFilterCollection, setIsForeignFilterCollection] = useState(false);
+  const [isForeignFilterCollection, setIsForeignFilterCollection] =
+    useState(false);
   const [isPriceFilterAppliedProduct, setIsPriceFilterAppliedProduct] =
     useState(false);
   const [isProductFilterModalOpen, setIsProductFilterModalOpen] =
@@ -63,6 +67,34 @@ const ShopPage = () => {
     getProducts();
     getCollections();
   }, [getProducts, getCollections]);
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const categoryFromUrl = queryParams.get('category');
+    const viewFromUrl = queryParams.get('view');
+
+    if (categoryFromUrl) {
+      setSelectedCategory(categoryFromUrl);
+      setViewMode('products');
+    } else if (viewFromUrl === 'collections') {
+      setViewMode('collections');
+    }
+  }, [location.search]);
+
+  // NEW: Dedicated useEffect for focusing the search bar
+  useEffect(() => {
+    // Check if focusSearch state was passed and if the ref is available
+    if (location.state?.focusSearch && productSearchInputRef.current) {
+      // Ensure we are in the 'products' view mode before attempting to focus
+      // as the search bar is only visible in this mode.
+      if (viewMode === 'products') {
+        productSearchInputRef.current.focus();
+        // Clear the state after focusing to prevent re-focusing on subsequent renders
+        // This uses `replace: true` so it doesn't add a new entry to browser history.
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [location.state?.focusSearch, productSearchInputRef, viewMode, navigate]);
 
   // NEW: Effect to read category from URL on initial load
   useEffect(() => {
@@ -143,9 +175,8 @@ const ShopPage = () => {
     if (isForeignFilterProduct) {
       currentProducts = currentProducts.filter((product) => product.isForeign);
     }
-    
 
-    console.log(filteredProducts);
+    // console.log(filteredProducts);
 
     setFilteredProducts(currentProducts);
   }, [
@@ -207,7 +238,9 @@ const ShopPage = () => {
     }
 
     if (isForeignFilterCollection) {
-      currentCollections = currentCollections.filter((collection) => collection.isForeign);
+      currentCollections = currentCollections.filter(
+        (collection) => collection.isForeign
+      );
     }
 
     setFilteredCollections(currentCollections);
@@ -282,8 +315,6 @@ const ShopPage = () => {
     setIsCollectionFilterModalOpen(false);
   };
 
-  const navigate = useNavigate();
-
   const handleProductClick = (Id) => {
     navigate(`/product/${Id}`);
     setTimeout(() => {
@@ -297,6 +328,8 @@ const ShopPage = () => {
       window.scrollTo(0, 0);
     }, 10);
   };
+
+//   console.log(location.state)
 
   // Combined loading state
   if (isGettingProducts || isGettingCollections) {
@@ -460,6 +493,7 @@ const ShopPage = () => {
                     className="input input-bordered w-full pl-10 pr-3 rounded-xl"
                     value={productSearchQuery}
                     onChange={(e) => setProductSearchQuery(e.target.value)}
+                    ref={productSearchInputRef}
                   />
                 </div>
               </div>
