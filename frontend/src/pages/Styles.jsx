@@ -16,14 +16,19 @@ import Hero1 from '../images/Hero1.png';
 import whatsapp from '../images/whatsapp.png';
 import { useCollectionStore } from '../store/useCollectionStore';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useCartStore } from '../store/useCartStore';
 
 const Styles = () => {
   const { style } = useParams();
-  console.log(style);
+  // console.log(style);
   const { products, getProducts, isGettingProducts } = useProductsStore();
   const { collections, getCollections, isGettingCollections } =
     useCollectionStore();
+  const { addToCart, isAddingToCart } = useCartStore();
 
+  const handleAddtoCart = (id) => {
+    addToCart(id);
+  };
   const [viewMode, setViewMode] = useState('products');
 
   const designs = [
@@ -56,7 +61,8 @@ const Styles = () => {
     useState(false);
   const [isPromoFilterProduct, setIsPromoFilterProduct] = useState(false);
   const [isForeignFilterProduct, setIsForeignFilterProduct] = useState(false);
-  const [isForeignFilterCollection, setIsForeignFilterCollection] = useState(false);
+  const [isForeignFilterCollection, setIsForeignFilterCollection] =
+    useState(false);
   const [isPriceFilterAppliedProduct, setIsPriceFilterAppliedProduct] =
     useState(false);
   const [isProductFilterModalOpen, setIsProductFilterModalOpen] =
@@ -183,7 +189,7 @@ const Styles = () => {
     style,
   ]);
 
-  console.log(filteredProducts);
+  // console.log(filteredProducts);
 
   // Effect to filter COLLECTIONS based on all criteria
   useEffect(() => {
@@ -237,7 +243,9 @@ const Styles = () => {
     }
 
     if (isForeignFilterCollection) {
-      currentCollections = currentCollections.filter((collection) => collection.isForeign);
+      currentCollections = currentCollections.filter(
+        (collection) => collection.isForeign
+      );
     }
 
     setFilteredCollections(currentCollections);
@@ -259,7 +267,10 @@ const Styles = () => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsCategoryDropdownOpen(false);
       }
-      if (StyledropdownRef.current && !StyledropdownRef.current.contains(event.target)) {
+      if (
+        StyledropdownRef.current &&
+        !StyledropdownRef.current.contains(event.target)
+      ) {
         setIsStyleDropdownOpen(false);
       }
     };
@@ -274,7 +285,10 @@ const Styles = () => {
       // if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
       //   setIsCategoryDropdownOpen(false);
       // }
-      if (StyledropdownRef.current && !StyledropdownRef.current.contains(event.target)) {
+      if (
+        StyledropdownRef.current &&
+        !StyledropdownRef.current.contains(event.target)
+      ) {
         setIsStyleDropdownOpen(false);
       }
     };
@@ -359,7 +373,6 @@ const Styles = () => {
       window.scrollTo(0, 0);
     }, 10);
   };
-
 
   // Combined loading state
   if (isGettingProducts || isGettingCollections) {
@@ -493,9 +506,7 @@ const Styles = () => {
               >
                 <div
                   className="input border-0 w-full bg-transparent rounded-md flex items-center justify-center cursor-pointer shadow-none"
-                  onClick={() =>
-                    setIsStyleDropdownOpen(!isStyleDropdownOpen)
-                  }
+                  onClick={() => setIsStyleDropdownOpen(!isStyleDropdownOpen)}
                   tabIndex="0"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -505,7 +516,9 @@ const Styles = () => {
                   }}
                 >
                   <span className="font-[montserrat] text-base-100 font-bold">
-                    {style ? style.charAt(0).toUpperCase() + style.slice(1) : ''}
+                    {style
+                      ? style.charAt(0).toUpperCase() + style.slice(1)
+                      : ''}
                   </span>
                   {isStyleDropdownOpen ? (
                     <ChevronUp className="stroke-base-100" />
@@ -527,9 +540,7 @@ const Styles = () => {
                           placeholder="Search categories..."
                           className="input input-bordered w-full pl-10 pr-3 rounded-md"
                           value={styleSearchQuery}
-                          onChange={(e) =>
-                            setStyleSearchQuery(e.target.value)
-                          }
+                          onChange={(e) => setStyleSearchQuery(e.target.value)}
                         />
                       </div>
                     </div>
@@ -686,8 +697,15 @@ const Styles = () => {
                               className="size-5"
                             />
                           </button>
-                          <button className="btn rounded-xl bg-primary">
-                            <ShoppingCart className="" />
+                          <button
+                            className="btn rounded-xl bg-primary"
+                            onClick={() => handleAddtoCart(product._id)}
+                          >
+                            {isAddingToCart ? (
+                              <Loader2 className="animate-spin" />
+                            ) : (
+                              <ShoppingCart className="" />
+                            )}
                           </button>
                         </div>
                       </div>
@@ -801,8 +819,15 @@ const Styles = () => {
                               className="size-5"
                             />
                           </button>
-                          <button className="btn rounded-xl bg-primary">
-                            <ShoppingCart className="" />
+                          <button
+                            className="btn rounded-xl bg-primary"
+                            onClick={() => handleAddtoCart(collection._id)}
+                          >
+                            {isAddingToCart ? (
+                              <Loader2 className="animate-spin" />
+                            ) : (
+                              <ShoppingCart className="" />
+                            )}
                           </button>
                         </div>
                       </div>

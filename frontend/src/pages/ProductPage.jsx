@@ -8,13 +8,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Share2,
+  Loader,
 } from 'lucide-react';
 import { useProductsStore } from '../store/useProductsStore';
 import whatsapp from '../images/whatsapp.png';
+import { useCartStore } from '../store/useCartStore';
 const ProductPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
   const { product, getProductById, isGettingProduct } = useProductsStore();
+  const { addToCart, isAddingToCart } = useCartStore();
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -82,10 +85,8 @@ const ProductPage = () => {
   };
 
   // Placeholder functions for cart and wishlist
-  const handleAddToCart = () => {
-    console.log(`Added ${product.name} to cart!`);
-    // Implement actual cart logic here
-    // toast.success(`${product.name} added to cart!`);
+  const handleAddToCart = (data) => {
+    addToCart(data);
   };
 
   const handleAddToWishlist = () => {
@@ -287,9 +288,14 @@ const ProductPage = () => {
           <div className="flex space-x-4 mb-6">
             <button
               className="btn btn-primary text-secondary flex-1 rounded-xl font-[poppins] shadow-none border-0"
-              onClick={handleAddToCart}
+              onClick={() => handleAddToCart(product._id)}
             >
-              <ShoppingCart size={20} /> Add to Cart
+              {isAddingToCart ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <ShoppingCart size={20} />
+              )}
+              Add to Cart
             </button>
             <button
               className="btn btn-outline btn-primary flex-1 rounded-xl font-[poppins] shadow-none"

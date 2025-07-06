@@ -13,6 +13,7 @@ import {
 import { useProductsStore } from '../store/useProductsStore'; // To get all products and filter them
 import { useCollectionStore } from '../store/useCollectionStore';
 import whatsapp from '../images/whatsapp.png';
+import { useCartStore } from '../store/useCartStore';
 
 const CollectionDetailsPage = () => {
   const { collectionId } = useParams();
@@ -20,6 +21,7 @@ const CollectionDetailsPage = () => {
 
   const { collection, getCollectionById, isGettingCollection } =
     useCollectionStore();
+  const { addToCart, isAddingToCart } = useCartStore();
 
   const {
     products, // All products to filter by collectionId
@@ -44,9 +46,8 @@ const CollectionDetailsPage = () => {
   );
 
   // Placeholder functions for cart and wishlist (reusing from ProductPage)
-  const handleAddToCart = (productName) => {
-    console.log(`Added ${productName} to cart!`);
-    // Implement actual cart logic here
+  const handleAddToCart = (id) => {
+    addToCart(id);
   };
 
   const handleAddToWishlist = (productName) => {
@@ -223,9 +224,14 @@ const CollectionDetailsPage = () => {
 
         <button
           className="btn btn-primary text-secondary flex-3 w-full rounded-xl font-[poppins] shadow-none border-0"
-          onClick={handleAddToCart}
+          onClick={() => handleAddToCart(collectionId)}
         >
-          <ShoppingCart size={20} /> Add to Cart
+          {isAddingToCart ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <ShoppingCart size={20} />
+          )}
+          Add to Cart
         </button>
         <button
           className="btn btn-outline btn-primary flex-3 w-full rounded-xl font-[poppins] shadow-none"

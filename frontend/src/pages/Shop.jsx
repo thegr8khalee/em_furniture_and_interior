@@ -16,12 +16,14 @@ import Hero1 from '../images/Hero1.png';
 import whatsapp from '../images/whatsapp.png';
 import { useCollectionStore } from '../store/useCollectionStore';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useCartStore } from '../store/useCartStore';
 
 const ShopPage = () => {
   const location = useLocation();
   const { products, getProducts, isGettingProducts } = useProductsStore();
   const { collections, getCollections, isGettingCollections } =
     useCollectionStore();
+  const { addToCart, isAddingToCart } = useCartStore();
 
   const navigate = useNavigate();
 
@@ -329,7 +331,11 @@ const ShopPage = () => {
     }, 10);
   };
 
-//   console.log(location.state)
+  const handleAddToCart = (id) => {
+    addToCart(id);
+  };
+
+  //   console.log(location.state)
 
   // Combined loading state
   if (isGettingProducts || isGettingCollections) {
@@ -587,8 +593,15 @@ const ShopPage = () => {
                               className="size-5"
                             />
                           </button>
-                          <button className="btn rounded-xl bg-primary">
-                            <ShoppingCart className="" />
+                          <button
+                            className="btn rounded-xl bg-primary"
+                            onClick={() => handleAddToCart(product._id)}
+                          >
+                            {isAddingToCart ? (
+                              <Loader2 className="animate-spin" />
+                            ) : (
+                              <ShoppingCart className="" />
+                            )}
                           </button>
                         </div>
                       </div>
@@ -702,8 +715,15 @@ const ShopPage = () => {
                               className="size-5"
                             />
                           </button>
-                          <button className="btn rounded-xl bg-primary">
-                            <ShoppingCart className="" />
+                          <button
+                            className="btn rounded-xl bg-primary"
+                            onClick={() => handleAddToCart(collection._id)}
+                          >
+                            {isAddingToCart ? (
+                              <Loader2 className="animate-spin" />
+                            ) : (
+                              <ShoppingCart className="" />
+                            )}
                           </button>
                         </div>
                       </div>
