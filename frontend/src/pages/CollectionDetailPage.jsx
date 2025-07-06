@@ -14,6 +14,7 @@ import { useProductsStore } from '../store/useProductsStore'; // To get all prod
 import { useCollectionStore } from '../store/useCollectionStore';
 import whatsapp from '../images/whatsapp.png';
 import { useCartStore } from '../store/useCartStore';
+import { useWishlistStore } from '../store/useWishlistStore';
 
 const CollectionDetailsPage = () => {
   const { collectionId } = useParams();
@@ -22,6 +23,14 @@ const CollectionDetailsPage = () => {
   const { collection, getCollectionById, isGettingCollection } =
     useCollectionStore();
   const { addToCart, isAddingToCart } = useCartStore();
+  const {
+    addToWishlist,
+    isAddingTowishlist,
+    wishlist,
+    getwishlist,
+    removeFromwishlist,
+    isRemovingFromwishlist,
+  } = useWishlistStore();
 
   const {
     products, // All products to filter by collectionId
@@ -36,7 +45,8 @@ const CollectionDetailsPage = () => {
     }
     // Ensure all products are fetched to filter them later
     getProducts();
-  }, [collectionId, getCollectionById, getProducts]);
+    getwishlist();
+  }, [collectionId, getCollectionById, getProducts, getwishlist]);
 
   //   console.log(collection)
 
@@ -50,9 +60,12 @@ const CollectionDetailsPage = () => {
     addToCart(id);
   };
 
-  const handleAddToWishlist = (productName) => {
-    console.log(`Added ${productName} to wishlist!`);
-    // Implement actual wishlist logic here
+  const handleAddToWishlist = (id) => {
+    addToWishlist(id);
+  };
+
+  const handleRemovefromWishlist = (id) => {
+    removeFromwishlist(id);
   };
 
   const handleProductClick = (Id) => {
@@ -61,6 +74,12 @@ const CollectionDetailsPage = () => {
       window.scrollTo(0, 0);
     }, 10);
   };
+
+  const isInWishlist = (wishlist || []).some(
+    (wishlistItem) =>
+      wishlistItem.item === collectionId &&
+      wishlistItem.itemType === 'Collection'
+  );
 
   // Combined loading state
   if (isGettingCollection || isGettingProducts) {
@@ -233,13 +252,30 @@ const CollectionDetailsPage = () => {
           )}
           Add to Cart
         </button>
-        <button
-          className="btn btn-outline btn-primary flex-3 w-full rounded-xl font-[poppins] shadow-none"
-          onClick={handleAddToWishlist}
-        >
-          <Heart size={20} />
-          Wishlist
-        </button>
+        {isInWishlist ? (
+          <button
+            className="btn btn-primary flex-3 w-full rounded-xl font-[poppins] shadow-none"
+            onClick={() => handleRemovefromWishlist(collectionId)}
+          >
+            {isRemovingFromwishlist ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Heart size={20} className="fill-white stroke-0" />
+            )}
+          </button>
+        ) : (
+          <button
+            className="btn btn-outline btn-primary flex-3 w-full rounded-xl font-[poppins] shadow-none"
+            onClick={() => handleAddToWishlist(collectionId)}
+          >
+            {isAddingTowishlist ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Heart size={20} />
+            )}
+            Wishlist
+          </button>
+        )}
       </div>
       {/* Products in this Collection */}
       <h2 className="text-xl font-bold mb-6 text-center font-[poppins]">
@@ -311,8 +347,15 @@ const CollectionDetailsPage = () => {
                   <button className="btn rounded-xl bg-green-400">
                     <img src={whatsapp} alt="WhatsApp" className="size-5" />
                   </button>
-                  <button className="btn rounded-xl bg-primary">
-                    <ShoppingCart className="" />
+                  <button
+                    className="btn rounded-xl bg-primary"
+                    onClick={() => handleAddToCart(product._id)}
+                  >
+                    {isAddingToCart ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <ShoppingCart className="" />
+                    )}
                   </button>
                 </div>
               </div>

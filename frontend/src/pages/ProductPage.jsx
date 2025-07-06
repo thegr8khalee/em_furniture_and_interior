@@ -13,11 +13,20 @@ import {
 import { useProductsStore } from '../store/useProductsStore';
 import whatsapp from '../images/whatsapp.png';
 import { useCartStore } from '../store/useCartStore';
+import { useWishlistStore } from '../store/useWishlistStore';
 const ProductPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
   const { product, getProductById, isGettingProduct } = useProductsStore();
   const { addToCart, isAddingToCart } = useCartStore();
+  const {
+    addToWishlist,
+    isAddingTowishlist,
+    wishlist,
+    getwishlist,
+    removeFromwishlist,
+    isRemovingFromwishlist,
+  } = useWishlistStore();
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -31,7 +40,8 @@ const ProductPage = () => {
     if (productId) {
       getProductById(productId);
     }
-  }, [productId, getProductById]);
+    getwishlist();
+  }, [productId, getProductById, getwishlist]);
 
   // Reset currentImageIndex when product changes (e.g., navigating to a new product page)
   useEffect(() => {
@@ -89,11 +99,19 @@ const ProductPage = () => {
     addToCart(data);
   };
 
-  const handleAddToWishlist = () => {
-    console.log(`Added ${product.name} to wishlist!`);
-    // Implement actual wishlist logic here
-    // toast.info(`${product.name} added to wishlist!`);
+  const handleAddToWishlist = (id) => {
+    addToWishlist(id);
   };
+
+  const handleRemovefromWishlist = (id) => {
+    removeFromwishlist(id);
+  };
+
+  const isInWishlist = (wishlist || []).some(
+    (wishlistItem) =>
+      wishlistItem.item === product._id && wishlistItem.itemType === 'Product'
+  );
+  console.log(wishlist);
 
   // Loading state
   if (isGettingProduct) {
@@ -297,13 +315,30 @@ const ProductPage = () => {
               )}
               Add to Cart
             </button>
-            <button
-              className="btn btn-outline btn-primary flex-1 rounded-xl font-[poppins] shadow-none"
-              onClick={handleAddToWishlist}
-            >
-              <Heart size={20} />
-              Wishlist
-            </button>
+            {isInWishlist ? (
+              <button
+                className="btn btn-primary flex-1 rounded-xl font-[poppins] shadow-none"
+                onClick={() => handleRemovefromWishlist(productId)}
+              >
+                {isRemovingFromwishlist ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Heart size={20} className="stroke-0 fill-white" />
+                )}
+              </button>
+            ) : (
+              <button
+                className="btn btn-outline btn-primary flex-1 rounded-xl font-[poppins] shadow-none"
+                onClick={() => handleAddToWishlist(product._id)}
+              >
+                {isAddingTowishlist ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Heart size={20} />
+                )}
+                Wishlist
+              </button>
+            )}
           </div>
         </div>
       </div>

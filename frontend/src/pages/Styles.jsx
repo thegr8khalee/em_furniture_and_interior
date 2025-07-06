@@ -17,6 +17,7 @@ import whatsapp from '../images/whatsapp.png';
 import { useCollectionStore } from '../store/useCollectionStore';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
+import { useWishlistStore } from '../store/useWishlistStore';
 
 const Styles = () => {
   const { style } = useParams();
@@ -25,6 +26,14 @@ const Styles = () => {
   const { collections, getCollections, isGettingCollections } =
     useCollectionStore();
   const { addToCart, isAddingToCart } = useCartStore();
+  const {
+    addToWishlist,
+    isAddingTowishlist,
+    wishlist,
+    getwishlist,
+    removeFromwishlist,
+    isRemovingFromwishlist,
+  } = useWishlistStore();
 
   const handleAddtoCart = (id) => {
     addToCart(id);
@@ -85,7 +94,8 @@ const Styles = () => {
   useEffect(() => {
     getProducts();
     getCollections();
-  }, [getProducts, getCollections]);
+    getwishlist();
+  }, [getProducts, getCollections, getwishlist]);
 
   // NEW: Effect to read category from URL on initial load
   //   useEffect(() => {
@@ -374,6 +384,17 @@ const Styles = () => {
     }, 10);
   };
 
+  const isInWishlist = (id) =>
+    (wishlist || []).some((wishlistItem) => wishlistItem.item === id);
+
+  const handleAddToWishlist = (id) => {
+    addToWishlist(id);
+  };
+
+  const handleRemovefromWishlist = (id) => {
+    removeFromwishlist(id);
+  };
+
   // Combined loading state
   if (isGettingProducts || isGettingCollections) {
     return (
@@ -651,12 +672,31 @@ const Styles = () => {
                         />
                       </button>
 
-                      <button
-                        className="absolute top-3 right-3"
-                        aria-label="Add to wishlist"
-                      >
-                        <Heart className="text-primary size-7" />
-                      </button>
+                      {isInWishlist(product._id) ? (
+                        <button
+                          className="absolute top-3 right-3"
+                          aria-label="reomove from wishlist"
+                          onClick={() => handleRemovefromWishlist(product._id)}
+                        >
+                          {isRemovingFromwishlist ? (
+                            <Loader2 className="animate-spin" />
+                          ) : (
+                            <Heart className="text-primary size-7 fill-primary" />
+                          )}
+                        </button>
+                      ) : (
+                        <button
+                          className="absolute top-3 right-3"
+                          aria-label="Add to wishlist"
+                          onClick={() => handleAddToWishlist(product._id)}
+                        >
+                          {isAddingTowishlist ? (
+                            <Loader2 className="animate-spin" />
+                          ) : (
+                            <Heart className="text-primary size-7" />
+                          )}
+                        </button>
+                      )}
                       <span className="absolute bottom-3 left-3 text-base text-shadow-lg truncate text-base-100 font-[montserrat]">
                         {product.style}{' '}
                         {product.collectionId && product.collectionId.name && (
@@ -773,12 +813,33 @@ const Styles = () => {
                           }}
                         />
                       </button>
-                      <button
-                        className="absolute top-3 right-3"
-                        aria-label="Add to wishlist"
-                      >
-                        <Heart className="text-primary size-7" />
-                      </button>
+                      {isInWishlist(collection._id) ? (
+                        <button
+                          className="absolute top-3 right-3"
+                          aria-label="reomove from wishlist"
+                          onClick={() =>
+                            handleRemovefromWishlist(collection._id)
+                          }
+                        >
+                          {isRemovingFromwishlist ? (
+                            <Loader2 className="animate-spin" />
+                          ) : (
+                            <Heart className="text-primary size-7 fill-primary" />
+                          )}
+                        </button>
+                      ) : (
+                        <button
+                          className="absolute top-3 right-3"
+                          aria-label="Add to wishlist"
+                          onClick={() => handleAddToWishlist(collection._id)}
+                        >
+                          {isAddingTowishlist ? (
+                            <Loader2 className="animate-spin" />
+                          ) : (
+                            <Heart className="text-primary size-7" />
+                          )}
+                        </button>
+                      )}
                       <span className="absolute bottom-3 left-3 text-base text-shadow-lg truncate text-base-100 font-[montserrat]">
                         {collection.style}
                       </span>

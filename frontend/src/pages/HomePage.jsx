@@ -148,6 +148,13 @@ const HomePage = () => {
     }, 10);
   };
 
+  const handleCollectionClick = (Id) => {
+    navigate(`/collection/${Id}`);
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+  };
+
   if (isGettingProducts || isGettingCollections) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -354,11 +361,14 @@ const HomePage = () => {
               className="flex-shrink-0 w-75 md:w-90 lg:w-100 rounded-lg overflow-hidden"
             >
               <div className="relative">
-                <img
-                  src={product.coverImage.url}
-                  alt={product.name}
-                  className="w-full h-50 md:h-60 lg:h-70 rounded-lg object-cover rounded-t-lg"
-                />
+                <button className='w-full h-full'
+                onClick={() => handleCollectionClick(product._id)}>
+                  <img
+                    src={product.coverImage.url}
+                    alt={product.name}
+                    className="w-full h-50 md:h-60 lg:h-70 rounded-lg object-cover rounded-t-lg"
+                  />
+                </button>
               </div>
               <div className="mt-1">
                 <h3 className="text-lg font-medium truncate font-[poppins]">
