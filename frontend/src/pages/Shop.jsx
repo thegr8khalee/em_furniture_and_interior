@@ -39,6 +39,7 @@ const ShopPage = () => {
     useState(false);
   const [isPromoFilterProduct, setIsPromoFilterProduct] = useState(false);
   const [isForeignFilterProduct, setIsForeignFilterProduct] = useState(false);
+  const [isForeignFilterCollection, setIsForeignFilterCollection] = useState(false);
   const [isPriceFilterAppliedProduct, setIsPriceFilterAppliedProduct] =
     useState(false);
   const [isProductFilterModalOpen, setIsProductFilterModalOpen] =
@@ -142,6 +143,7 @@ const ShopPage = () => {
     if (isForeignFilterProduct) {
       currentProducts = currentProducts.filter((product) => product.isForeign);
     }
+    
 
     console.log(filteredProducts);
 
@@ -156,6 +158,7 @@ const ShopPage = () => {
     isPromoFilterProduct,
     isForeignFilterProduct,
     isPriceFilterAppliedProduct,
+    filteredProducts,
   ]);
 
   // Effect to filter COLLECTIONS based on all criteria
@@ -203,9 +206,14 @@ const ShopPage = () => {
       );
     }
 
+    if (isForeignFilterCollection) {
+      currentCollections = currentCollections.filter((collection) => collection.isForeign);
+    }
+
     setFilteredCollections(currentCollections);
   }, [
     collections,
+    isForeignFilterCollection,
     collectionSearchQuery,
     minPriceCollection,
     maxPriceCollection,
@@ -269,6 +277,7 @@ const ShopPage = () => {
     setMaxPriceCollection(''); // Corrected setter name
     setIsBestSellerFilterCollection(false);
     setIsPromoFilterCollection(false);
+    setIsForeignFilterCollection(false);
     setIsPriceFilterAppliedCollection(false);
     setIsCollectionFilterModalOpen(false);
   };
@@ -703,8 +712,8 @@ const ShopPage = () => {
           setIsBestSellerFilter={setIsBestSellerFilterCollection}
           isPromoFilter={isPromoFilterCollection}
           setIsPromoFilter={setIsPromoFilterCollection}
-          // isForeignFilter is NOT passed for collections as per request
-          setIsForeignFilter={() => {}} // Pass a no-op function to satisfy prop type if needed, or remove prop from modal if it's strictly for products
+          isForeignFilter={isForeignFilterCollection}
+          setIsForeignFilter={setIsForeignFilterCollection}
           setIsPriceFilterApplied={setIsPriceFilterAppliedCollection}
           onApplyFilters={handleApplyCollectionFilters}
           onClearFilters={handleClearCollectionFilters}

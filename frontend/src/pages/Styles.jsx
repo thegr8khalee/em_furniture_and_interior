@@ -26,13 +26,29 @@ const Styles = () => {
 
   const [viewMode, setViewMode] = useState('products');
 
+  const designs = [
+    { id: '1', name: 'Modern', link: 'modern' },
+    {
+      id: '2',
+      name: 'Contemporary',
+      link: 'contemporary',
+    },
+    { id: '3', name: 'Antique/Royal', link: 'antique%2Froyal' },
+    { id: '4', name: 'Bespoke', link: 'bespoke' },
+    { id: '5', name: 'Minimalist', link: 'minimalist' },
+    { id: '6', name: 'Glam', link: 'glam' }, // Using Hero1 as a placeholder for now
+  ];
+
   // Product-specific states
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [uniqueCategories, setUniqueCategories] = useState([]);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const [isStyleDropdownOpen, setIsStyleDropdownOpen] = useState(false);
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
+  const [styleSearchQuery, setStyleSearchQuery] = useState('');
   const dropdownRef = useRef(null);
+  const StyledropdownRef = useRef(null);
   const [productSearchQuery, setProductSearchQuery] = useState(''); // Renamed from searchQuery to productSearchQuery
   const [minPriceProduct, setMinPriceProduct] = useState('');
   const [maxPriceProduct, setMaxPriceProduct] = useState('');
@@ -40,6 +56,7 @@ const Styles = () => {
     useState(false);
   const [isPromoFilterProduct, setIsPromoFilterProduct] = useState(false);
   const [isForeignFilterProduct, setIsForeignFilterProduct] = useState(false);
+  const [isForeignFilterCollection, setIsForeignFilterCollection] = useState(false);
   const [isPriceFilterAppliedProduct, setIsPriceFilterAppliedProduct] =
     useState(false);
   const [isProductFilterModalOpen, setIsProductFilterModalOpen] =
@@ -219,10 +236,15 @@ const Styles = () => {
       );
     }
 
+    if (isForeignFilterCollection) {
+      currentCollections = currentCollections.filter((collection) => collection.isForeign);
+    }
+
     setFilteredCollections(currentCollections);
   }, [
     collections,
     collectionSearchQuery,
+    isForeignFilterCollection,
     minPriceCollection,
     maxPriceCollection,
     isBestSellerFilterCollection,
@@ -236,6 +258,9 @@ const Styles = () => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsCategoryDropdownOpen(false);
+      }
+      if (StyledropdownRef.current && !StyledropdownRef.current.contains(event.target)) {
+        setIsStyleDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -251,9 +276,22 @@ const Styles = () => {
     setCategorySearchQuery('');
   };
 
+  const handleStyleChange = (category) => {
+    navigate(`/styles/${category}`);
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+    setIsStyleDropdownOpen(false);
+    setStyleSearchQuery('');
+  };
+
   // Filter categories based on search query
   const filteredCategories = uniqueCategories.filter((category) =>
     category.toLowerCase().includes(categorySearchQuery.toLowerCase())
+  );
+
+  const filteredStyle = designs.filter((category) =>
+    category.name.toLowerCase().includes(styleSearchQuery.toLowerCase())
   );
 
   // Handlers for Product Filter Modal
@@ -286,6 +324,7 @@ const Styles = () => {
     setMaxPriceCollection(''); // Corrected setter name
     setIsBestSellerFilterCollection(false);
     setIsPromoFilterCollection(false);
+    setIsForeignFilterCollection(false);
     setIsPriceFilterAppliedCollection(false);
     setIsCollectionFilterModalOpen(false);
   };
@@ -305,6 +344,7 @@ const Styles = () => {
       window.scrollTo(0, 0);
     }, 10);
   };
+
 
   // Combined loading state
   if (isGettingProducts || isGettingCollections) {
@@ -329,12 +369,12 @@ const Styles = () => {
       <div className="relative">
         <img src={Hero1} alt="" className="object-cover h-50 w-full" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
-          <h1 className="absolute bottom-15 left-1/2 -translate-x-1/2 mt-20 mb-2 text-5xl font-bold text-center text-base-100 font-[poppins]">
+          <h1 className="absolute bottom-15 left-1/2 -translate-x-1/2 mt-20 mb-2 text-4xl font-bold text-center text-base-100 font-[poppins]">
             {style ? style.charAt(0).toUpperCase() + style.slice(1) : ''}
           </h1>
 
           {/* Filters Section: Category Dropdown (conditionally rendered) */}
-          <div className="absolute bottom-8 flex flex-col justify-center items-center gap-4 w-full">
+          <div className="absolute bottom-1 flex flex-col justify-center items-center gap-4 w-full">
             {viewMode === 'products' && (
               <div
                 className="form-control relative w-full max-w-xs"
@@ -366,7 +406,7 @@ const Styles = () => {
                 </div>
 
                 {isCategoryDropdownOpen && (
-                  <div className="absolute z-101 w-full bg-base-100 border border-base-300 rounded-md shadow-lg mt-1 top-full max-h-60 overflow-y-auto">
+                  <div className="absolute z-101 w-full bg-base-100 border border-base-300 rounded-md shadow-lg mt-1 top-full max-h-80 overflow-y-auto">
                     <div className="p-2 sticky top-0 bg-base-100 border-b border-base-300 z-20">
                       <div className="relative">
                         <Search
@@ -427,6 +467,76 @@ const Styles = () => {
                 )}
               </div>
             )}
+          </div>
+
+          {/** Styles Selector */}
+          <div className="absolute bottom-8 flex flex-col justify-center items-center gap-4 w-full">
+            {
+              <div
+                className="form-control relative w-full max-w-xs"
+                ref={dropdownRef}
+              >
+                <div
+                  className="input border-0 w-full bg-transparent rounded-md flex items-center justify-center cursor-pointer shadow-none"
+                  onClick={() =>
+                    setIsStyleDropdownOpen(!isStyleDropdownOpen)
+                  }
+                  tabIndex="0"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setIsStyleDropdownOpen(!isStyleDropdownOpen);
+                    }
+                  }}
+                >
+                  <span className="font-[montserrat] text-base-100 font-bold">
+                    {style ? style.charAt(0).toUpperCase() + style.slice(1) : ''}
+                  </span>
+                  {isStyleDropdownOpen ? (
+                    <ChevronUp className="stroke-base-100" />
+                  ) : (
+                    <ChevronDown className="stroke-base-100" />
+                  )}
+                </div>
+
+                {isStyleDropdownOpen && (
+                  <div className="absolute z-101 w-full bg-base-100 border border-base-300 rounded-md shadow-lg mt-1 top-full max-h-80 overflow-y-auto">
+                    <div className="p-2 sticky top-0 bg-base-100 border-b border-base-300 z-20">
+                      <div className="relative">
+                        <Search
+                          className="absolute z-100 left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                          size={18}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Search categories..."
+                          className="input input-bordered w-full pl-10 pr-3 rounded-md"
+                          value={styleSearchQuery}
+                          onChange={(e) =>
+                            setStyleSearchQuery(e.target.value)
+                          }
+                        />
+                      </div>
+                    </div>
+                    {
+                      <ul className="menu p-0 w-full">
+                        {filteredStyle.map((category) => (
+                          <li key={category.id}>
+                            <button
+                              onClick={() => handleStyleChange(category.link)}
+                              className={`font-[montserrat] btn border-0 shadow-0 bg-base-100 w-full text-left p-2 hover:bg-base-200 rounded-none
+        ${selectedCategory?.id === category.id ? 'font-bold bg-base-200' : ''}`}
+                            >
+                              {category.name}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    }
+                  </div>
+                )}
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -720,8 +830,8 @@ const Styles = () => {
           setIsBestSellerFilter={setIsBestSellerFilterCollection}
           isPromoFilter={isPromoFilterCollection}
           setIsPromoFilter={setIsPromoFilterCollection}
-          // isForeignFilter is NOT passed for collections as per request
-          setIsForeignFilter={() => {}} // Pass a no-op function to satisfy prop type if needed, or remove prop from modal if it's strictly for products
+          isForeignFilter={isForeignFilterCollection}
+          setIsForeignFilter={setIsForeignFilterCollection}
           setIsPriceFilterApplied={setIsPriceFilterAppliedCollection}
           onApplyFilters={handleApplyCollectionFilters}
           onClearFilters={handleClearCollectionFilters}
