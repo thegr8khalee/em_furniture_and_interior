@@ -4,34 +4,99 @@ import {
   MenuIcon, // For mobile drawer and admin sidebar toggle
   SearchIcon,
   ShoppingCart,
+  UserIcon, // For profile link
+  X, // NEW: Import X icon for close button
 } from 'lucide-react';
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom'; // Assuming you use Link for navigation
-import LogoLightMode from '../images/LogoLightMode.png'; // Assuming correct path
-// import LogoDarkMode from '../assets/images/logoDarkMode.png'; // If you have a dark mode logo
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import LogoLightMode from '../images/LogoLightMode.png';
 
-import { useAuthStore } from '../store/useAuthStore'; // Import auth store to check admin status
-import { useAdminStore } from '../store/useAdminStore'; // Import new admin dashboard UI store
+import { useAuthStore } from '../store/useAuthStore';
+import { useAdminStore } from '../store/useAdminStore';
+import { useCartStore } from '../store/useCartStore';
+import { useWishlistStore } from '../store/useWishlistStore';
+// import { useProductsStore } from '../store/useProductsStore'; // No longer needed if categories are hardcoded here
 
 const Navbar = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const isDashboard = location.pathname === '/admin/dashboard';
-  const { authUser, isAdmin } = useAuthStore(); // Get auth status and admin role
-  const { toggleSidebar, closeSidebar } = useAdminStore(); // Get sidebar toggle action
+  const { authUser, isAdmin } = useAuthStore();
+  const { toggleSidebar, closeSidebar: closeAdminSidebar } = useAdminStore();
+  const { cart } = useCartStore();
+  const { wishlist } = useWishlistStore();
 
-  // Determine if the general mobile drawer checkbox should be checked
-  // This is for the existing mobile drawer in Navbar, not the admin sidebar.
+  // Hardcoded categories (moved from useProductsStore import)
+  const uniqueCategories = [
+    { id: '1', name: 'Sofas', link: 'Living%20Room' },
+    { id: '2', name: 'Armchairs', link: 'Armchair' },
+    { id: '3', name: 'Living Rooms', link: 'Living%20Room' },
+    { id: '4', name: 'Bedrooms', link: 'Bedroom' },
+    { id: '5', name: 'Dining Rooms', link: 'Dining%20Room' },
+    { id: '6', name: 'Center Tables', link: 'Center%20Table' },
+    { id: '7', name: 'Wardrobe', link: 'Wardrobe' },
+    { id: '8', name: 'TV Unit', link: 'TV%20unit' },
+    { id: '9', name: 'Carpets', link: 'Carpet' },
+  ];
+
+  const [isDrawerChecked, setIsDrawerChecked] = useState(false);
+  const [activeDrawerTab, setActiveDrawerTab] = useState('categories');
+
+  // Hardcoded styles for the drawer switch
+  const hardcodedStyles = [
+    'Modern',
+    'Contemporary',
+    'Antique/Royal',
+    'Bespoke',
+    'Minimalist',
+    'Glam',
+  ].sort();
+
+  const closeDrawer = () => {
+    setIsDrawerChecked(false);
+  };
+
   const handleDrawerCheckboxChange = (e) => {
-    // If the general mobile drawer is opened, ensure admin sidebar is closed
+    setIsDrawerChecked(e.target.checked);
     if (e.target.checked) {
-      closeSidebar(); // Close admin sidebar if user opens general mobile drawer
+      closeAdminSidebar();
     }
   };
 
-  const navigate = useNavigate();
+  const handleCategoryLinkClick = (categoryLink) => {
+    // Changed parameter name to avoid confusion
+    navigate(`/shop?category=${categoryLink}`);
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+    closeDrawer();
+  };
+
+  const handleStyleLinkClick = (styleName) => {
+    navigate(`/styles/${encodeURIComponent(styleName)}`);
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+    closeDrawer();
+  };
 
   const handleMobileSearchClick = () => {
-    navigate('/shop', { state: { focusSearch: true } }); // Navigate and pass state
-    closeSidebar(); // Close the mobile drawer if it's open
+    navigate('/shop', { state: { focusSearch: true } });
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+    closeDrawer();
+  };
+
+  const handleDesktopSearchClick = () => {
+    navigate('/shop', { state: { focusSearch: true } });
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+  };
+
+  const handleCartClick = () => {
+    navigate('/cart');
   };
 
   return (
@@ -42,20 +107,15 @@ const Navbar = () => {
           id="my-drawer"
           type="checkbox"
           className="drawer-toggle"
+          checked={isDrawerChecked}
           onChange={handleDrawerCheckboxChange}
         />
         <div className="px-4 fixed navbar bg-base-100 items-center w-full top-0 z-20 drawer-content">
-          {' '}
-          {/* Adjusted z-index */}
           <div className="navbar-start">
-            {/* Conditional rendering for the MenuIcon:
-                            - If isAdmin, it toggles the AdminSidebar.
-                            - Otherwise, it toggles the general mobile drawer.
-                        */}
             {isAdmin && isDashboard ? (
               <button
                 className="btn bg-base-100 border-none"
-                onClick={toggleSidebar} // Toggle admin sidebar
+                onClick={toggleSidebar}
                 aria-label="Toggle admin sidebar"
               >
                 <MenuIcon />
@@ -71,11 +131,8 @@ const Navbar = () => {
             )}
           </div>
           <div className="navbar-center">
-            <Link to="/">
-              {' '}
-              {/* Use Link for navigation */}
+            <Link to="/" onClick={closeDrawer}>
               <img src={LogoLightMode} alt="Logo" className="h-10" />
-              {/* <img src={LogoDarkMode} alt="Logo" className="h-10 hidden dark:flex" /> */}
             </Link>
           </div>
           <div className="navbar-end">
@@ -84,71 +141,101 @@ const Navbar = () => {
               onClick={handleMobileSearchClick}
               aria-label="Search"
             >
-              {' '}
-              {/* Added btn-ghost */}
               <SearchIcon />
             </button>
           </div>
         </div>
         <div className="drawer-side z-40">
-          {' '}
-          {/* Adjusted z-index */}
           <label
             htmlFor="my-drawer"
             aria-label="close sidebar"
             className="drawer-overlay"
+            onClick={closeDrawer}
           ></label>
           <ul className="menu bg-base-200 text-base-content min-h-full w-80 p-4">
-            <li>
-              <Link to="/" className="btn btn-xl border-0 justify-start">
-                Home
-              </Link>
+            {/* Close Button */}
+            <li className="flex justify-end p-2">
+              <button
+                onClick={closeDrawer}
+                className="btn btn-ghost btn-circle"
+                aria-label="Close menu"
+              >
+                <X size={24} />
+              </button>
             </li>
-            <li>
-              <Link to="/menus" className="btn btn-xl border-0 justify-start">
-                Sofas
-              </Link>
+
+            {/* Categories/Styles Switch */}
+            <li className="mb-4">
+              <div className="tabs tabs-boxed w-full">
+                <button
+                  className={`tab flex-1 ${
+                    activeDrawerTab === 'categories' ? 'tab-active' : ''
+                  }`}
+                  onClick={() => setActiveDrawerTab('categories')}
+                >
+                  Categories
+                </button>
+                <button
+                  className={`tab flex-1 ${
+                    activeDrawerTab === 'styles' ? 'tab-active' : ''
+                  }`}
+                  onClick={() => setActiveDrawerTab('styles')}
+                >
+                  Styles
+                </button>
+              </div>
             </li>
-            <li>
-              <Link to="/menus" className="btn btn-xl border-0 justify-start">
-                Armchairs
-              </Link>
-            </li>
-            <li>
-              <Link to="/menus" className="btn btn-xl border-0 justify-start">
-                Living Rooms
-              </Link>
-            </li>
-            <li>
-              <Link to="/menus" className="btn btn-xl border-0 justify-start">
-                Bed Rooms
-              </Link>
-            </li>
-            <li>
-              <Link to="/menus" className="btn btn-xl border-0 justify-start">
-                Dining Rooms
-              </Link>
-            </li>
-            <li>
-              <Link to="/menus" className="btn btn-xl border-0 justify-start">
-                Center Tables
-              </Link>
-            </li>
-            <li>
-              <Link to="/menus" className="btn btn-xl border-0 justify-start">
-                Wardrobes
-              </Link>
-            </li>
-            <li>
-              <Link to="/menus" className="btn btn-xl border-0 justify-start">
-                TV Units
-              </Link>
-            </li>
-            <li>
-              <Link to="/menus" className="btn btn-xl border-0 justify-start">
-                Carpets
-              </Link>
-            </li>
+
+            {/* Conditional Rendering based on activeDrawerTab */}
+            {activeDrawerTab === 'categories' ? (
+              <>
+                <li>
+                  <Link
+                    to="/"
+                    className="btn btn-lg font-normal border-0 justify-start"
+                    onClick={closeDrawer}
+                  >
+                    Home
+                  </Link>
+                </li>
+                {uniqueCategories.map((category) => (
+                  <li key={category.id}>
+                    {' '}
+                    {/* FIX: Added key prop */}
+                    <button
+                      onClick={() => handleCategoryLinkClick(category.link)}
+                      className="btn  font-normal btn-lg border-0 justify-start"
+                    >
+                      {category.name} {/* FIX: Render category.name */}
+                    </button>
+                  </li>
+                ))}
+              </>
+            ) : (
+              <>
+                <li>
+                  <Link
+                    to="/"
+                    className="btn font-normal btn-lg border-0 justify-start"
+                    onClick={closeDrawer}
+                  >
+                    Home
+                  </Link>
+                </li>
+                {hardcodedStyles.map((style) => (
+                  <li key={style}>
+                    <button
+                      onClick={() => handleStyleLinkClick(style)}
+                      className="btn font-normal btn-lg border-0 justify-start"
+                    >
+                      {style}
+                    </button>
+                  </li>
+                ))}
+              </>
+            )}
+
+            {/* Other general navigation links (always visible) */}
           </ul>
         </div>
       </div>
@@ -195,36 +282,51 @@ const Navbar = () => {
         <div className="navbar-end space-x-2">
           {authUser ? (
             <>
-              <Link to="/profile" className="btn bg-base-100 border-none btn-ghost">
+              {isAdmin && (
+                <Link to="/admin/dashboard" className="btn btn-ghost">
+                  Admin Dashboard
+                </Link>
+              )}
+              <Link to="/profile" className="btn btn-ghost">
                 My Account
               </Link>
-              <button
-                onClick={useAuthStore.getState().logout}
-                className="btn bg-base-100 border-none btn-ghost"
-              >
-                Logout
-              </button>
             </>
           ) : (
             <>
-              <Link to="/profile" className="btn bg-base-100 border-none btn-ghost">
+              <Link to="/profile" className="btn btn-ghost">
                 Login
               </Link>
-              <Link to="/signup" className="btn bg-base-100 border-none btn-ghost">
+              <Link to="/signup" className="btn btn-ghost">
                 Signup
               </Link>
             </>
           )}
-          <button className="btn bg-base-100 border-none btn-ghost"
-          onClick={handleMobileSearchClick}>
+          <button
+            className="btn btn-ghost"
+            onClick={handleDesktopSearchClick}
+            aria-label="Search"
+          >
             <SearchIcon />
           </button>
-          <Link to="/cart" className="btn bg-base-100 border-none btn-ghost">
+          <button
+            className="relative btn btn-ghost"
+            onClick={() => handleCartClick()}
+          >
+            {cart.length !== 0 ? (
+              <div className="absolute right-1 top-0 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
+                {cart.length}
+              </div>
+            ) : null}
             <ShoppingCart />
-          </Link>
-          <Link to="/wishlist" className="btn bg-base-100 border-none btn-ghost">
+          </button>
+          <button className="relative btn btn-ghost">
+            {wishlist.length !== 0 ? (
+              <div className="absolute top-0 right-1 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
+                {wishlist.length}
+              </div>
+            ) : null}
             <HeartIcon />
-          </Link>
+          </button>
         </div>
       </div>
     </div>

@@ -1,18 +1,34 @@
 // src/components/BottomNavbar.jsx
 import React from 'react';
-import { Home, ShoppingBag, ShoppingCart, User, Heart, LayoutDashboard } from 'lucide-react'; // Example icons
+import {
+  Home,
+  ShoppingBag,
+  ShoppingCart,
+  User,
+  Heart,
+  LayoutDashboard,
+} from 'lucide-react'; // Example icons
 import { Link, useLocation } from 'react-router-dom'; // Use Link for navigation, useLocation for active state
 import { useAuthStore } from '../store/useAuthStore';
+import { useCartStore } from '../store/useCartStore';
+import { useWishlistStore } from '../store/useWishlistStore';
 
 const BottomNavbar = () => {
   const location = useLocation(); // Get current location to highlight active link
   const { isAdmin } = useAuthStore();
+  const { cart } = useCartStore();
+  const {wishlist} = useWishlistStore();
+
   // Define your navigation items
   const navItems = [
     { name: 'Shop', icon: ShoppingBag, path: '/shop' }, // Example shop page
     { name: 'Cart', icon: ShoppingCart, path: '/cart' }, // Example cart page
     { name: 'Wishlist', icon: Heart, path: '/wishlist' }, // Example wishlist page
-    { name: 'Profile', icon: isAdmin ? LayoutDashboard : User, path: isAdmin ? '/admin/dashboard' : '/profile' }, // Example profile page
+    {
+      name: 'Profile',
+      icon: isAdmin ? LayoutDashboard : User,
+      path: isAdmin ? '/admin/dashboard' : '/profile',
+    }, // Example profile page
   ];
 
   return (
@@ -27,7 +43,7 @@ const BottomNavbar = () => {
             <Link
               key={item.name}
               to={item.path}
-              className={`flex flex-col items-center justify-center p-1 rounded-lg transition-colors duration-200
+              className={`relative flex flex-col items-center justify-center p-1 rounded-lg transition-colors duration-200
                                 ${
                                   isActive
                                     ? 'text-primary'
@@ -36,6 +52,18 @@ const BottomNavbar = () => {
               aria-label={item.name}
             >
               <IconComponent size={24} className="mb-1" />
+              {item.name === 'Cart' && cart.length !== 0 ? (
+                <div className="absolute right-0 top-0 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
+                  {cart.length}
+                </div>
+              ) : null}
+
+              {item.name === 'Wishlist' && wishlist.length !== 0 ? (
+                <div className="absolute right-0 top-0 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
+                  {wishlist.length}
+                </div>
+              ) : null}
+
               <span className="text-xs font-medium">{item.name}</span>
             </Link>
           );

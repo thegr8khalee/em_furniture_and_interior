@@ -43,7 +43,7 @@ export const getCart = async (req, res) => {
 export const addToCart = async (req, res) => {
   // const { itemId } = req.params;
   const { itemId, quantity = 1 } = req.body; // Default quantity to 1
-    // console.log(req.body)
+  // console.log(req.body)
   if (!mongoose.Types.ObjectId.isValid(itemId)) {
     return res.status(400).json({ message: 'Invalid Item ID format.' });
   }
@@ -65,11 +65,9 @@ export const addToCart = async (req, res) => {
       if (foundItem) {
         itemType = 'Collection';
       } else {
-        return res
-          .status(404)
-          .json({
-            message: 'Item not found (neither Product nor Collection).',
-          });
+        return res.status(404).json({
+          message: 'Item not found (neither Product nor Collection).',
+        });
       }
     }
 
@@ -96,12 +94,10 @@ export const addToCart = async (req, res) => {
       }
 
       await user.save();
-      res
-        .status(200)
-        .json({
-          message: `${itemType} added to user cart successfully.`,
-          cart: user.cart,
-        });
+      res.status(200).json({
+        message: `${itemType} added to user cart successfully.`,
+        cart: user.cart,
+      });
     } else if (req.guestSession) {
       // Guest user
       let guestSession = await GuestSession.findOne({
@@ -132,12 +128,10 @@ export const addToCart = async (req, res) => {
       }
 
       await guestSession.save();
-      res
-        .status(200)
-        .json({
-          message: `${itemType} added to guest cart successfully.`,
-          cart: guestSession.cart,
-        });
+      res.status(200).json({
+        message: `${itemType} added to guest cart successfully.`,
+        cart: guestSession.cart,
+      });
     } else {
       return res
         .status(401)
@@ -177,12 +171,10 @@ export const removeFromCart = async (req, res) => {
       }
 
       await user.save();
-      res
-        .status(200)
-        .json({
-          message: 'Item removed from user cart successfully.',
-          cart: user.cart,
-        });
+      res.status(200).json({
+        message: 'Item removed from user cart successfully.',
+        cart: user.cart,
+      });
     } else if (req.guestSession) {
       // Guest user
       const guestSession = await GuestSession.findOne({
@@ -205,12 +197,10 @@ export const removeFromCart = async (req, res) => {
       }
 
       await guestSession.save();
-      res
-        .status(200)
-        .json({
-          message: 'Item removed from guest cart successfully.',
-          cart: guestSession.cart,
-        });
+      res.status(200).json({
+        message: 'Item removed from guest cart successfully.',
+        cart: guestSession.cart,
+      });
     } else {
       return res
         .status(401)
@@ -228,44 +218,34 @@ export const clearCart = async (req, res) => {
 
     // Determine if the request is from an authenticated user or a guest
     if (req.user && req.user._id) {
-      // Authenticated user
       currentCartOwner = await User.findById(req.user._id);
       if (!currentCartOwner) {
         return res
           .status(404)
           .json({ message: 'Authenticated user not found.' });
       }
-      // Clear the user's cart
-      currentCartOwner.cart = { items: [], totalPrice: 0 }; // Assuming cart structure
+      // FIX: Set cart to an empty array [] to match schema definition
+      currentCartOwner.cart = [];
       await currentCartOwner.save();
 
-      // Respond with the updated (empty) cart
-      return res
-        .status(200)
-        .json({
-          message: 'Cart cleared successfully for user.',
-          cart: currentCartOwner.cart,
-        });
+      return res.status(200).json({
+        message: 'Cart cleared successfully for user.',
+        cart: currentCartOwner.cart, // This will be []
+      });
     } else if (req.guestSession && req.guestSession._id) {
-      // Guest user (identified by identifyGuest middleware)
       currentCartOwner = await GuestSession.findById(req.guestSession._id);
       if (!currentCartOwner) {
-        // This case should ideally not happen if identifyGuest middleware is working correctly
         return res.status(404).json({ message: 'Guest session not found.' });
       }
-      // Clear the guest's cart
-      currentCartOwner.cart = { items: [], totalPrice: 0 }; // Assuming cart structure
+      // FIX: Set cart to an empty array [] to match schema definition
+      currentCartOwner.cart = [];
       await currentCartOwner.save();
 
-      // Respond with the updated (empty) cart
-      return res
-        .status(200)
-        .json({
-          message: 'Cart cleared successfully for guest.',
-          cart: currentCartOwner.cart,
-        });
+      return res.status(200).json({
+        message: 'Cart cleared successfully for guest.',
+        cart: currentCartOwner.cart, // This will be []
+      });
     } else {
-      // Neither authenticated user nor guest session found
       return res
         .status(401)
         .json({
@@ -273,7 +253,7 @@ export const clearCart = async (req, res) => {
         });
     }
   } catch (error) {
-    console.error('Error in clearCart controller:', error);
+    console.error('Error in clearCart controller:', error.message); // Log only message for cleaner output
     // Check if headers have already been sent before attempting to send response
     if (res.headersSent) {
       console.warn(
@@ -284,5 +264,89 @@ export const clearCart = async (req, res) => {
     res
       .status(500)
       .json({ message: 'Internal Server Error during cart clear operation.' });
+  }
+};
+
+export const updateCartItemQuantity = async (req, res) => {
+  const { itemId, itemType, quantity } = req.body;
+
+  // Input validation
+  if (!mongoose.Types.ObjectId.isValid(itemId)) {
+    return res.status(400).json({ message: 'Invalid Item ID format.' });
+  }
+  if (!['Product', 'Collection'].includes(itemType)) {
+    return res
+      .status(400)
+      .json({ message: 'Invalid item type. Must be Product or Collection.' });
+  }
+  if (typeof quantity !== 'number' || quantity < 0) {
+    // Quantity can be 0 to trigger removal
+    return res
+      .status(400)
+      .json({ message: 'Quantity must be a non-negative number.' });
+  }
+
+  try {
+    let cartOwner = null;
+
+    // Determine if it's an authenticated user or a guest
+    if (req.user && req.user._id) {
+      cartOwner = await User.findById(req.user._id);
+    } else if (req.guestSession && req.guestSession._id) {
+      cartOwner = await GuestSession.findOne({
+        anonymousId: req.guestSession.anonymousId,
+      });
+    } else {
+      return res
+        .status(401)
+        .json({ message: 'Unauthorized: No user or guest session found.' });
+    }
+
+    if (!cartOwner) {
+      return res.status(404).json({ message: 'Cart owner not found.' });
+    }
+
+    // Ensure cart.items exists and is an array
+    if (!cartOwner.cart || !Array.isArray(cartOwner.cart)) {
+      cartOwner.cart = []; // Initialize if it's missing or not an array
+    }
+
+    // Find the item in the cart
+    const itemIndex = cartOwner.cart.findIndex(
+      (cartItem) =>
+        cartItem.item.toString() === itemId.toString() &&
+        cartItem.itemType === itemType
+    );
+
+    if (itemIndex === -1) {
+      return res.status(404).json({ message: 'Item not found in cart.' });
+    }
+
+    // Update quantity or remove item if quantity is 0
+    if (quantity === 0) {
+      cartOwner.cart.splice(itemIndex, 1); // Remove item
+    } else {
+      cartOwner.cart[itemIndex].quantity = quantity; // Update quantity
+    }
+
+    await cartOwner.save();
+
+    // Respond with the updated cart items array (without populating 'item')
+    res.status(200).json({
+      message: 'Cart item quantity updated successfully.',
+      cart: cartOwner.cart, // Send back the raw cart array
+    });
+  } catch (error) {
+    console.error('Error in updateCartItemQuantity controller:', error);
+    // Check if headers have already been sent before attempting to send response
+    if (res.headersSent) {
+      console.warn(
+        'Headers already sent, cannot send error response from updateCartItemQuantity catch block.'
+      );
+      return;
+    }
+    res
+      .status(500)
+      .json({ message: 'Internal Server Error during cart quantity update.' });
   }
 };

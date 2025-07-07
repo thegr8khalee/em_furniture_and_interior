@@ -37,7 +37,7 @@ const AdminDashboard = () => {
     // }
 
     return (
-        <div className="flex min-h-screen w-screen bg-base-300">
+        <div className="flex min-h-screen w-screen bg-base-300 lg:pt-16">
             {/* Removed: Mobile Hamburger Menu Button (now in Navbar) */}
 
             {/* NEW: Mobile Overlay - uses closeSidebar from store */}

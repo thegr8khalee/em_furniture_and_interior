@@ -27,6 +27,7 @@ import CollectionDetailsPage from './pages/CollectionDetailPage';
 import Styles from './pages/Styles';
 import SignupPage from './pages/Signup';
 import ProfilePage from './pages/Profile';
+import CartPage from './pages/Cart';
 
 function App() {
   const { checkAuth, authUser, isAdmin } = useAuthStore();
@@ -39,7 +40,7 @@ function App() {
     getCollections();
   }, [checkAuth, getProducts, getCollections]); // Dependency array ensures it runs once on mount
 
-  console.log('AuthUser', authUser);
+  // console.log('AuthUser', authUser);
   // console.log('Products', products);
   // console.log('Collections', collections);
   return (
@@ -72,6 +73,7 @@ function App() {
           />
 
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/cart" element={<CartPage />} />
 
           <Route element={<AdminLoginProtectedRoute />}>
             <Route path="/admin/login" element={<AdminLoginPage />} />
