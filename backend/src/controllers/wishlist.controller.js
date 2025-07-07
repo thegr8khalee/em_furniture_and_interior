@@ -9,7 +9,10 @@ import mongoose from 'mongoose';
 export const getWishlist = async (req, res) => {
   try {
     let wishlist = [];
-    if (req.user) {
+    console.log(req.user)
+    if (req.user.role === 'admin') {
+      return;
+    } else if (req.user) {
       // Authenticated user
       const user = await User.findById(req.user._id).populate(
         'wishlist.item',
@@ -63,11 +66,9 @@ export const addToWishlist = async (req, res) => {
       if (foundItem) {
         itemType = 'Collection';
       } else {
-        return res
-          .status(404)
-          .json({
-            message: 'Item not found (neither Product nor Collection).',
-          });
+        return res.status(404).json({
+          message: 'Item not found (neither Product nor Collection).',
+        });
       }
     }
 
@@ -96,12 +97,10 @@ export const addToWishlist = async (req, res) => {
       user.wishlist.push({ item: itemId, itemType });
 
       await user.save();
-      res
-        .status(200)
-        .json({
-          message: `${itemType} added to user wishlist successfully.`,
-          wishlist: user.wishlist,
-        });
+      res.status(200).json({
+        message: `${itemType} added to user wishlist successfully.`,
+        wishlist: user.wishlist,
+      });
     } else if (req.guestSession) {
       // Guest user
       let guestSession = await GuestSession.findOne({
@@ -134,12 +133,10 @@ export const addToWishlist = async (req, res) => {
       guestSession.wishlist.push({ item: itemId, itemType });
 
       await guestSession.save();
-      res
-        .status(200)
-        .json({
-          message: `${itemType} added to guest wishlist successfully.`,
-          wishlist: guestSession.wishlist,
-        });
+      res.status(200).json({
+        message: `${itemType} added to guest wishlist successfully.`,
+        wishlist: guestSession.wishlist,
+      });
     } else {
       return res
         .status(401)
@@ -154,7 +151,7 @@ export const addToWishlist = async (req, res) => {
 export const removeFromWishlist = async (req, res) => {
   const { itemId } = req.body;
 
-  console.log(itemId)
+  console.log(itemId);
 
   if (!mongoose.Types.ObjectId.isValid(itemId)) {
     return res.status(400).json({ message: 'Invalid Item ID format.' });
@@ -181,12 +178,10 @@ export const removeFromWishlist = async (req, res) => {
       }
 
       await user.save();
-      res
-        .status(200)
-        .json({
-          message: 'Item removed from user wishlist successfully.',
-          wishlist: user.wishlist,
-        });
+      res.status(200).json({
+        message: 'Item removed from user wishlist successfully.',
+        wishlist: user.wishlist,
+      });
     } else if (req.guestSession) {
       // Guest user
       const guestSession = await GuestSession.findOne({
@@ -209,12 +204,10 @@ export const removeFromWishlist = async (req, res) => {
       }
 
       await guestSession.save();
-      res
-        .status(200)
-        .json({
-          message: 'Item removed from guest wishlist successfully.',
-          wishlist: guestSession.wishlist,
-        });
+      res.status(200).json({
+        message: 'Item removed from guest wishlist successfully.',
+        wishlist: guestSession.wishlist,
+      });
     } else {
       return res
         .status(401)
@@ -244,12 +237,10 @@ export const clearWishlist = async (req, res) => {
       await currentWishlistOwner.save();
 
       // Respond with the updated (empty) wishlist
-      return res
-        .status(200)
-        .json({
-          message: 'Wishlist cleared successfully for user.',
-          wishlist: currentWishlistOwner.wishlist,
-        });
+      return res.status(200).json({
+        message: 'Wishlist cleared successfully for user.',
+        wishlist: currentWishlistOwner.wishlist,
+      });
     } else if (req.guestSession && req.guestSession._id) {
       // Guest user (identified by identifyGuest middleware)
       currentWishlistOwner = await GuestSession.findById(req.guestSession._id);
@@ -262,19 +253,15 @@ export const clearWishlist = async (req, res) => {
       await currentWishlistOwner.save();
 
       // Respond with the updated (empty) wishlist
-      return res
-        .status(200)
-        .json({
-          message: 'Wishlist cleared successfully for guest.',
-          wishlist: currentWishlistOwner.wishlist,
-        });
+      return res.status(200).json({
+        message: 'Wishlist cleared successfully for guest.',
+        wishlist: currentWishlistOwner.wishlist,
+      });
     } else {
       // Neither authenticated user nor guest session found
-      return res
-        .status(401)
-        .json({
-          message: 'Unauthorized: No valid user or guest session found.',
-        });
+      return res.status(401).json({
+        message: 'Unauthorized: No valid user or guest session found.',
+      });
     }
   } catch (error) {
     console.error('Error in clearWishlist controller:', error);
@@ -285,10 +272,8 @@ export const clearWishlist = async (req, res) => {
       );
       return;
     }
-    res
-      .status(500)
-      .json({
-        message: 'Internal Server Error during wishlist clear operation.',
-      });
+    res.status(500).json({
+      message: 'Internal Server Error during wishlist clear operation.',
+    });
   }
 };

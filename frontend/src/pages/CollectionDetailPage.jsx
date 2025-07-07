@@ -15,6 +15,8 @@ import { useCollectionStore } from '../store/useCollectionStore';
 import whatsapp from '../images/whatsapp.png';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
+// import { useAdminStore } from '../store/useAdminStore';
+import { useAuthStore } from '../store/useAuthStore';
 
 const CollectionDetailsPage = () => {
   const { collectionId } = useParams();
@@ -38,6 +40,8 @@ const CollectionDetailsPage = () => {
     isGettingProducts,
   } = useProductsStore();
 
+  const { isAdmin } = useAuthStore();
+
   // Fetch collection details when component mounts or collectionId changes
   useEffect(() => {
     if (collectionId) {
@@ -45,7 +49,9 @@ const CollectionDetailsPage = () => {
     }
     // Ensure all products are fetched to filter them later
     getProducts();
-    getwishlist();
+    if (!isAdmin) {
+      getwishlist();
+    }
   }, [collectionId, getCollectionById, getProducts, getwishlist]);
 
   //   console.log(collection)
@@ -230,51 +236,55 @@ const CollectionDetailsPage = () => {
           </div>
         </div>
       </div>
-      <div className="px-4 mb-6 sm:flex space-x-2 space-y-2">
-        <button
-          className=" btn bg-green-500 text-base-100 flex-3 w-full rounded-xl font-[poppins] shadow-none border-0"
-          onClick={handleAddToCart}
-        >
-          <img src={whatsapp} alt="" className="size-6" />
-          Order Now
-        </button>
+      {!isAdmin ? (
+        <div className="px-4 mb-6 sm:flex space-x-2 space-y-2">
+          <button
+            className=" btn bg-green-500 text-base-100 flex-3 w-full rounded-xl font-[poppins] shadow-none border-0"
+            onClick={handleAddToCart}
+          >
+            <img src={whatsapp} alt="" className="size-6" />
+            Order Now
+          </button>
 
-        <button
-          className="btn btn-primary text-secondary flex-3 w-full rounded-xl font-[poppins] shadow-none border-0"
-          onClick={() => handleAddToCart(collectionId, 1, 'Collection')}
-        >
-          {isAddingToCart ? (
-            <Loader2 className="animate-spin" />
+          <button
+            className="btn btn-primary text-secondary flex-3 w-full rounded-xl font-[poppins] shadow-none border-0"
+            onClick={() => handleAddToCart(collectionId, 1, 'Collection')}
+          >
+            {isAddingToCart ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <ShoppingCart size={20} />
+            )}
+            Add to Cart
+          </button>
+          {isInWishlist(collectionId) ? (
+            <button
+              className="btn btn-primary flex-3 w-full rounded-xl font-[poppins] shadow-none"
+              onClick={() =>
+                handleRemovefromWishlist(collectionId, 'Collection')
+              }
+            >
+              {isRemovingFromwishlist ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <Heart size={20} className="fill-white stroke-0" />
+              )}
+            </button>
           ) : (
-            <ShoppingCart size={20} />
+            <button
+              className="btn btn-outline btn-primary flex-3 w-full rounded-xl font-[poppins] shadow-none"
+              onClick={() => handleAddToWishlist(collectionId, 'Collection')}
+            >
+              {isAddingTowishlist ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <Heart size={20} />
+              )}
+              Wishlist
+            </button>
           )}
-          Add to Cart
-        </button>
-        {isInWishlist(collectionId) ? (
-          <button
-            className="btn btn-primary flex-3 w-full rounded-xl font-[poppins] shadow-none"
-            onClick={() => handleRemovefromWishlist(collectionId, 'Collection')}
-          >
-            {isRemovingFromwishlist ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <Heart size={20} className="fill-white stroke-0" />
-            )}
-          </button>
-        ) : (
-          <button
-            className="btn btn-outline btn-primary flex-3 w-full rounded-xl font-[poppins] shadow-none"
-            onClick={() => handleAddToWishlist(collectionId, 'Collection')}
-          >
-            {isAddingTowishlist ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <Heart size={20} />
-            )}
-            Wishlist
-          </button>
-        )}
-      </div>
+        </div>
+      ) : null}
       {/* Products in this Collection */}
       <h2 className="text-xl font-bold mb-6 text-center font-[poppins]">
         Products in this Collection
@@ -303,33 +313,37 @@ const CollectionDetailsPage = () => {
                 />
               </button>
 
-              {isInWishlist(product._id) ? (
-                <button
-                  className="absolute top-3 right-3"
-                  aria-label="reomove from wishlist"
-                  onClick={() =>
-                    handleRemovefromWishlist(product._id, 'Collection')
-                  }
-                >
-                  {isRemovingFromwishlist ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <Heart className="text-primary size-7 fill-primary" />
-                  )}
-                </button>
-              ) : (
-                <button
-                  className="absolute top-3 right-3"
-                  aria-label="Add to wishlist"
-                  onClick={() => handleAddToWishlist(product._id, 'Collection')}
-                >
-                  {isAddingTowishlist ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <Heart className="text-primary size-7" />
-                  )}
-                </button>
-              )}
+              {!isAdmin ? (
+                isInWishlist(product._id) ? (
+                  <button
+                    className="absolute top-3 right-3"
+                    aria-label="reomove from wishlist"
+                    onClick={() =>
+                      handleRemovefromWishlist(product._id, 'Collection')
+                    }
+                  >
+                    {isRemovingFromwishlist ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <Heart className="text-primary size-7 fill-primary" />
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    className="absolute top-3 right-3"
+                    aria-label="Add to wishlist"
+                    onClick={() =>
+                      handleAddToWishlist(product._id, 'Collection')
+                    }
+                  >
+                    {isAddingTowishlist ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <Heart className="text-primary size-7" />
+                    )}
+                  </button>
+                )
+              ) : null}
               <span className="absolute bottom-3 left-3 text-base text-shadow-lg truncate text-base-100 font-[montserrat]">
                 {product.style}
               </span>
@@ -362,21 +376,23 @@ const CollectionDetailsPage = () => {
                     </span>
                   )}
                 </div>
-                <div className="space-x-1">
-                  <button className="btn rounded-xl bg-green-400">
-                    <img src={whatsapp} alt="WhatsApp" className="size-5" />
-                  </button>
-                  <button
-                    className="btn rounded-xl bg-primary"
-                    onClick={() => handleAddToCart(product._id, 1, 'Product')}
-                  >
-                    {isAddingToCart ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <ShoppingCart className="" />
-                    )}
-                  </button>
-                </div>
+                {!isAdmin ? (
+                  <div className="space-x-1">
+                    <button className="btn rounded-xl bg-green-400">
+                      <img src={whatsapp} alt="WhatsApp" className="size-5" />
+                    </button>
+                    <button
+                      className="btn rounded-xl bg-primary"
+                      onClick={() => handleAddToCart(product._id, 1, 'Product')}
+                    >
+                      {isAddingToCart ? (
+                        <Loader2 className="animate-spin" />
+                      ) : (
+                        <ShoppingCart className="" />
+                      )}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

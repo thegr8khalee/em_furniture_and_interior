@@ -39,7 +39,7 @@ function App() {
     getCollections();
   }, [checkAuth, getProducts, getCollections]); // Dependency array ensures it runs once on mount
 
-  // console.log('AuthUser', authUser);
+  console.log('AuthUser', authUser);
   // console.log('Products', products);
   // console.log('Collections', collections);
   return (

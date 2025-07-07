@@ -14,6 +14,7 @@ import { useProductsStore } from '../store/useProductsStore';
 import whatsapp from '../images/whatsapp.png';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
+import { useAuthStore } from '../store/useAuthStore';
 const ProductPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -28,6 +29,8 @@ const ProductPage = () => {
     isRemovingFromwishlist,
   } = useWishlistStore();
 
+  const { isAdmin } = useAuthStore();
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // NEW: Refs for touch events
@@ -40,7 +43,9 @@ const ProductPage = () => {
     if (productId) {
       getProductById(productId);
     }
-    getwishlist();
+    if (!isAdmin) {
+      getwishlist();
+    }
   }, [productId, getProductById, getwishlist]);
 
   // Reset currentImageIndex when product changes (e.g., navigating to a new product page)
@@ -297,50 +302,54 @@ const ProductPage = () => {
           <p className="text text-gray-700 font-[montserrat]">
             {product.description}
           </p>
-          <button
-            className="my-4 btn bg-green-500 text-base-100 w-full rounded-xl font-[poppins] shadow-none border-0"
-            onClick={handleAddToCart}
-          >
-            <img src={whatsapp} alt="" className="size-6" />
-            Order Now
-          </button>
-          <div className="flex space-x-4 mb-6">
+          {!isAdmin ? (
             <button
-              className="btn btn-primary text-secondary flex-1 rounded-xl font-[poppins] shadow-none border-0"
-              onClick={() => handleAddToCart(product._id, 1, 'Product')}
+              className="my-4 btn bg-green-500 text-base-100 w-full rounded-xl font-[poppins] shadow-none border-0"
+              onClick={handleAddToCart}
             >
-              {isAddingToCart ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <ShoppingCart size={20} />
-              )}
-              Add to Cart
+              <img src={whatsapp} alt="" className="size-6" />
+              Order Now
             </button>
-            {isInWishlist ? (
+          ) : null}
+          {!isAdmin ? (
+            <div className="flex space-x-4 mb-6">
               <button
-                className="btn btn-primary flex-1 rounded-xl font-[poppins] shadow-none"
-                onClick={() => handleRemovefromWishlist(productId, 'Product')}
+                className="btn btn-primary text-secondary flex-1 rounded-xl font-[poppins] shadow-none border-0"
+                onClick={() => handleAddToCart(product._id, 1, 'Product')}
               >
-                {isRemovingFromwishlist ? (
+                {isAddingToCart ? (
                   <Loader2 className="animate-spin" />
                 ) : (
-                  <Heart size={20} className="stroke-0 fill-white" />
+                  <ShoppingCart size={20} />
                 )}
+                Add to Cart
               </button>
-            ) : (
-              <button
-                className="btn btn-outline btn-primary flex-1 rounded-xl font-[poppins] shadow-none"
-                onClick={() => handleAddToWishlist(product._id, 'Product')}
-              >
-                {isAddingTowishlist ? (
-                  <Loader2 className="animate-spin" />
-                ) : (
-                  <Heart size={20} />
-                )}
-                Wishlist
-              </button>
-            )}
-          </div>
+              {isInWishlist ? (
+                <button
+                  className="btn btn-primary flex-1 rounded-xl font-[poppins] shadow-none"
+                  onClick={() => handleRemovefromWishlist(productId, 'Product')}
+                >
+                  {isRemovingFromwishlist ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <Heart size={20} className="stroke-0 fill-white" />
+                  )}
+                </button>
+              ) : (
+                <button
+                  className="btn btn-outline btn-primary flex-1 rounded-xl font-[poppins] shadow-none"
+                  onClick={() => handleAddToWishlist(product._id, 'Product')}
+                >
+                  {isAddingTowishlist ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <Heart size={20} />
+                  )}
+                  Wishlist
+                </button>
+              )}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
