@@ -710,13 +710,13 @@ const Styles = () => {
                     <div className="p-2">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h2 className="text-lg font-semibold truncate">
+                          <h2 className="text font whitespace-nowrap truncate">
                             {product.name}
                           </h2>
                           {product.isPromo &&
                           product.discountedPrice !== undefined ? (
                             <div className="flex flex-col">
-                              <span className="text-red-600 font-bold text-xl">
+                              <span className="text-red-600 font-bold text-lg">
                                 N{product.discountedPrice.toFixed(2)}
                               </span>
                               <span className="text-gray-500 line-through text-sm">
@@ -724,7 +724,7 @@ const Styles = () => {
                               </span>
                             </div>
                           ) : (
-                            <span className="font-bold text-xl">
+                            <span className="font-semibold text-lg">
                               N{product.price.toFixed(2)}
                             </span>
                           )}
@@ -847,19 +847,19 @@ const Styles = () => {
                     <div className="p-2">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h2 className="text-lg font-semibold truncate">
+                          <h2 className="font whitespace-nowrap truncate">
                             {collection.name}
                           </h2>
-                          {collection.collectionId &&
+                          {/* {collection.collectionId &&
                             collection.collectionId.name && (
                               <p className="text-sm text-gray-500 mb-1">
                                 Collection: {collection.collectionId.name}
                               </p>
-                            )}
+                            )} */}
                           {collection.isPromo &&
                           collection.discountedPrice !== undefined ? (
                             <div className="flex flex-col">
-                              <span className="text-red-600 font-bold text-xl">
+                              <span className="text-red-600 font-bold text-lg">
                                 N{collection.discountedPrice.toFixed(2)}
                               </span>
                               <span className="text-gray-500 line-through text-sm">
@@ -867,7 +867,7 @@ const Styles = () => {
                               </span>
                             </div>
                           ) : (
-                            <span className="font-bold text-xl">
+                            <span className="font-semibold text-lg">
                               N{collection.price.toFixed(2)}
                             </span>
                           )}
