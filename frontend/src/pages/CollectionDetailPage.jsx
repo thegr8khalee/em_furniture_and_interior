@@ -56,16 +56,17 @@ const CollectionDetailsPage = () => {
   );
 
   // Placeholder functions for cart and wishlist (reusing from ProductPage)
-  const handleAddToCart = (id) => {
-    addToCart(id);
+  const handleAddToCart = (id, quantity, type) => {
+    addToCart(id, quantity, type);
   };
 
-  const handleAddToWishlist = (id) => {
-    addToWishlist(id);
+  // console.log(wishlist);
+  const handleAddToWishlist = (id, type) => {
+    addToWishlist(id, type);
   };
 
-  const handleRemovefromWishlist = (id) => {
-    removeFromwishlist(id);
+  const handleRemovefromWishlist = (id, type) => {
+    removeFromwishlist(id, type);
   };
 
   const handleProductClick = (Id) => {
@@ -75,11 +76,8 @@ const CollectionDetailsPage = () => {
     }, 10);
   };
 
-  const isInWishlist = (wishlist || []).some(
-    (wishlistItem) =>
-      wishlistItem.item === collectionId &&
-      wishlistItem.itemType === 'Collection'
-  );
+  const isInWishlist = (id) =>
+    (wishlist || []).some((wishlistItem) => wishlistItem.item === id);
 
   // Combined loading state
   if (isGettingCollection || isGettingProducts) {
@@ -243,7 +241,7 @@ const CollectionDetailsPage = () => {
 
         <button
           className="btn btn-primary text-secondary flex-3 w-full rounded-xl font-[poppins] shadow-none border-0"
-          onClick={() => handleAddToCart(collectionId)}
+          onClick={() => handleAddToCart(collectionId, 1, 'Collection')}
         >
           {isAddingToCart ? (
             <Loader2 className="animate-spin" />
@@ -252,10 +250,10 @@ const CollectionDetailsPage = () => {
           )}
           Add to Cart
         </button>
-        {isInWishlist ? (
+        {isInWishlist(collectionId) ? (
           <button
             className="btn btn-primary flex-3 w-full rounded-xl font-[poppins] shadow-none"
-            onClick={() => handleRemovefromWishlist(collectionId)}
+            onClick={() => handleRemovefromWishlist(collectionId, 'Collection')}
           >
             {isRemovingFromwishlist ? (
               <Loader2 className="animate-spin" />
@@ -266,7 +264,7 @@ const CollectionDetailsPage = () => {
         ) : (
           <button
             className="btn btn-outline btn-primary flex-3 w-full rounded-xl font-[poppins] shadow-none"
-            onClick={() => handleAddToWishlist(collectionId)}
+            onClick={() => handleAddToWishlist(collectionId, 'Collection')}
           >
             {isAddingTowishlist ? (
               <Loader2 className="animate-spin" />
@@ -305,12 +303,33 @@ const CollectionDetailsPage = () => {
                 />
               </button>
 
-              <button
-                className="absolute top-3 right-3"
-                aria-label="Add to wishlist"
-              >
-                <Heart className="text-primary size-7" />
-              </button>
+              {isInWishlist(product._id) ? (
+                <button
+                  className="absolute top-3 right-3"
+                  aria-label="reomove from wishlist"
+                  onClick={() =>
+                    handleRemovefromWishlist(product._id, 'Collection')
+                  }
+                >
+                  {isRemovingFromwishlist ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <Heart className="text-primary size-7 fill-primary" />
+                  )}
+                </button>
+              ) : (
+                <button
+                  className="absolute top-3 right-3"
+                  aria-label="Add to wishlist"
+                  onClick={() => handleAddToWishlist(product._id, 'Collection')}
+                >
+                  {isAddingTowishlist ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <Heart className="text-primary size-7" />
+                  )}
+                </button>
+              )}
               <span className="absolute bottom-3 left-3 text-base text-shadow-lg truncate text-base-100 font-[montserrat]">
                 {product.style}
               </span>
@@ -349,7 +368,7 @@ const CollectionDetailsPage = () => {
                   </button>
                   <button
                     className="btn rounded-xl bg-primary"
-                    onClick={() => handleAddToCart(product._id)}
+                    onClick={() => handleAddToCart(product._id, 1, 'Product')}
                   >
                     {isAddingToCart ? (
                       <Loader2 className="animate-spin" />

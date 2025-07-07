@@ -195,33 +195,34 @@ const Navbar = () => {
         <div className="navbar-end space-x-2">
           {authUser ? (
             <>
-              <Link to="/my-account" className="btn btn-ghost">
+              <Link to="/profile" className="btn bg-base-100 border-none btn-ghost">
                 My Account
               </Link>
               <button
                 onClick={useAuthStore.getState().logout}
-                className="btn btn-ghost"
+                className="btn bg-base-100 border-none btn-ghost"
               >
                 Logout
               </button>
             </>
           ) : (
             <>
-              <Link to="/login" className="btn btn-ghost">
+              <Link to="/profile" className="btn bg-base-100 border-none btn-ghost">
                 Login
               </Link>
-              <Link to="/signup" className="btn btn-ghost">
+              <Link to="/signup" className="btn bg-base-100 border-none btn-ghost">
                 Signup
               </Link>
             </>
           )}
-          <button className="btn btn-ghost">
+          <button className="btn bg-base-100 border-none btn-ghost"
+          onClick={handleMobileSearchClick}>
             <SearchIcon />
           </button>
-          <Link to="/cart" className="btn btn-ghost">
+          <Link to="/cart" className="btn bg-base-100 border-none btn-ghost">
             <ShoppingCart />
           </Link>
-          <Link to="/wishlist" className="btn btn-ghost">
+          <Link to="/wishlist" className="btn bg-base-100 border-none btn-ghost">
             <HeartIcon />
           </Link>
         </div>

@@ -35,9 +35,10 @@ const Styles = () => {
     isRemovingFromwishlist,
   } = useWishlistStore();
 
-  const handleAddtoCart = (id) => {
-    addToCart(id);
+  const handleAddtoCart = (id, quantity, type) => {
+    addToCart(id, quantity, type);
   };
+
   const [viewMode, setViewMode] = useState('products');
 
   const designs = [
@@ -386,13 +387,12 @@ const Styles = () => {
 
   const isInWishlist = (id) =>
     (wishlist || []).some((wishlistItem) => wishlistItem.item === id);
-
-  const handleAddToWishlist = (id) => {
-    addToWishlist(id);
+  const handleAddToWishlist = (id, type) => {
+    addToWishlist(id, type);
   };
 
-  const handleRemovefromWishlist = (id) => {
-    removeFromwishlist(id);
+  const handleRemovefromWishlist = (id, type) => {
+    removeFromwishlist(id, type);
   };
 
   // Combined loading state
@@ -676,7 +676,7 @@ const Styles = () => {
                         <button
                           className="absolute top-3 right-3"
                           aria-label="reomove from wishlist"
-                          onClick={() => handleRemovefromWishlist(product._id)}
+                          onClick={() => handleRemovefromWishlist(product._id, 'Product')}
                         >
                           {isRemovingFromwishlist ? (
                             <Loader2 className="animate-spin" />
@@ -688,7 +688,7 @@ const Styles = () => {
                         <button
                           className="absolute top-3 right-3"
                           aria-label="Add to wishlist"
-                          onClick={() => handleAddToWishlist(product._id)}
+                          onClick={() => handleAddToWishlist(product._id, 'Product')}
                         >
                           {isAddingTowishlist ? (
                             <Loader2 className="animate-spin" />
@@ -739,7 +739,7 @@ const Styles = () => {
                           </button>
                           <button
                             className="btn rounded-xl bg-primary"
-                            onClick={() => handleAddtoCart(product._id)}
+                            onClick={() => handleAddtoCart(product._id, 1, 'Product')}
                           >
                             {isAddingToCart ? (
                               <Loader2 className="animate-spin" />
@@ -818,7 +818,7 @@ const Styles = () => {
                           className="absolute top-3 right-3"
                           aria-label="reomove from wishlist"
                           onClick={() =>
-                            handleRemovefromWishlist(collection._id)
+                            handleRemovefromWishlist(collection._id, 'Collection')
                           }
                         >
                           {isRemovingFromwishlist ? (
@@ -831,7 +831,7 @@ const Styles = () => {
                         <button
                           className="absolute top-3 right-3"
                           aria-label="Add to wishlist"
-                          onClick={() => handleAddToWishlist(collection._id)}
+                          onClick={() => handleAddToWishlist(collection._id, 'Collection')}
                         >
                           {isAddingTowishlist ? (
                             <Loader2 className="animate-spin" />
@@ -882,7 +882,7 @@ const Styles = () => {
                           </button>
                           <button
                             className="btn rounded-xl bg-primary"
-                            onClick={() => handleAddtoCart(collection._id)}
+                            onClick={() => handleAddtoCart(collection._id, 1, 'Collection')}
                           >
                             {isAddingToCart ? (
                               <Loader2 className="animate-spin" />

@@ -95,23 +95,24 @@ const ProductPage = () => {
   };
 
   // Placeholder functions for cart and wishlist
-  const handleAddToCart = (data) => {
-    addToCart(data);
+  const handleAddToCart = (id, quantity, type) => {
+    addToCart(id, quantity, type);
   };
 
-  const handleAddToWishlist = (id) => {
-    addToWishlist(id);
+  // console.log(wishlist);
+  const handleAddToWishlist = (id, type) => {
+    addToWishlist(id, type);
   };
 
-  const handleRemovefromWishlist = (id) => {
-    removeFromwishlist(id);
+  const handleRemovefromWishlist = (id, type) => {
+    removeFromwishlist(id, type);
   };
 
   const isInWishlist = (wishlist || []).some(
     (wishlistItem) =>
-      wishlistItem.item === product._id && wishlistItem.itemType === 'Product'
+      wishlistItem.item === productId && wishlistItem.itemType === 'Product'
   );
-  console.log(wishlist);
+  // console.log(wishlist);
 
   // Loading state
   if (isGettingProduct) {
@@ -306,7 +307,7 @@ const ProductPage = () => {
           <div className="flex space-x-4 mb-6">
             <button
               className="btn btn-primary text-secondary flex-1 rounded-xl font-[poppins] shadow-none border-0"
-              onClick={() => handleAddToCart(product._id)}
+              onClick={() => handleAddToCart(product._id, 1, 'Product')}
             >
               {isAddingToCart ? (
                 <Loader2 className="animate-spin" />
@@ -318,7 +319,7 @@ const ProductPage = () => {
             {isInWishlist ? (
               <button
                 className="btn btn-primary flex-1 rounded-xl font-[poppins] shadow-none"
-                onClick={() => handleRemovefromWishlist(productId)}
+                onClick={() => handleRemovefromWishlist(productId, 'Product')}
               >
                 {isRemovingFromwishlist ? (
                   <Loader2 className="animate-spin" />
@@ -329,7 +330,7 @@ const ProductPage = () => {
             ) : (
               <button
                 className="btn btn-outline btn-primary flex-1 rounded-xl font-[poppins] shadow-none"
-                onClick={() => handleAddToWishlist(product._id)}
+                onClick={() => handleAddToWishlist(product._id, 'Product')}
               >
                 {isAddingTowishlist ? (
                   <Loader2 className="animate-spin" />
