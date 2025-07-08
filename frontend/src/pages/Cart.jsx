@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useCartStore } from '../store/useCartStore';
 import { Loader2, Trash2, Minus, Plus, ShoppingCart, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { axiosInstance } from '../lib/axios.js';
 import whatsapp from '../images/whatsapp.png';
 import Hero1 from '../images/Hero1.png';
@@ -150,6 +150,15 @@ const CartPage = () => {
     0
   );
 
+  const navigate = useNavigate();
+
+  const handleShopClick = () => {
+    navigate(`/shop`);
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+  };
+
   // Overall loading state for the page
   const isLoadingPage =
     isGettingCart ||
@@ -173,12 +182,15 @@ const CartPage = () => {
   // cart is now an array, so check cart.length
   if (!cart || cart.length === 0 || detailedCartItems.length === 0) {
     return (
-      <div className="pt-16 overflow-x-hidden">
+      <div className="py-16 overflow-x-hidden">
         <div className="text-center text-xl text-gray-600 mt-16">
           Your cart is empty.{' '}
-          <Link to="/shop" className="text-primary hover:underline">
+          <button
+            className="btn bg-primary rounded-xl"
+            onClick={() => handleShopClick()}
+          >
             Start shopping!
-          </Link>
+          </button>
         </div>
       </div>
     );

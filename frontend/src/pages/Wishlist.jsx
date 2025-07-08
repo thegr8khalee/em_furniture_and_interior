@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useWishlistStore } from '../store/useWishlistStore';
 import { useCartStore } from '../store/useCartStore'; // Import cart store for "Add to Cart"
 import { Loader2, Trash2, ShoppingCart, Heart } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { axiosInstance } from '../lib/axios.js'; // For fetching product/collection details
 import Hero1 from '../images/Hero1.png';
 
@@ -125,6 +125,15 @@ const WishlistPage = () => {
     await addToCart(itemId, quantity, itemType);
   };
 
+  const navigate = useNavigate();
+
+  const handleShopClick = () => {
+    navigate(`/shop`);
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+  };
+
   // Overall loading state for the page
   const isLoadingPage =
     isGettingWishlist || isFetchingDetails || isAddingToWishlist;
@@ -147,12 +156,15 @@ const WishlistPage = () => {
     detailedWishlistItems.length === 0
   ) {
     return (
-      <div className="pt-16">
+      <div className="py-16 overflow-x-hidden">
         <div className="text-center text-xl text-gray-600 mt-16">
-          Your wishlist is empty.{' '}
-          <Link to="/shop" className="text-primary hover:underline">
-            Start adding items!
-          </Link>
+          Your cart is empty.{' '}
+          <button
+            className="btn bg-primary rounded-xl"
+            onClick={() => handleShopClick()}
+          >
+            Start shopping!
+          </button>
         </div>
       </div>
     );
@@ -169,7 +181,6 @@ const WishlistPage = () => {
         </div>
       </div>
       <div className="container mx-auto p-2 sm:p-6 lg:p-8">
-
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Wishlist Items List */}
           <div className="flex-1 bg-base-100 p-2 rounded-lg shadow-xl">
