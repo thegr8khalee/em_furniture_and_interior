@@ -362,6 +362,24 @@ const ShopPage = () => {
     removeFromwishlist(id, type);
   };
 
+  const whatsappNumber = '2349037691860'; // Your actual WhatsApp number
+
+  // Construct the base product URL dynamically using window.location.origin
+  // This will correctly resolve to http://localhost:5173 or your actual deployed domain
+  const productLink = (id) => `${window.location.origin}/product/${id}`;
+
+  // Construct the full message, ensuring it's fully URL-encoded
+  const fullMessage = (product) =>
+    encodeURIComponent(
+      `I want to Order this: ${product.name}.\n` + // Use \n for new lines in WhatsApp
+        `Price: N${
+          product?.discountedPrice?.toFixed(2) || product.price?.toFixed(2)
+        }.\n` +
+        `Link: ${productLink(product._id)}`
+    );
+
+  const whatsappHref = (product) =>
+    `https://wa.me/${whatsappNumber}?text=${fullMessage(product)}`;
   //   console.log(location.state)
 
   // Combined loading state
@@ -639,13 +657,16 @@ const ShopPage = () => {
                         </div>
                         {!isAdmin ? (
                           <div className="space-x-1">
-                            <button className="btn rounded-xl bg-green-400">
+                            <a
+                              href={whatsappHref(product)}
+                              className="btn rounded-xl bg-green-400"
+                            >
                               <img
                                 src={whatsapp}
                                 alt="WhatsApp"
                                 className="size-5"
                               />
-                            </button>
+                            </a>
                             <button
                               className="btn rounded-xl bg-primary"
                               onClick={() =>
@@ -793,13 +814,16 @@ const ShopPage = () => {
                         </div>
                         {!isAdmin ? (
                           <div className="space-x-1">
-                            <button className="btn rounded-xl bg-green-400">
+                            <a
+                              href={whatsappHref(collection)}
+                              className="btn rounded-xl bg-green-400"
+                            >
                               <img
                                 src={whatsapp}
                                 alt="WhatsApp"
                                 className="size-5"
                               />
-                            </button>
+                            </a>
                             <button
                               className="btn rounded-xl bg-primary"
                               onClick={() =>

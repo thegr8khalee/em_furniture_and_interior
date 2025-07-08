@@ -158,7 +158,7 @@ const WishlistPage = () => {
     return (
       <div className="py-16 overflow-x-hidden">
         <div className="text-center text-xl text-gray-600 mt-16">
-          Your cart is empty.{' '}
+          Your wishlist is empty.{' '}
           <button
             className="btn bg-primary rounded-xl"
             onClick={() => handleShopClick()}

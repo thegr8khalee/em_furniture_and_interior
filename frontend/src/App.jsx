@@ -45,6 +45,14 @@ function App() {
     getCollections();
   }, [checkAuth, getProducts, getCollections]); // Dependency array ensures it runs once on mount
 
+  const whatsappPhoneNumber = '2349037691860'; // REPLACE WITH YOUR ACTUAL PHONE NUMBER
+  // Your preset message (URL-encoded)
+  const presetMessage = encodeURIComponent(
+    "Hello, I'm interested in your products. I saw your website and would like to inquire more."
+  );
+
+  const whatsappLink = `https://wa.me/${whatsappPhoneNumber}?text=${presetMessage}`;
+
   // console.log('AuthUser', authUser);
   // console.log('Products', products);
   // console.log('Collections', collections);
@@ -111,9 +119,19 @@ function App() {
         </Routes>{' '}
       </main>
       <Footer />
-      <button className="bg-none size-20 border-none fixed bottom-25 lg:bottom-6 right-6 rounded-full shadow-lg transition-colors duration-200 z-40 flex items-center justify-center">
-        <img src={whatsapp} alt="" className="" />
-      </button>
+      <a
+        href={whatsappLink}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="bg-none size-20 border-none fixed bottom-25 lg:bottom-6 right-6 rounded-full shadow-lg transition-colors duration-200 z-40 flex items-center justify-center"
+        aria-label="Chat on WhatsApp"
+      >
+        <img
+          src={whatsapp}
+          alt="WhatsApp Chat"
+          className="w-full h-full object-contain"
+        />
+      </a>
       <Toaster />
       {/* ... other layout components */}
     </div>

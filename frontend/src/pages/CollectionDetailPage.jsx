@@ -85,6 +85,25 @@ const CollectionDetailsPage = () => {
   const isInWishlist = (id) =>
     (wishlist || []).some((wishlistItem) => wishlistItem.item === id);
 
+  const whatsappNumber = '2349037691860'; // Your actual WhatsApp number
+
+  // Construct the base product URL dynamically using window.location.origin
+  // This will correctly resolve to http://localhost:5173 or your actual deployed domain
+  const productLink = (id) => `${window.location.origin}/product/${id}`;
+
+  // Construct the full message, ensuring it's fully URL-encoded
+  const fullMessage = (product) =>
+    encodeURIComponent(
+      `I want to Order this: ${product.name}.\n` + // Use \n for new lines in WhatsApp
+        `Price: N${
+          product?.discountedPrice?.toFixed(2) || product.price?.toFixed(2)
+        }.\n` +
+        `Link: ${productLink(product._id)}`
+    );
+
+  const whatsappHref = (product) =>
+    `https://wa.me/${whatsappNumber}?text=${fullMessage(product)}`;
+
   // Combined loading state
   if (isGettingCollection || isGettingProducts) {
     return (
@@ -238,13 +257,13 @@ const CollectionDetailsPage = () => {
       </div>
       {!isAdmin ? (
         <div className="px-4 mb-6 sm:flex space-x-2 space-y-2">
-          <button
+          <a
             className=" btn bg-green-500 text-base-100 flex-3 w-full rounded-xl font-[poppins] shadow-none border-0"
-            onClick={handleAddToCart}
+            href={whatsappHref(collection)}
           >
             <img src={whatsapp} alt="" className="size-6" />
             Order Now
-          </button>
+          </a>
 
           <button
             className="btn btn-primary text-secondary flex-3 w-full rounded-xl font-[poppins] shadow-none border-0"
@@ -378,9 +397,9 @@ const CollectionDetailsPage = () => {
                 </div>
                 {!isAdmin ? (
                   <div className="space-x-1">
-                    <button className="btn rounded-xl bg-green-400">
+                    <a className="btn rounded-xl bg-green-400" href={whatsappHref(product)}>
                       <img src={whatsapp} alt="WhatsApp" className="size-5" />
-                    </button>
+                    </a>
                     <button
                       className="btn rounded-xl bg-primary"
                       onClick={() => handleAddToCart(product._id, 1, 'Product')}

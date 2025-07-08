@@ -36,6 +36,14 @@ const Footer = () => {
     }, 10);
   };
 
+  const whatsappPhoneNumber = '2349037691860'; // REPLACE WITH YOUR ACTUAL PHONE NUMBER
+  // Your preset message (URL-encoded)
+  const presetMessage = encodeURIComponent(
+    "Hello, I'm interested in your products. I saw your website and would like to inquire more."
+  );
+
+  const whatsappLink = `https://wa.me/${whatsappPhoneNumber}?text=${presetMessage}`;
+
   return (
     <footer className="footer footer-horizontal footer-center bg-base-200 text-base-content rounded p-10 pb-30">
       <nav className="grid grid-flow-col gap-4">
@@ -63,7 +71,7 @@ const Footer = () => {
       </nav>
       <nav>
         <div className="grid grid-flow-col gap-4">
-          <a>
+          <a href={whatsappLink}>
             <img src={whatsapp} alt="" className="size-10" />
           </a>
           <a href="https://www.instagram.com/em_furniture_and_interior?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==">
