@@ -52,6 +52,7 @@ const HomePage = () => {
 
     // Clear the interval when the component unmounts or dependencies change
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSlide]); // Re-run effect when currentSlide changes to reset timer
 
   const designs = [
