@@ -161,32 +161,42 @@ const CartPage = () => {
 
   const whatsappNumber = '2349037691860'; // REPLACE WITH YOUR ACTUAL PHONE NUMBER
 
-  // Function to calculate the overall total from detailedCartItems
-  // This function should already exist in your CartPage.jsx
-  //   const calculateOverallTotal = () => {
-  //     return detailedCartItems.reduce((total, item) => {
-  //       const itemPrice = item.displayPrice || 0; // Access displayPrice directly from the detailed item
-  //       return total + itemPrice * item.quantity;
-  //     }, 0);
-  //   };
+  // Helper function to get the link for a product or collection item
+  const getItemLink = (item) => {
+    const baseUrl = window.location.origin;
+    if (item.itemType === 'Product') {
+      return `${baseUrl}/product/${item.item}`; // item.item holds the Product ID
+    } else if (item.itemType === 'Collection') {
+      return `${baseUrl}/collection/${item.item}`; // item.item holds the Collection ID
+    }
+    return ''; // Fallback if type is unknown
+  };
 
-  // FIX: Construct the full message with detailed cart items and total price
-  // 'items' here refers to your 'detailedCartItems' array
+  // Function to calculate the overall total from detailedCartItems
+  // const calculateOverallTotal = () => {
+  //     return detailedCartItems.reduce((total, item) => {
+  //         const itemPrice = item.displayPrice || 0;
+  //         return total + (itemPrice * item.quantity);
+  //     }, 0);
+  // };
+
+  // FIX: Construct the full message with detailed cart items, their links, and total price
   const fullMessage = (items) => {
-    // Start with a general greeting
     let message =
       "Hello, I'd like to place an order for the following items from my cart:\n\n";
 
-    // Add each item's details
     items.forEach((item, index) => {
-      // 'item' here is the detailed item object, so you access its properties directly
+      const link = getItemLink(item); // Get the specific link for this item
       message += `${index + 1}. ${item.name} (Qty: ${item.quantity}) - N${
         item.displayPrice?.toFixed(2) || '0.00'
-      }\n`;
+      }`;
+      if (link) {
+        message += `\n   Link: ${link}`; // Add the link on a new line, indented
+      }
+      message += `\n\n`; // Add an extra newline for better spacing between items
     });
 
-    // Add the total price
-    message += `\nTotal Price: N${calculateOverallTotal().toFixed(2)}\n`;
+    message += `Total Price: N${calculateOverallTotal().toFixed(2)}\n`;
     message += `\nThank you!`;
 
     return encodeURIComponent(message);
