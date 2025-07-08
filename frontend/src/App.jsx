@@ -28,6 +28,11 @@ import Styles from './pages/Styles';
 import SignupPage from './pages/Signup';
 import ProfilePage from './pages/Profile';
 import CartPage from './pages/Cart';
+import WishlistPage from './pages/Wishlist';
+import AboutUs from './pages/AboutUs';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import Contact from './pages/Contact';
 
 function App() {
   const { checkAuth, authUser, isAdmin } = useAuthStore();
@@ -74,6 +79,11 @@ function App() {
 
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/cart" element={<CartPage />} />
+          <Route path="/wishlist" element={<WishlistPage />} />
+          <Route path="/aboutUs" element={<AboutUs />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/contact" element={<Contact />} />
 
           <Route element={<AdminLoginProtectedRoute />}>
             <Route path="/admin/login" element={<AdminLoginPage />} />

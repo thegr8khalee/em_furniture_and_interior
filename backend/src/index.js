@@ -7,12 +7,12 @@ import { connectDB } from './lib/db.js';
 import authRoutes from './routes/auth.routes.js';
 import guestRoutes from './routes/guest.routes.js';
 import adminRoutes from './routes/admin.routes.js';
-import collectionRoutes from './routes/collection.routes.js'
-import productRoutes from './routes/product.routes.js'
-import reviewRoutes from './routes/review.routes.js'
-import cartRoutes from './routes/cart.routes.js'
-import wishlistRoutes from './routes/wishlist.routes.js'
-
+import collectionRoutes from './routes/collection.routes.js';
+import productRoutes from './routes/product.routes.js';
+import reviewRoutes from './routes/review.routes.js';
+import cartRoutes from './routes/cart.routes.js';
+import wishlistRoutes from './routes/wishlist.routes.js';
+import contactRoutes from './routes/contact.routes.js';
 const app = express();
 
 dotenv.config();
@@ -36,6 +36,7 @@ app.use('/api/collections', collectionRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/contact', contactRoutes);
 
 app.listen(PORT, () => {
   console.log('Server running on port: ', PORT);

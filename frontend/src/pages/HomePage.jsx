@@ -155,6 +155,13 @@ const HomePage = () => {
     }, 10);
   };
 
+  const handleContatClick = () => {
+    navigate(`/contact`);
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+  }
+
   if (isGettingProducts || isGettingCollections) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -361,8 +368,10 @@ const HomePage = () => {
               className="flex-shrink-0 w-75 md:w-90 lg:w-100 rounded-lg overflow-hidden"
             >
               <div className="relative">
-                <button className='w-full h-full'
-                onClick={() => handleCollectionClick(product._id)}>
+                <button
+                  className="w-full h-full"
+                  onClick={() => handleCollectionClick(product._id)}
+                >
                   <img
                     src={product.coverImage.url}
                     alt={product.name}
@@ -580,6 +589,12 @@ const HomePage = () => {
           </p>
         </div>
       </section>
+      <div className="items-center justify-center flex px-8 mt-10 sm:px-8 lg:px-16">
+        <button className="btn bg-primary font-[poppins] rounded-xl w-full"
+        onClick={() => handleContatClick()}>
+          Contact Us
+        </button>
+      </div>
     </div>
   );
 };

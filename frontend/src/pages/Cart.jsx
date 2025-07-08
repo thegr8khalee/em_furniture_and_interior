@@ -5,6 +5,7 @@ import { Loader2, Trash2, Minus, Plus, ShoppingCart, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { axiosInstance } from '../lib/axios.js';
 import whatsapp from '../images/whatsapp.png';
+import Hero1 from '../images/Hero1.png';
 
 const CartPage = () => {
   const {
@@ -172,7 +173,7 @@ const CartPage = () => {
   // cart is now an array, so check cart.length
   if (!cart || cart.length === 0 || detailedCartItems.length === 0) {
     return (
-      <div className="pt-16">
+      <div className="pt-16 overflow-x-hidden">
         <div className="text-center text-xl text-gray-600 mt-16">
           Your cart is empty.{' '}
           <Link to="/shop" className="text-primary hover:underline">
@@ -185,11 +186,15 @@ const CartPage = () => {
 
   return (
     <div className="pt-12 w-screen">
-      <div className="container mx-auto p-2 sm:p-6 lg:p-8 pt-16 w-full">
-        <h1 className="text-2xl font-bold font-[poppins] mb-8 text-center">
-          Your Shopping Cart
-        </h1>
-
+      <div className="relative">
+        <img src={Hero1} alt="" className="object-cover h-40 w-full" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
+          <h1 className="absolute bottom-10 left-1/2 -translate-x-1/2 mt-20 w-full mb-2 text-3xl font-bold text-center text-base-100 font-[poppins]">
+            Your Shopping Cart
+          </h1>
+        </div>
+      </div>
+      <div className="container mx-auto p-2 sm:p-6 lg:p-8 w-full">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Cart Items List */}
           <div className="flex-1 bg-base-100 p-2 rounded-lg shadow-xl">
@@ -223,7 +228,9 @@ const CartPage = () => {
                         <h3 className="text-lg font-medium">{item.name}</h3>
                         <button
                           className="btn btn-xs btn-circle"
-                          onClick={() => handleRemoveItem(item._id, item.itemType)}
+                          onClick={() =>
+                            handleRemoveItem(item._id, item.itemType)
+                          }
                         >
                           <X className="size-4" />
                         </button>
@@ -311,7 +318,7 @@ const CartPage = () => {
               </div>
             </div>
             <button className="btn bg-green-500 text-white border-0 shadow-none w-full mt-8 rounded-xl">
-              <img src={whatsapp} alt="" className='size-8' /> Order On WhatsApp
+              <img src={whatsapp} alt="" className="size-8" /> Order On WhatsApp
             </button>
           </div>
         </div>

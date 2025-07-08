@@ -1,5 +1,5 @@
 // src/components/BottomNavbar.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Home,
   ShoppingBag,
@@ -16,9 +16,13 @@ import { useWishlistStore } from '../store/useWishlistStore';
 const BottomNavbar = () => {
   const location = useLocation(); // Get current location to highlight active link
   const { isAdmin } = useAuthStore();
-  const { cart } = useCartStore();
-  const {wishlist} = useWishlistStore();
+  const { cart, getCart } = useCartStore();
+  const { wishlist, getwishlist } = useWishlistStore();
 
+  useEffect(() => {
+    getCart();
+    getwishlist();
+  }, [getCart, getwishlist]);
   // Define your navigation items
   const navItems = [
     { name: 'Shop', icon: ShoppingBag, path: '/shop' }, // Example shop page
@@ -52,15 +56,15 @@ const BottomNavbar = () => {
               aria-label={item.name}
             >
               <IconComponent size={24} className="mb-1" />
-              {item.name === 'Cart' && cart.length !== 0 ? (
+              {item.name === 'Cart' && cart?.length !== 0 ? (
                 <div className="absolute right-0 top-0 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
-                  {cart.length}
+                  {cart?.length}
                 </div>
               ) : null}
 
-              {item.name === 'Wishlist' && wishlist.length !== 0 ? (
+              {item.name === 'Wishlist' && wishlist?.length !== 0 ? (
                 <div className="absolute right-0 top-0 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
-                  {wishlist.length}
+                  {wishlist?.length}
                 </div>
               ) : null}
 

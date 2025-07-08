@@ -7,7 +7,7 @@ import {
   UserIcon, // For profile link
   X, // NEW: Import X icon for close button
 } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import LogoLightMode from '../images/LogoLightMode.png';
 
@@ -23,8 +23,15 @@ const Navbar = () => {
   const isDashboard = location.pathname === '/admin/dashboard';
   const { authUser, isAdmin } = useAuthStore();
   const { toggleSidebar, closeSidebar: closeAdminSidebar } = useAdminStore();
-  const { cart } = useCartStore();
-  const { wishlist } = useWishlistStore();
+  const { getCart, cart } = useCartStore();
+  const { getwishlist, wishlist } = useWishlistStore();
+
+  useEffect(() => {
+    getCart();
+    getwishlist();
+  }, [getCart, getwishlist]);
+
+  // console.log(wishlist)
 
   // Hardcoded categories (moved from useProductsStore import)
   const uniqueCategories = [
@@ -97,6 +104,16 @@ const Navbar = () => {
 
   const handleCartClick = () => {
     navigate('/cart');
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+  };
+
+  const handleHeartClick = () => {
+    navigate('/wishlist');
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
   };
 
   return (
@@ -312,17 +329,20 @@ const Navbar = () => {
             className="relative btn btn-ghost"
             onClick={() => handleCartClick()}
           >
-            {cart.length !== 0 ? (
+            {cart?.length !== 0 ? (
               <div className="absolute right-1 top-0 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
-                {cart.length}
+                {cart?.length}
               </div>
             ) : null}
             <ShoppingCart />
           </button>
-          <button className="relative btn btn-ghost">
-            {wishlist.length !== 0 ? (
+          <button
+            className="relative btn btn-ghost"
+            onClick={() => handleHeartClick()}
+          >
+            {wishlist?.length !== 0 ? (
               <div className="absolute top-0 right-1 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
-                {wishlist.length}
+                {wishlist?.length}
               </div>
             ) : null}
             <HeartIcon />
