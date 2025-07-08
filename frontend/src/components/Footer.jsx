@@ -71,16 +71,28 @@ const Footer = () => {
       </nav>
       <nav>
         <div className="grid grid-flow-col gap-4">
-          <a href={whatsappLink}>
+          <a target="_blank" rel="noopener noreferrer" href={whatsappLink}>
             <img src={whatsapp} alt="" className="size-10" />
           </a>
-          <a href="https://www.instagram.com/em_furniture_and_interior?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href="https://www.instagram.com/em_furniture_and_interior?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+          >
             <img src={ig} alt="" className="size-10" />
           </a>
-          <a href="https://www.tiktok.com/@em_furniture_nd_interior?is_from_webapp=1&sender_device=pc">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href="https://www.tiktok.com/@em_furniture_nd_interior?is_from_webapp=1&sender_device=pc"
+          >
             <img src={tiktok} alt="" className="size-10" />
           </a>
-          <a href="https://x.com/___Emine_">
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href="https://x.com/___Emine_"
+          >
             <img src={x} alt="" className="size-10 rounded-full" />
           </a>
         </div>

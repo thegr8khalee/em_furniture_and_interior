@@ -18,14 +18,14 @@ const Privacy = () => {
         </div>
       </div>
       <div className="w-full justify-center flex">
-        <div className="w-full space-y-2 flex flex-col p-4 max-w-7xl">
+        <div className="w-full space-y-2 flex flex-col p-4 max-w-7xl font-[montserrat]">
           <p className="mb-6 text-base-content">
             This Privacy Policy describes how EM Furniture and Interior
             collects, uses, and shares information when you use our website,
             emfurnitureandinterior.com .
           </p>
 
-          <h2 className="text-2xl font-semibold mb-4">
+          <h2 className="text-2xl font-[poppins] font-semibold mb-4">
             1. Information We Collect
           </h2>
 
@@ -111,7 +111,7 @@ const Privacy = () => {
             </strong>
           </p>
 
-          <h2 className="text-2xl font-semibold  mb-4">
+          <h2 className="text-2xl font-[poppins] font-semibold  mb-4">
             2. How We Use Your Information
           </h2>
           <p className="mb-6 text-base-content">
@@ -144,7 +144,7 @@ const Privacy = () => {
             </li>
           </ul>
 
-          <h2 className="text-2xl font-semibold mb-4">
+          <h2 className="text-2xl font-[poppins] font-semibold mb-4">
             3. Data Sharing and Disclosure
           </h2>
           <p className="mb-6 text-base-content">
@@ -174,7 +174,7 @@ const Privacy = () => {
             </li>
           </ul>
 
-          <h2 className="text-2xl font-semibold mb-4">
+          <h2 className="text-2xl font-[poppins] font-semibold mb-4">
             4. Data Storage and Security
           </h2>
           <ul className="list-disc list-inside ml-4 mb-6 text-base-content">
@@ -192,7 +192,7 @@ const Privacy = () => {
             </li>
           </ul>
 
-          <h2 className="text-2xl font-semibold mb-4">
+          <h2 className="text-2xl font-[poppins] font-semibold mb-4">
             5. Your Privacy Rights
           </h2>
 
@@ -239,7 +239,7 @@ const Privacy = () => {
             our Service may not function properly without cookies.
           </p>
 
-          <h2 className="text-2xl font-semibold mb-4">
+          <h2 className="text-2xl font-[poppins] font-semibold mb-4">
             6. Changes to This Privacy Policy
           </h2>
           <p className="mb-6 text-base-content">
@@ -250,7 +250,7 @@ const Privacy = () => {
             "Effective Date" at the top.
           </p>
 
-          <h2 className="text-2xl font-semibold mb-4">7. Contact Us</h2>
+          <h2 className="text-2xl font-semibold font-[poppins] mb-4">7. Contact Us</h2>
           <p className="mb-6 text-base-content">
             If you have any questions or concerns about this Privacy Policy or
             our data practices, please contact us at:

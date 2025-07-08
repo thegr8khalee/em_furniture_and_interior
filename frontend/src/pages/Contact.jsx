@@ -166,7 +166,12 @@ const Contact = () => {
               <div>
                 <h3 className="font-bold text-lg">Phone:</h3>
                 <p>
-                  <a href="tel:+2349037691860" className="hover:underline">
+                  <a
+                    href="tel:+2349037691860"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline"
+                  >
                     +2349037691860
                   </a>
                 </p>
@@ -184,6 +189,7 @@ const Contact = () => {
                 <div className="flex space-x-4 mt-2">
                   <a
                     href="https://wa.me/"
+                    target="_blank"
                     rel="noopener noreferrer"
                     aria-label="WhatsApp"
                   >
@@ -191,6 +197,7 @@ const Contact = () => {
                   </a>
                   <a
                     href="https://www.instagram.com/em_furniture_and_interior?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
+                    target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Instagram"
                   >
@@ -198,6 +205,7 @@ const Contact = () => {
                   </a>
                   <a
                     href="https://www.tiktok.com/@em_furniture_nd_interior?is_from_webapp=1&sender_device=pc"
+                    target="_blank"
                     rel="noopener noreferrer"
                     aria-label="TikTok"
                   >
@@ -205,6 +213,7 @@ const Contact = () => {
                   </a>
                   <a
                     href="https://x.com/___Emine_"
+                    target="_blank"
                     rel="noopener noreferrer"
                     aria-label="X (Twitter)"
                   >

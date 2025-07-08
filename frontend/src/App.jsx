@@ -33,6 +33,8 @@ import AboutUs from './pages/AboutUs';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import Contact from './pages/Contact';
+import ECatalog from './pages/ECatalog';
+import Showroom from './pages/Showroom';
 
 function App() {
   const { checkAuth, authUser, isAdmin } = useAuthStore();
@@ -92,6 +94,8 @@ function App() {
           <Route path="/terms" element={<Terms />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/e-catalog" element={<ECatalog />} />
+          <Route path="/showroom" element={<Showroom />} />
 
           <Route element={<AdminLoginProtectedRoute />}>
             <Route path="/admin/login" element={<AdminLoginPage />} />

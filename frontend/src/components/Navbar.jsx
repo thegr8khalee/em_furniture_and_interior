@@ -169,7 +169,7 @@ const Navbar = () => {
             className="drawer-overlay"
             onClick={closeDrawer}
           ></label>
-          <ul className="menu bg-base-200 text-base-content min-h-full w-80 p-4">
+          <ul className="menu bg-base-200 text-base-content min-h-full w-95 p-4">
             {/* Close Button */}
             <li className="flex justify-end p-2">
               <button
@@ -180,21 +180,50 @@ const Navbar = () => {
                 <X size={24} />
               </button>
             </li>
+            <div className='flex'>
+              <li>
+                <Link
+                  to="/"
+                  className="btn btn-lg font-normal border-0 justify-start"
+                  onClick={closeDrawer}
+                >
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/e-catalog"
+                  className="btn btn-lg font-normal border-0 justify-start"
+                  onClick={closeDrawer}
+                >
+                  E-Catalogs
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/showroom"
+                  className="btn btn-lg font-normal border-0 justify-start"
+                  onClick={closeDrawer}
+                >
+                  Showroom
+                </Link>
+              </li>
+            </div>
 
             {/* Categories/Styles Switch */}
             <li className="mb-4">
               <div className="tabs tabs-boxed w-full">
                 <button
-                  className={`tab flex-1 ${
-                    activeDrawerTab === 'categories' ? 'tab-active' : ''
+                  className={`btn border-0 tab flex-1 ${
+                    activeDrawerTab === 'categories' ? 'bg-primary tab-active' : ''
                   }`}
                   onClick={() => setActiveDrawerTab('categories')}
                 >
                   Categories
                 </button>
                 <button
-                  className={`tab flex-1 ${
-                    activeDrawerTab === 'styles' ? 'tab-active' : ''
+                  className={`btn border-0 tab flex-1 ${
+                    activeDrawerTab === 'styles' ? 'bg-primary tab-active' : ''
                   }`}
                   onClick={() => setActiveDrawerTab('styles')}
                 >
@@ -206,7 +235,7 @@ const Navbar = () => {
             {/* Conditional Rendering based on activeDrawerTab */}
             {activeDrawerTab === 'categories' ? (
               <>
-                <li>
+                {/* <li>
                   <Link
                     to="/"
                     className="btn btn-lg font-normal border-0 justify-start"
@@ -214,7 +243,7 @@ const Navbar = () => {
                   >
                     Home
                   </Link>
-                </li>
+                </li> */}
                 {uniqueCategories.map((category) => (
                   <li key={category.id}>
                     {' '}
@@ -230,7 +259,7 @@ const Navbar = () => {
               </>
             ) : (
               <>
-                <li>
+                {/* <li>
                   <Link
                     to="/"
                     className="btn font-normal btn-lg border-0 justify-start"
@@ -238,7 +267,7 @@ const Navbar = () => {
                   >
                     Home
                   </Link>
-                </li>
+                </li> */}
                 {hardcodedStyles.map((style) => (
                   <li key={style}>
                     <button
@@ -290,7 +319,7 @@ const Navbar = () => {
             Showroom
           </Link>
           <Link
-            to="/about-us"
+            to="/aboutUs"
             className="btn bg-base-100 border-0 shadow-none btn-ghost"
           >
             About Us
