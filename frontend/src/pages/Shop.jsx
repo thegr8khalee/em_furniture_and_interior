@@ -84,6 +84,7 @@ const ShopPage = () => {
       getwishlist();
     }
     checkAuth();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getProducts, getCollections, getwishlist, checkAuth]);
 
   useEffect(() => {
@@ -112,6 +113,7 @@ const ShopPage = () => {
         navigate(location.pathname, { replace: true, state: {} });
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state?.focusSearch, productSearchInputRef, viewMode, navigate]);
 
   // NEW: Effect to read category from URL on initial load

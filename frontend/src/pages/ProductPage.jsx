@@ -46,6 +46,7 @@ const ProductPage = () => {
     if (!isAdmin) {
       getwishlist();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId, getProductById, getwishlist]);
 
   // Reset currentImageIndex when product changes (e.g., navigating to a new product page)

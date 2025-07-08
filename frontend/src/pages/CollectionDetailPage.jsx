@@ -52,6 +52,7 @@ const CollectionDetailsPage = () => {
     if (!isAdmin) {
       getwishlist();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collectionId, getCollectionById, getProducts, getwishlist]);
 
   //   console.log(collection)

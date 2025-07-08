@@ -100,6 +100,7 @@ const Styles = () => {
     if (!isAdmin) {
       getwishlist();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getProducts, getCollections, getwishlist]);
 
   // NEW: Effect to read category from URL on initial load
