@@ -57,9 +57,9 @@ export const useWishlistStore = create((set, get) => ({
         set({ wishlist: res.data.wishlist || [] }); // Ensure it defaults to an empty array
       } catch (error) {
         console.error('Error loading wishlist from backend:', error);
-        toast.error(
-          error.response?.data?.message || 'Failed to load wishlist.'
-        );
+        // toast.error(
+        //   error.response?.data?.message || 'Failed to load wishlist.'
+        // );
       } finally {
         set({ isGettingWishlist: false });
       }

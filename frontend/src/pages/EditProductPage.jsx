@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 // import { toast } from 'react-toastify';
-import { ChevronDown, ChevronUp, Loader2, XCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, Search, XCircle } from 'lucide-react';
 import { useCollectionStore } from '../store/useCollectionStore'; // Assuming this provides collections
 import { useAdminStore } from '../store/useAdminStore'; // Assuming this provides updateProduct
 import { useProductsStore } from '../store/useProductsStore'; // Assuming this provides getProductById

@@ -127,11 +127,11 @@ const Navbar = () => {
           checked={isDrawerChecked}
           onChange={handleDrawerCheckboxChange}
         />
-        <div className="px-4 fixed navbar bg-base-100 items-center w-full top-0 z-20 drawer-content">
+        <div className="px-4 fixed navbar backdrop-blur-lg bg-base-100/80 items-center w-full top-0 z-20 drawer-content">
           <div className="navbar-start">
             {isAdmin && isDashboard ? (
               <button
-                className="btn bg-base-100 border-none"
+                className="pl-4 border-none"
                 onClick={toggleSidebar}
                 aria-label="Toggle admin sidebar"
               >
@@ -140,7 +140,7 @@ const Navbar = () => {
             ) : (
               <label
                 htmlFor="my-drawer"
-                className="btn bg-base-100 border-none drawer-button"
+                className="pl-4 border-none drawer-button"
                 aria-label="Open main menu"
               >
                 <MenuIcon />
@@ -154,7 +154,7 @@ const Navbar = () => {
           </div>
           <div className="navbar-end">
             <button
-              className="btn bg-base-100 border-none btn-ghost"
+              className="pr-4 border-none btn-ghost"
               onClick={handleMobileSearchClick}
               aria-label="Search"
             >
@@ -180,7 +180,7 @@ const Navbar = () => {
                 <X size={24} />
               </button>
             </li>
-            <div className='flex'>
+            <div className="flex">
               <li>
                 <Link
                   to="/"
@@ -215,7 +215,9 @@ const Navbar = () => {
               <div className="tabs tabs-boxed w-full">
                 <button
                   className={`btn border-0 tab flex-1 ${
-                    activeDrawerTab === 'categories' ? 'bg-primary tab-active' : ''
+                    activeDrawerTab === 'categories'
+                      ? 'bg-primary tab-active'
+                      : ''
                   }`}
                   onClick={() => setActiveDrawerTab('categories')}
                 >
@@ -287,40 +289,40 @@ const Navbar = () => {
       </div>
 
       {/* Desktop View Navbar (hidden on lg screens and smaller) */}
-      <div className="hidden lg:flex fixed navbar bg-base-100 shadow-sm z-100">
+      <div className="hidden lg:flex fixed navbar backdrop-blur-lg bg-base-100/80 shadow-sm z-100">
         <div className="navbar-start">
           <Link to="/">
             <img src={LogoLightMode} alt="Logo" className="h-10" />
           </Link>
         </div>
-        <div className="navbar-center">
+        <div className="navbar-center space-x-6">
           <Link
             to="/"
-            className="btn bg-base-100 border-0 shadow-none btn-ghost"
+            className=" border-0 shadow-none btn-ghost"
           >
             Home
           </Link>
           <Link
             to="/shop"
-            className="btn bg-base-100 border-0 shadow-none btn-ghost"
+            className=" border-0 shadow-none btn-ghost"
           >
             Shop
           </Link>
           <Link
             to="/e-catalog"
-            className="btn bg-base-100 border-0 shadow-none btn-ghost"
+            className=" border-0 shadow-none btn-ghost"
           >
             E-Catalog
           </Link>
           <Link
             to="/showroom"
-            className="btn bg-base-100 border-0 shadow-none btn-ghost"
+            className=" border-0 shadow-none btn-ghost"
           >
             Showroom
           </Link>
           <Link
             to="/aboutUs"
-            className="btn bg-base-100 border-0 shadow-none btn-ghost"
+            className=" border-0 shadow-none btn-ghost"
           >
             About Us
           </Link>
@@ -354,28 +356,32 @@ const Navbar = () => {
           >
             <SearchIcon />
           </button>
-          <button
-            className="relative btn btn-ghost"
-            onClick={() => handleCartClick()}
-          >
-            {cart?.length !== 0 ? (
-              <div className="absolute right-1 top-0 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
-                {cart?.length}
-              </div>
-            ) : null}
-            <ShoppingCart />
-          </button>
-          <button
-            className="relative btn btn-ghost"
-            onClick={() => handleHeartClick()}
-          >
-            {wishlist?.length !== 0 ? (
-              <div className="absolute top-0 right-1 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
-                {wishlist?.length}
-              </div>
-            ) : null}
-            <HeartIcon />
-          </button>
+          {!isAdmin ? (
+            <div>
+              <button
+                className="relative btn btn-ghost"
+                onClick={() => handleCartClick()}
+              >
+                {cart?.length !== 0 ? (
+                  <div className="absolute right-1 top-0 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
+                    {cart?.length}
+                  </div>
+                ) : null}
+                <ShoppingCart />
+              </button>
+              <button
+                className="relative btn btn-ghost"
+                onClick={() => handleHeartClick()}
+              >
+                {wishlist?.length !== 0 ? (
+                  <div className="absolute top-0 right-1 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
+                    {wishlist?.length}
+                  </div>
+                ) : null}
+                <HeartIcon />
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

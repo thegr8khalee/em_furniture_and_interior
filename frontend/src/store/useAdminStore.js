@@ -31,7 +31,10 @@ export const useAdminStore = create((set) => ({
       console.log('Sending login request with data:', data); // Add this
       const res = await axiosInstance.post('/admin/login', data);
       console.log('Login response:', res);
-      useAuthStore.setState({ authUser: res.data, isAdmin: res.data?.role === 'admin' });
+      useAuthStore.setState({
+        authUser: res.data,
+        isAdmin: res.data?.role === 'admin',
+      });
       toast.success('Logged in successfully');
     } catch (error) {
       console.error('Login error:', error); // Add this
@@ -62,6 +65,7 @@ export const useAdminStore = create((set) => ({
       useProductsStore.setState((state) => ({
         products: [...state.products, res.data],
       }));
+      toast.success('success');
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -82,6 +86,7 @@ export const useAdminStore = create((set) => ({
         ),
         product: res.data,
       }));
+      toast.success('success');
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -96,6 +101,7 @@ export const useAdminStore = create((set) => ({
       useProductsStore.setState((state) => ({
         products: state.products.filter((p) => p._id !== Id),
       }));
+      toast.success('success');
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -113,6 +119,7 @@ export const useAdminStore = create((set) => ({
       useCollectionStore.setState((state) => ({
         collections: [...state.collections, res.data],
       }));
+      toast.success('success');
     } catch (error) {
       console.log(error.message);
     } finally {
@@ -127,6 +134,7 @@ export const useAdminStore = create((set) => ({
       useCollectionStore.setState((state) => ({
         collections: state.collections.filter((p) => p._id !== Id),
       }));
+      toast.success('success');
     } catch (error) {
       console.log(error.message);
     } finally {
@@ -138,13 +146,15 @@ export const useAdminStore = create((set) => ({
     try {
       set({ isUpdatingCollection: true });
       const res = await axiosInstance.put(
-        `/admin/operations/updateCollection/${Id}`, data
+        `/admin/operations/updateCollection/${Id}`,
+        data
       );
       useCollectionStore.setState((state) => ({
         collections: state.collections.map((p) =>
           p._id === Id ? res.data : p
         ),
       }));
+      toast.success('success');
     } catch (error) {
       console.log(error.message);
     } finally {

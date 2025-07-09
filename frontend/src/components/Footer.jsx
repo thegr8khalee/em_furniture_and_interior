@@ -36,6 +36,19 @@ const Footer = () => {
     }, 10);
   };
 
+  const handleShowroomClick = () => {
+    navigate('/showroom');
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+  };
+
+  const handleECatalogClick = () => {
+    navigate('/e-catalog');
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+  };
   const whatsappPhoneNumber = '2349037691860'; // REPLACE WITH YOUR ACTUAL PHONE NUMBER
   // Your preset message (URL-encoded)
   const presetMessage = encodeURIComponent(
@@ -46,7 +59,7 @@ const Footer = () => {
 
   return (
     <footer className="footer footer-horizontal footer-center bg-base-200 text-base-content rounded p-10 pb-30">
-      <nav className="grid grid-flow-col gap-4">
+      <nav className="grid grid-col grid-cols-2 sm:grid-cols-6">
         <button
           className="link link-hover"
           onClick={() => handleAboutUsClick()}
@@ -67,6 +80,18 @@ const Footer = () => {
           onClick={() => handlePrivacyClick()}
         >
           Privacy policy
+        </button>
+        <button
+          className="link link-hover"
+          onClick={() => handleECatalogClick()}
+        >
+          E-catalog
+        </button>
+        <button
+          className="link link-hover"
+          onClick={() => handleShowroomClick()}
+        >
+          Showroom
         </button>
       </nav>
       <nav>

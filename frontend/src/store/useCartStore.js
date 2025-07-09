@@ -240,11 +240,11 @@ export const useCartStore = create((set, get) => ({
           quantity: newQuantity,
         });
         // FIX: Assume backend returns an object { cart: [...] }
-        toast.success('Cart item quantity updated!');
+        // toast.success('Cart item quantity updated!');
         await get().getCart(); // Re-fetch cart after successful operation
       } catch (error) {
         console.error('Error updating cart item quantity (backend):', error);
-        toast.error(error.message);
+        // toast.error(error.message);
       } finally {
         set({ isUpdatingCartItem: false });
       }
@@ -258,11 +258,11 @@ export const useCartStore = create((set, get) => ({
       if (itemIndex > -1) {
         currentLocalCart[itemIndex].quantity = newQuantity;
         saveLocalCart(currentLocalCart);
-        toast.success('Local cart item quantity updated!');
+        // toast.success('Local cart item quantity updated!');
         await get().getCart(); // Re-fetch cart after successful operation
         set({ isUpdatingCartItem: false });
       } else {
-        toast.error('Item not found in local cart to update.');
+        // toast.error('Item not found in local cart to update.');
         set({ isUpdatingCartItem: false });
       }
     }
