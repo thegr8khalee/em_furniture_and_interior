@@ -87,7 +87,10 @@ function App() {
             }
           />
 
-          <Route path="/signup" element={<SignupPage />} />
+          <Route
+            path="/signup"
+            element={!authUser ? <SignupPage /> : <Navigate to={'/'} />}
+          />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/aboutUs" element={<AboutUs />} />
