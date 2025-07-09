@@ -14,7 +14,7 @@ const AddCollection = () => {
     name: '',
     description: '',
     price: '',
-    style:'',
+    style: '',
     productIds: [], // Array to hold selected product IDs
     isBestSeller: false,
     isPromo: false,
@@ -217,6 +217,20 @@ const AddCollection = () => {
             ></textarea>
           </div>
 
+          {/* <div className="form-control">
+            <label className="label">
+              <span className="label-text">Items</span>
+            </label>
+            <textarea
+              name="items"
+              placeholder="(3+3+1+1) or Bed+Wardrobe+mirror..."
+              className="textarea textarea-bordered h-24 w-full rounded-md"
+              value={formData.items}
+              onChange={handleChange}
+              required
+            ></textarea>
+          </div> */}
+
           <div className="form-control">
             <label className="label">
               <span className="label-text">Price ($)</span>
@@ -227,7 +241,7 @@ const AddCollection = () => {
               placeholder="1999.99"
               step="0.01"
               className="input input-bordered w-full rounded-md"
-              value={formData.price}
+              value={Number(formData.price).toFixed(2)}
               onChange={handleChange}
               required
             />
@@ -361,7 +375,6 @@ const AddCollection = () => {
               accept="image/*"
               className="file-input file-input-bordered w-full rounded-md"
               onChange={handleCoverImageChange}
-              
             />
             <p className="text-sm text-gray-500 mt-1">
               Select a single cover image.
@@ -425,7 +438,7 @@ const AddCollection = () => {
                 placeholder="e.g., 1499.99"
                 step="0.01"
                 className="input input-bordered w-full rounded-md"
-                value={formData.discountedPrice}
+                value={Number(formData.discountedPrice).toFixed(2)}
                 onChange={handleChange}
                 required={formData.isPromo}
               />

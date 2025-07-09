@@ -37,7 +37,7 @@ const ProductPage = () => {
   const { isDeletingProduct, delProduct } = useAdminStore();
 
   const handleEditProduct = (product) => {
-    console.log(product);
+    // console.log(product);
     navigate(`/admin/products/edit/${product}`);
   };
 
@@ -316,6 +316,7 @@ const ProductPage = () => {
             )}
           </div>
           <h1 className="text-3xl font-bold font-[poppins]">{product.name}</h1>
+          <p>{product.items}</p>
           <div className="text-base font-[montserrat] text-gray-600"></div>
           <div className="flex items-baseline space-x-3">
             {product.isPromo && product.discountedPrice !== undefined ? (

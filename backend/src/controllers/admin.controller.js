@@ -129,6 +129,7 @@ export const addProduct = async (req, res) => {
     name,
     description,
     category,
+    items,
     style,
     collectionId,
     images, // This will be an array of Base64 strings from the frontend
@@ -221,6 +222,7 @@ export const addProduct = async (req, res) => {
       description,
       price,
       category,
+      items,
       style,
       collectionId: collectionId || null,
       images: uploadedImages,
@@ -277,6 +279,7 @@ export const updateProduct = async (req, res) => {
     name,
     description,
     category,
+    items,
     style,
     collectionId,
     images,
@@ -389,15 +392,15 @@ export const updateProduct = async (req, res) => {
     // --- End Collection ID Update Logic ---
 
     // --- Image Handling for Update ---
-    console.log('--- Debugging Image Update ---');
-    console.log(
-      '1. Initial product.images from DB:',
-      JSON.stringify(product.images)
-    );
-    console.log(
-      '2. Incoming images from frontend (req.body.images):',
-      JSON.stringify(images)
-    );
+    // console.log('--- Debugging Image Update ---');
+    // console.log(
+    //   '1. Initial product.images from DB:',
+    //   JSON.stringify(product.images)
+    // );
+    // console.log(
+    //   '2. Incoming images from frontend (req.body.images):',
+    //   JSON.stringify(images)
+    // );
 
     const newImageUploads = [];
     const imagesToKeep = [];
@@ -407,7 +410,7 @@ export const updateProduct = async (req, res) => {
         if (
           typeof imageData === 'object' &&
           imageData.url &&
-          imageData.public_id
+          imageData.public_id === true
         ) {
           imagesToKeep.push(imageData);
         } else if (
@@ -441,20 +444,20 @@ export const updateProduct = async (req, res) => {
         }
       }
     }
-    console.log(
-      '3. Images identified to keep (imagesToKeep):',
-      JSON.stringify(imagesToKeep)
-    );
-    console.log(
-      '4. Newly uploaded images (newImageUploads):',
-      JSON.stringify(newImageUploads)
-    );
+    // console.log(
+    //   '3. Images identified to keep (imagesToKeep):',
+    //   JSON.stringify(imagesToKeep)
+    // );
+    // console.log(
+    //   '4. Newly uploaded images (newImageUploads):',
+    //   JSON.stringify(newImageUploads)
+    // );
 
     const finalImages = [...imagesToKeep, ...newImageUploads];
-    console.log(
-      '5. Final images array (finalImages):',
-      JSON.stringify(finalImages)
-    );
+    // console.log(
+    //   '5. Final images array (finalImages):',
+    //   JSON.stringify(finalImages)
+    // );
 
     const publicIdsToDelete = product.images
       .map((img) => img.public_id) // Ensure this is correct property name from DB
@@ -462,10 +465,10 @@ export const updateProduct = async (req, res) => {
         (publicId) =>
           publicId && !finalImages.some((img) => img.public_id === publicId)
       ); // Ensure img.public_id here matches DB property
-    console.log(
-      '6. Public IDs to delete from Cloudinary (publicIdsToDelete):',
-      JSON.stringify(publicIdsToDelete)
-    );
+    // console.log(
+    //   '6. Public IDs to delete from Cloudinary (publicIdsToDelete):',
+    //   JSON.stringify(publicIdsToDelete)
+    // );
 
     for (const publicId of publicIdsToDelete) {
       try {
@@ -485,6 +488,7 @@ export const updateProduct = async (req, res) => {
     if (description !== undefined) product.description = description;
     if (price !== undefined && !isNaN(price)) product.price = price;
     if (category !== undefined) product.category = category;
+    if (items !== undefined) product.items = items;
     if (style !== undefined) product.style = style;
     product.collectionId = newCollectionId;
     product.images = finalImages; // Assign the processed images
@@ -837,6 +841,7 @@ export const updateCollection = async (req, res) => {
     // Update fields dynamically
     if (name !== undefined) collection.name = name;
     if (description !== undefined) collection.description = description;
+    // if (items !== undefined) collection.items = items;
     if (price !== undefined && !isNaN(price)) collection.price = price; // Use parsed price
     if (isBestSeller !== undefined) collection.isBestSeller = isBestSeller;
     if (isPromo !== undefined) collection.isPromo = isPromo;

@@ -221,6 +221,7 @@ const CollectionDetailsPage = () => {
               <h1 className="text-3xl font-bold font-[poppins]">
                 {collection.name}
               </h1>
+              <p>{collection.items}</p>
               <div className="flex space-x-3">
                 {collection.isPromo &&
                 collection.discountedPrice !== undefined ? (

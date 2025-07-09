@@ -16,6 +16,7 @@ const AdminEditProductPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    items: '',
     price: '',
     category: '',
     style: '',
@@ -53,6 +54,7 @@ const AdminEditProductPage = () => {
           setFormData({
             name: productData.name || '',
             description: productData.description || '',
+            items: productData.items || '',
             price: productData.price || '',
             category: productData.category || '',
             style: productData.style || '',
@@ -222,19 +224,19 @@ const AdminEditProductPage = () => {
       if (img.isNew) {
         return { url: img.url, isNew: true }; // Send {url: base64, isNew: true} for new images
       }
-      return { url: img.url, public_id: img.public_id }; // Send existing objects
+      return { url: img.url, public_id: true }; // Send existing objects
     });
 
-    console.log(
-      'Data to submit (images field) from frontend:',
-      JSON.stringify(dataToSubmit.images)
-    ); // DEBUG LOG
+    
 
-    const success = await updateProduct(productId, dataToSubmit);
+    // console.log(
+    //   'Data to submit (images field) from frontend:',
+    //   JSON.stringify(dataToSubmit.images)
+    // ); // DEBUG LOG
 
-    if (success) {
-      navigate(-1); // Go back to previous page (e.g., admin dashboard)
-    }
+    updateProduct(productId, dataToSubmit);
+
+    navigate(-1); // Go back to previous page (e.g., admin dashboard)
   };
 
   // For collection dropdown filtering
@@ -300,7 +302,21 @@ const AdminEditProductPage = () => {
 
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Price ($)</span>
+              <span className="label-text">Items</span>
+            </label>
+            <textarea
+              name="items"
+              placeholder="(3+3+1+1) with Center Table Or Bed+Wardrobe..."
+              className="textarea textarea-bordered h-24 w-full rounded-md"
+              value={formData.items}
+              onChange={handleChange}
+              required
+            ></textarea>
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Price</span>
             </label>
             <input
               type="number"
@@ -308,7 +324,7 @@ const AdminEditProductPage = () => {
               placeholder="999.99"
               step="0.01"
               className="input input-bordered w-full rounded-md"
-              value={formData.price}
+              value={Number(formData.price).toFixed(2)}
               onChange={handleChange}
               required
             />
@@ -550,7 +566,7 @@ const AdminEditProductPage = () => {
                 placeholder="e.g., 399.99"
                 step="0.01"
                 className="input input-bordered w-full rounded-md"
-                value={formData.discountedPrice}
+                value={Number(formData.discountedPrice).toFixed(2)}
                 onChange={handleChange}
                 required={formData.isPromo}
               />

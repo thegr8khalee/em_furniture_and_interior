@@ -13,6 +13,7 @@ const collectionSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, unique: true },
     description: { type: String, trim: true },
+    // items: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 }, // NEW: Price for the collection
     productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     reviews: [reviewSchema], // Embedded reviews for the collection

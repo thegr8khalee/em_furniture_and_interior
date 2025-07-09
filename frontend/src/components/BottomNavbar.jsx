@@ -6,7 +6,11 @@ import {
   ShoppingCart,
   User,
   Heart,
+  X,
   LayoutDashboard,
+  HomeIcon,
+  Plus,
+  Minus,
 } from 'lucide-react'; // Example icons
 import { Link, useLocation } from 'react-router-dom'; // Use Link for navigation, useLocation for active state
 import { useAuthStore } from '../store/useAuthStore';
@@ -26,8 +30,8 @@ const BottomNavbar = () => {
   // Define your navigation items
   const navItems = [
     { name: 'Shop', icon: ShoppingBag, path: '/shop' }, // Example shop page
-    { name: 'Cart', icon: ShoppingCart, path: '/cart' }, // Example cart page
-    { name: 'Wishlist', icon: Heart, path: '/wishlist' }, // Example wishlist page
+    { name: isAdmin? 'Product' : 'Cart', icon: isAdmin ? Plus : ShoppingCart, path: isAdmin ? '/admin/products/new' :'/cart' }, // Example cart page
+    { name: isAdmin? 'Collection' : 'Wishlist', icon: isAdmin ? Plus :  Heart, path: isAdmin ? '/admin/collections/new' : '/wishlist' }, // Example wishlist page
     {
       name: 'Profile',
       icon: isAdmin ? LayoutDashboard : User,

@@ -9,7 +9,8 @@ import { useCollectionStore } from '../store/useCollectionStore';
 
 const EditCollection = () => {
   const { collectionId } = useParams(); // Get collection ID from URL
-  const { isGettingCollection, isUpdatingCollection,  updateCollection } = useAdminStore();
+  const { isGettingCollection, isUpdatingCollection, updateCollection } =
+    useAdminStore();
 
   const { getCollectionById } = useCollectionStore();
   const { products, getProducts, isGettingProducts } = useProductsStore();
@@ -50,6 +51,7 @@ const EditCollection = () => {
             name: collectionData.name || '',
             style: collectionData.style || '',
             description: collectionData.description || '',
+            // items: collectionData.items || '',
             price: collectionData.price || '', // Keep as string for input
             // NEW: Ensure productIds is always an array before mapping
             productIds: Array.isArray(collectionData.productIds)
@@ -166,6 +168,10 @@ const EditCollection = () => {
       setError('Description is required.');
       return;
     }
+    // if (dataToSubmit.items.trim() === '') {
+    //   setError('Items is required.');
+    //   return;
+    // }
     if (dataToSubmit.productIds.length === 0) {
       setError('At least one product must be selected for the collection.');
       return;
@@ -224,7 +230,7 @@ const EditCollection = () => {
   }
 
   return (
-    <div className="flex justify-center items-start min-h-screen py-8 bg-base-200">
+    <div className="flex justify-center items-start min-h-screen py-8 bg-base-200 pt-16">
       <div className="p-4 bg-base-100 rounded-lg shadow-xl w-full max-w-3xl">
         <h2 className="text-3xl font-bold mb-6 text-primary font-[poppins]">
           Edit Collection
@@ -268,6 +274,22 @@ const EditCollection = () => {
             ></textarea>
           </div>
 
+          {/* <div className="form-control">
+            <label className="label">
+              <span className="label-text">
+                Items<span className="text-red-500">*</span>
+              </span>
+            </label>
+            <textarea
+              name="items"
+              placeholder="A collection inspired by minimalist design..."
+              className="textarea textarea-bordered h-24 w-full rounded-md"
+              value={formData.items}
+              onChange={handleChange}
+              required
+            ></textarea>
+          </div> */}
+
           <div className="form-control">
             <label className="label">
               <span className="label-text">Price ($)</span>
@@ -278,7 +300,7 @@ const EditCollection = () => {
               placeholder="1999.99"
               step="0.01"
               className="input input-bordered w-full rounded-md"
-              value={formData.price}
+              value={Number(formData.price).toFixed(2)}
               onChange={handleChange}
               required
             />
@@ -475,7 +497,7 @@ const EditCollection = () => {
                 placeholder="e.g., 1499.99"
                 step="0.01"
                 className="input input-bordered w-full rounded-md"
-                value={formData.discountedPrice}
+                value={Number(formData.discountedPrice).toFixed(2)}
                 onChange={handleChange}
                 required={formData.isPromo}
               />

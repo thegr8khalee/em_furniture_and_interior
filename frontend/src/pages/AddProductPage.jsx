@@ -13,6 +13,7 @@ const AdminAddProductPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    items: '',
     price: '',
     category: '',
     style: '',
@@ -172,7 +173,21 @@ const AdminAddProductPage = () => {
 
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Price ($)</span>
+              <span className="label-text">Items</span>
+            </label>
+            <textarea
+              name="items"
+              placeholder="(3+3+1+1) or Bed+Wardrobe+mirror..."
+              className="textarea textarea-bordered h-24 w-full rounded-md"
+              value={formData.items}
+              onChange={handleChange}
+              required
+            ></textarea>
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Price</span>
             </label>
             <input
               type="number"
@@ -180,7 +195,7 @@ const AdminAddProductPage = () => {
               placeholder="999.99"
               step="0.01"
               className="input input-bordered w-full rounded-md"
-              value={formData.price}
+              value={Number(formData.price).toFixed(2)}
               onChange={handleChange}
               required
             />
@@ -331,7 +346,7 @@ const AdminAddProductPage = () => {
                 placeholder="e.g., 799.99"
                 step="0.01"
                 className="input input-bordered w-full rounded-md"
-                value={formData.discountedPrice}
+                value={Number(formData.discountedPrice).toFixed(2)}
                 onChange={handleChange}
                 required={formData.isPromo}
               />

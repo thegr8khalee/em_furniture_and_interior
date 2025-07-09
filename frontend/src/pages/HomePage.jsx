@@ -163,6 +163,8 @@ const HomePage = () => {
     }, 10);
   }
 
+  console.log(promotionProducts)
+
   if (isGettingProducts || isGettingCollections) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -287,7 +289,7 @@ const HomePage = () => {
                   onClick={() => handleProductClick(product._id)}
                 >
                   <img
-                    src={product.images[0].url}
+                    src={product?.images[0].url}
                     alt={product.name}
                     className="w-full h-50 md:h-60 lg:h-70 rounded-lg object-cover rounded-t-lg"
                   />
