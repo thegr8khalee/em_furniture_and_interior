@@ -9,12 +9,15 @@ import {
   ChevronRight,
   Share2,
   Loader,
+  Pen,
+  Trash2,
 } from 'lucide-react';
 import { useProductsStore } from '../store/useProductsStore';
 import whatsapp from '../images/whatsapp.png';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useAdminStore } from '../store/useAdminStore';
 const ProductPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -31,6 +34,27 @@ const ProductPage = () => {
 
   const { isAdmin } = useAuthStore();
 
+  const { isDeletingProduct, delProduct } = useAdminStore();
+
+  const handleEditProduct = (product) => {
+    console.log(product);
+    navigate(`/admin/products/edit/${product}`);
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    // NEW: Add a confirmation prompt before deleting
+    if (
+      window.confirm(
+        'Are you sure you want to delete this product? This action cannot be undone.'
+      )
+    ) {
+      delProduct(productId);
+      navigate(-1)
+      // User cancelled the deletion
+      // toast.info('Product deletion cancelled.'); // Optional: inform user
+    }
+  };
+
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // NEW: Refs for touch events
@@ -46,7 +70,7 @@ const ProductPage = () => {
     if (!isAdmin) {
       getwishlist();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId, getProductById, getwishlist]);
 
   // Reset currentImageIndex when product changes (e.g., navigating to a new product page)
@@ -329,6 +353,27 @@ const ProductPage = () => {
               <img src={whatsapp} alt="" className="size-6" />
               Order Now
             </a>
+          ) : null}
+          {isAdmin ? (
+            <div className="space-y-2">
+              <button
+                className="btn rounded-xl bg-primary mr-2 w-full"
+                onClick={() => handleEditProduct(productId)}
+              >
+                <Pen /> Edit Product
+              </button>
+              <button
+                className="btn rounded-xl w-full btn-error"
+                onClick={() => handleDeleteProduct(product._id)}
+              >
+                {isDeletingProduct ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <Trash2 />
+                )}{' '}
+                Delete Product
+              </button>
+            </div>
           ) : null}
           {!isAdmin ? (
             <div className="flex space-x-4 mb-6">

@@ -191,7 +191,16 @@ const SignupPage = () => {
             </div>
 
             <div className="form-control">
-              <p className=''>By clicking on sign Up, you agree to our</p><a href="/privacy" className='text-info'>Privacy Policy</a>
+              <div className="flex mb-1">
+                <p className="">
+                  By clicking on sign Up, you agree to our
+                  <span className='pl-2'>
+                    <a href="/privacy" className="text-info">
+                      Privacy Policy
+                    </a>
+                  </span>
+                </p>
+              </div>
               <button
                 type="submit"
                 className="btn btn-primary w-full border-0 font-semibold py-3 rounded-md shadow-md hover:shadow-lg transition duration-200 text-black text-sm font-['poppins']"

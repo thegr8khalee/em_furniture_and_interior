@@ -313,7 +313,7 @@ const EditCollection = () => {
               </span>
             </label>
             <div
-              className="input input-bordered w-full rounded-md flex items-center justify-between cursor-pointer"
+              className="input input-bordered h-auto py-1 w-full rounded-md flex items-center justify-between cursor-pointer"
               onClick={() => setIsProductDropdownOpen(!isProductDropdownOpen)}
               tabIndex="0"
               onKeyDown={(e) => {

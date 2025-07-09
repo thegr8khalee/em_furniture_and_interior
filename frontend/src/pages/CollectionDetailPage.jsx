@@ -8,6 +8,8 @@ import {
   ChevronLeft,
   Share,
   Share2,
+  Pen,
+  Trash2,
 } from 'lucide-react';
 // import { useAdminStore } from '../store/useAdminStore'; // To get collection details
 import { useProductsStore } from '../store/useProductsStore'; // To get all products and filter them
@@ -17,6 +19,7 @@ import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
 // import { useAdminStore } from '../store/useAdminStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useAdminStore } from '../store/useAdminStore';
 
 const CollectionDetailsPage = () => {
   const { collectionId } = useParams();
@@ -42,6 +45,8 @@ const CollectionDetailsPage = () => {
 
   const { isAdmin } = useAuthStore();
 
+  const { delCollection, isDeletingCollection } = useAdminStore();
+
   // Fetch collection details when component mounts or collectionId changes
   useEffect(() => {
     if (collectionId) {
@@ -52,7 +57,7 @@ const CollectionDetailsPage = () => {
     if (!isAdmin) {
       getwishlist();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collectionId, getCollectionById, getProducts, getwishlist]);
 
   //   console.log(collection)
@@ -81,6 +86,21 @@ const CollectionDetailsPage = () => {
     setTimeout(() => {
       window.scrollTo(0, 0);
     }, 10);
+  };
+
+  const handleEditCollection = async (collection) => {
+    navigate(`/admin/collections/edit/${collection}`);
+  };
+
+  const handleDeleteCollection = async (collectionId) => {
+    if (
+      window.confirm(
+        'Are you sure you want to delete this collection? This action cannot be undone.'
+      )
+    ) {
+      await delCollection(collectionId);
+      navigate(-1);
+    }
   };
 
   const isInWishlist = (id) =>
@@ -256,6 +276,27 @@ const CollectionDetailsPage = () => {
           </div>
         </div>
       </div>
+      {isAdmin ? (
+        <div className="space-y-2 m-2">
+          <button
+            className="btn rounded-xl bg-primary mr-2 w-full"
+            onClick={() => handleEditCollection(collectionId)}
+          >
+            <Pen /> Edit Collection
+          </button>
+          <button
+            className="btn rounded-xl w-full btn-error"
+            onClick={() => handleDeleteCollection(collectionId)}
+          >
+            {isDeletingCollection ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Trash2 />
+            )}{' '}
+            Delete Collection
+          </button>
+        </div>
+      ) : null}
       {!isAdmin ? (
         <div className="px-4 mb-6 sm:flex space-x-2 space-y-2">
           <a
@@ -398,7 +439,10 @@ const CollectionDetailsPage = () => {
                 </div>
                 {!isAdmin ? (
                   <div className="space-x-1">
-                    <a className="btn rounded-xl bg-green-400" href={whatsappHref(product)}>
+                    <a
+                      className="btn rounded-xl bg-green-400"
+                      href={whatsappHref(product)}
+                    >
                       <img src={whatsapp} alt="WhatsApp" className="size-5" />
                     </a>
                     <button
