@@ -194,9 +194,7 @@ export const updateProfile = async (req, res) => {
       updatedAt: authenticatedEntity.updatedAt,
     };
 
-    res
-      .status(200)
-      .json(responseData);
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('Error in updateProfile controller:', error);
     // Check if headers have already been sent before attempting to send response
@@ -300,5 +298,53 @@ export const checkAuth = async (req, res) => {
     return res
       .status(500)
       .json({ message: 'Internal Server Error during authentication check.' });
+  }
+};
+
+export const deleteAccount = async (req, res) => {
+  try {
+    console.log(req.user);
+    // Ensure user is authenticated and req.user is populated by middleware
+    if (!req.user || !req.user._id) {
+      return res
+        .status(401)
+        .json({ message: 'Not authenticated: User information missing.' });
+    }
+
+    const userId = req.user._id;
+    // const userRole = req.user.role;
+
+    let deletedEntity = null;
+
+    deletedEntity = await User.findByIdAndDelete(userId);
+
+    if (!deletedEntity) {
+      return res
+        .status(404)
+        .json({ message: 'Account not found or already deleted.' });
+    }
+
+    // Clear the JWT cookie after successful deletion
+    res.clearCookie('jwt', {
+      maxAge: 0,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+    });
+
+    res
+      .status(200)
+      .json({ message: `your account deleted successfully.` });
+  } catch (error) {
+    console.error('Error in deleteAccount controller:', error.message);
+    if (res.headersSent) {
+      console.warn(
+        'Headers already sent, cannot send error response from deleteAccount catch block.'
+      );
+      return;
+    }
+    res
+      .status(500)
+      .json({ message: 'Internal Server Error during account deletion.' });
   }
 };

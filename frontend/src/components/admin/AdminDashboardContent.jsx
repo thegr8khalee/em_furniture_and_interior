@@ -18,9 +18,6 @@ const AdminDashboardContent = () => {
   const stats = [
     { label: 'Total Products', value: products.length },
     { label: 'Total Collections', value: collections.length },
-    { label: 'Recent Orders', value: '5' },
-    { label: 'New Users (Last 7 Days)', value: '10' },
-    { label: 'Pending Reviews', value: '7' },
   ];
 
   const navigate = useNavigate();

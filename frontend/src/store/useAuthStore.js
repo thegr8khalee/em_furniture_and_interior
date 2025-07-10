@@ -74,4 +74,17 @@ export const useAuthStore = create((set, get) => ({
       set({ isLoading: false });
     }
   },
+
+  deleteAccount: async () => {
+    set({ isLoading: true });
+    try {
+      await axiosInstance.delete('/auth/delete');
+      toast.success('Account deleted');
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
 }));

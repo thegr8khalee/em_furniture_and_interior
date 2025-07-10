@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import { Loader2, User, Mail, Phone, Save, Edit, Lock } from 'lucide-react';
+import { Loader2, User, Mail, Phone, Save, Edit, Lock, Trash2 } from 'lucide-react';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -13,6 +13,7 @@ const ProfilePage = () => {
     profileUpdateError,
     updateProfile,
     logout,
+    deleteAccount,
   } = useAuthStore();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -49,6 +50,17 @@ const ProfilePage = () => {
   const handleLogOut = () => {
     logout();
   };
+
+  const handleDeleteAccount = async () => {
+   if (
+      window.confirm(
+        'Are you sure you want to delete this collection? This action cannot be undone.'
+      )
+    ) {
+      await deleteAccount();
+      navigate('/');
+    }
+  }
 
   if (isLoading) {
     return (
@@ -164,6 +176,15 @@ const ProfilePage = () => {
               className="btn w-full btn-outline btn-error rounded-md"
             >
               Logout
+            </button>
+          </div>
+          <div className="w-full pt-6 border-t border-base-200">
+            <button
+              onClick={() => handleDeleteAccount()}
+              className="btn w-full btn-error rounded-md"
+            >
+              <Trash2/>
+              Delete Account
             </button>
           </div>
         </div>
