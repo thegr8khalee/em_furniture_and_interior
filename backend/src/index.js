@@ -17,7 +17,9 @@ import wishlistRoutes from './routes/wishlist.routes.js';
 import contactRoutes from './routes/contact.routes.js';
 const app = express();
 
-dotenv.config();
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 app.use(cookieParser());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
