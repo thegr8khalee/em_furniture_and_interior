@@ -16,7 +16,7 @@ router.put('/add', identifyGuest, protectRoute, addToCart);
 router.put('/remove', identifyGuest, protectRoute, removeFromCart);
 router.delete('/clear', identifyGuest, protectRoute, clearCart);
 router.put(
-  '/update-quantity',
+  '/updatequantity',
   identifyGuest,
   protectRoute,
   updateCartItemQuantity

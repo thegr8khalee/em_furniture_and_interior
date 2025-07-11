@@ -54,7 +54,7 @@ const AboutUs = () => {
               <p>Amina Abdulahi</p>
               <p>CEO & Visionary</p>
               <p>Lead Interior Designer</p>
-              <a className="text-info" href="emfurnitureandinterior@gmail.com">
+              <a className="text-info" href="mailto:emfurnitureandinterior@gmail.com">
                 Contact
               </a>
             </div>
@@ -63,7 +63,7 @@ const AboutUs = () => {
               <p>Ibrahim Abdulahi</p>
               <p>Head of Business Development</p>
               <p>Head of IT department</p>
-              <a className="text-info" href="mailto:kaliibro777A@gmail.com">
+              <a className="text-info" href="mailto:kaliibro777@gmail.com">
                 Contact
               </a>
             </div>

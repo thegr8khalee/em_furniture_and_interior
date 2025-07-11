@@ -234,7 +234,7 @@ export const useCartStore = create((set, get) => ({
 
     if (get()._isUserOrGuestIdentified()) {
       try {
-        await axiosInstance.put('/cart/update-quantity', {
+        await axiosInstance.put('/cart/updatequantity', {
           itemId,
           itemType,
           quantity: newQuantity,
