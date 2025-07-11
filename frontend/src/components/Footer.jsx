@@ -125,7 +125,7 @@ const Footer = () => {
       <aside>
         <p>
           Copyright © {new Date().getFullYear()} - All right reserved by EM
-          Group
+          Furniture and Interior
         </p>
       </aside>
     </footer>

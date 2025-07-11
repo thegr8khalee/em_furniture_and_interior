@@ -178,7 +178,7 @@ const Contact = () => {
               </div>
               <div>
                 <h3 className="font-bold text-lg">Address:</h3>
-                <p>C14 Bamaiyi Road, Kaduna, Nigeria.</p>
+                <p>C16 Bamaiyi Road, Kaduna, Nigeria.</p>
               </div>
               <div>
                 <h3 className="font-bold text-lg">Business Hours:</h3>

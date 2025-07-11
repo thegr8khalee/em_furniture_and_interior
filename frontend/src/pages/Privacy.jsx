@@ -268,7 +268,7 @@ const Privacy = () => {
                 +2349037691860
               </a>
             </li>
-            <li>Address: C15 Bamaiyi Road, Kaduna, Nigeria</li>
+            <li>Address: C16 Bamaiyi Road, Kaduna, Nigeria</li>
           </ul>
         </div>
       </div>

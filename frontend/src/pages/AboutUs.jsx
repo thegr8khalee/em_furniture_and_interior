@@ -17,7 +17,7 @@ const AboutUs = () => {
       <div className="w-full items-center justify-center flex">
         <section className="text-center w-full mt-10 px-4 max-w-5xl">
           <div className="text-3xl font-bold font-[poppins]">
-            EM Group Limited – The Epitome of Luxury & Craftsmanship
+            EM Furniture and Interior – The Epitome of Luxury & Craftsmanship
           </div>
           <div className="font-[montserrat] pt-4">
             At EM Group Limited, we redefine elegance by blending exceptional
@@ -67,6 +67,41 @@ const AboutUs = () => {
                 Contact
               </a>
             </div>
+          </div>
+          <div className="text-3xl font-bold font-[poppins] py-4">
+            Design & Consultation Team
+          </div>
+          <div className="font-[montserrat]">
+            Our talented interior designers and consultants work closely with
+            clients to understand their vision, offer expert advice, and
+            translate ideas into stunning, functional designs. They are adept at
+            blending global trends with local aesthetics.
+          </div>
+          <div className="text-3xl font-bold font-[poppins] py-4">
+            Manufacturing & Craftsmanship Team
+          </div>
+          <div className="font-[montserrat]">
+            Highly skilled artisans and carpenters form the backbone of our
+            local production. With years of experience, they meticulously craft
+            each custom furniture piece and kitchen cabinet, ensuring precision,
+            durability, and a flawless finish.
+          </div>
+          <div className="text-3xl font-bold font-[poppins] py-4">
+            Logistics & Installation Team
+          </div>
+          <div className="font-[montserrat]">
+            Our efficient logistics team ensures timely delivery of both
+            imported and locally manufactured goods. Our professional installers
+            handle complex setups, ensuring a seamless and secure integration of
+            all furniture and fixtures into your space.
+          </div>
+          <div className="text-3xl font-bold font-[poppins] py-4">
+            Client Relations & Support
+          </div>
+          <div className="font-[montserrat]">
+            A friendly and responsive team dedicated to providing excellent
+            customer service, from initial inquiry to post-delivery support,
+            ensuring a smooth and satisfying client journey.
           </div>
         </section>
       </div>

@@ -9,7 +9,7 @@ const Showroom = () => {
     const showroomLongitude = 7.401133; // Example Longitude (e.g., for Lagos, Nigeria)
 
     // A descriptive address for display purposes, even if using coordinates for the map
-    const descriptiveAddress = "C14 Bamaiyi Road, Kaduna Nigeria.";
+    const descriptiveAddress = "C16 Bamaiyi Road, Kaduna Nigeria.";
 
     // IMPORTANT: Get your Google Maps API Key from Google Cloud Console
     const googleMapsApiKey = import.meta.env.VITE_REACT_APP_GOOGLE_MAPS_API_KEY;
