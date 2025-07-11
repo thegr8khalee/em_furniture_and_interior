@@ -4,6 +4,8 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import { connectDB } from './lib/db.js';
 
+import path from 'path';
+
 import authRoutes from './routes/auth.routes.js';
 import guestRoutes from './routes/guest.routes.js';
 import adminRoutes from './routes/admin.routes.js';
@@ -27,6 +29,7 @@ app.use(
 );
 
 const PORT = process.env.PORT || 5000;
+const __dirname = path.resolve();
 
 app.use('/api/auth', authRoutes);
 app.use('/api/guestAuth', guestRoutes);
@@ -37,6 +40,14 @@ app.use('/api/review', reviewRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/contact', contactRoutes);
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend', 'dist', 'index.html'));
+  });
+}
 
 app.listen(PORT, () => {
   console.log('Server running on port: ', PORT);
