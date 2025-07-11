@@ -34,14 +34,14 @@ const PORT = process.env.PORT || 5000;
 const __dirname = path.resolve();
 
 app.use('/api/auth', authRoutes);
-app.use('/api/guestAuth', guestRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/collections', collectionRoutes);
-app.use('/api/review', reviewRoutes);
-app.use('/api/cart', cartRoutes);
-app.use('/api/wishlist', wishlistRoutes);
-app.use('/api/contact', contactRoutes);
+// app.use('/api/guestAuth', guestRoutes);
+// app.use('/api/admin', adminRoutes);
+// app.use('/api/products', productRoutes);
+// app.use('/api/collections', collectionRoutes);
+// app.use('/api/review', reviewRoutes);
+// app.use('/api/cart', cartRoutes);
+// app.use('/api/wishlist', wishlistRoutes);
+// app.use('/api/contact', contactRoutes);
 
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../frontend/dist')));
