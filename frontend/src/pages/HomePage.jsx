@@ -311,10 +311,10 @@ const HomePage = () => {
                 </h3>
                 <div className="flex items-baseline space-x-2">
                   <span className="text-red-600 font-bold text-lg">
-                    N{product.discountedPrice.toLocaleString()}
+                    ₦{product.discountedPrice.toLocaleString()}
                   </span>
                   <span className="text-gray-500 line-through text-sm">
-                    N{product.price.toLocaleString()}
+                    ₦{product.price.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -351,7 +351,7 @@ const HomePage = () => {
                 </h3>
                 <div className="flex items-baseline space-x-2">
                   <span className=" text-gray-500">
-                    N{product.price.toLocaleString()}
+                    ₦{product.price.toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -388,7 +388,7 @@ const HomePage = () => {
                 </h3>
                 <div className="flex items-baseline space-x-2">
                   <span className=" text-gray-500">
-                    N{product.price.toLocaleString()}
+                    ₦{product.price.toLocaleString()}
                   </span>
                 </div>
               </div>

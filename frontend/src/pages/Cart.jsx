@@ -310,7 +310,7 @@ const CartPage = () => {
                       </div>{' '}
                       <div className="flex items-end space-x-1 justify-between w-full">
                         <div className="text font-[montserrat]">
-                          N{item.displayPrice?.toFixed(2) || '0.00'}
+                          ₦{item.displayPrice?.toFixed(2) || '0.00'}
                         </div>
                         <div className="space-x-2 items-center">
                           <button
@@ -375,13 +375,13 @@ const CartPage = () => {
               <div className="flex justify-between text-lg">
                 <span>Subtotal ({totalItemsInCart} items)</span>
                 <span className="font-medium">
-                  N{calculateOverallTotal().toFixed(2)}
+                  ₦{calculateOverallTotal().toFixed(2)}
                 </span>
               </div>
               <div className="border-t border-base-200 my-4"></div>
               <div className="flex justify-between text-xl font-bold text-red-500">
                 <span>Total</span>
-                <span>N{calculateOverallTotal().toFixed(2)}</span>
+                <span>₦{calculateOverallTotal().toFixed(2)}</span>
               </div>
             </div>
             <a

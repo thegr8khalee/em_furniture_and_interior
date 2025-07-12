@@ -71,7 +71,7 @@ const CollectionManagement = () => {
             {collections.map((collection) => (
               <tr key={collection._id}>
                 <td>{collection.name}</td>
-                <td>${collection.price.toFixed(2)}</td>
+                <td>₦{collection.price.toFixed(2)}</td>
                 <td>
                   {collection.productIds ? collection.productIds.length : 0}
                 </td>

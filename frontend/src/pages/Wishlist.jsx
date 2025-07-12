@@ -216,7 +216,7 @@ const WishlistPage = () => {
                       <div className="flex items-center justify-between space-x-2 w-full">
                         <div>
                           <p className="text font-montserrat">
-                            N{item.displayPrice?.toFixed(2) || '0.00'}
+                            ₦{item.displayPrice?.toFixed(2) || '0.00'}
                           </p>
                         </div>
                         <div className="flex">

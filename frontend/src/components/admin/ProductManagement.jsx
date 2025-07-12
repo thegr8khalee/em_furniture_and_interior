@@ -76,7 +76,7 @@ const ProductManagement = () => {
               <tr key={product._id}>
                 <td>{product.name}</td>
                 <td>{product.category}</td>
-                <td>${product.price.toFixed(2)}</td>
+                <td>₦{product.price.toFixed(2)}</td>
                 <td className="space-y-1 sm:flex">
                   <button
                     className="btn btn-circle btn-warning mr-2"

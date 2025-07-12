@@ -316,7 +316,7 @@ const AdminEditProductPage = () => {
 
           <div className="form-control">
             <label className="label">
-              <span className="label-text">Price</span>
+              <span className="label-text">Price (₦)</span>
             </label>
             <input
               type="number"
@@ -558,7 +558,7 @@ const AdminEditProductPage = () => {
           {formData.isPromo && (
             <div className="form-control">
               <label className="label">
-                <span className="label-text">Discounted Price ($)</span>
+                <span className="label-text">Discounted Price (₦)</span>
               </label>
               <input
                 type="number"

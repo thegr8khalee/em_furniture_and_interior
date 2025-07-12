@@ -645,15 +645,15 @@ const ShopPage = () => {
                           product.discountedPrice !== undefined ? (
                             <div className="flex flex-col">
                               <span className="text-red-600 font-bold text-lg">
-                                N{product.discountedPrice.toFixed(2)}
+                                ₦{product.discountedPrice.toFixed(2)}
                               </span>
                               <span className="text-gray-500 line-through text-sm">
-                                N{product.price.toFixed(2)}
+                                ₦{product.price.toFixed(2)}
                               </span>
                             </div>
                           ) : (
                             <span className="font-semibold text-lg">
-                              N{product.price.toFixed(2)}
+                              ₦{product.price.toFixed(2)}
                             </span>
                           )}
                         </div>
@@ -802,15 +802,15 @@ const ShopPage = () => {
                           collection.discountedPrice !== undefined ? (
                             <div className="flex flex-col">
                               <span className="text-red-600 font-bold text-lg">
-                                N{collection.discountedPrice.toFixed(2)}
+                                ₦{collection.discountedPrice.toFixed(2)}
                               </span>
                               <span className="text-gray-500 line-through text-sm">
-                                N{collection.price.toFixed(2)}
+                                ₦{collection.price.toFixed(2)}
                               </span>
                             </div>
                           ) : (
                             <span className="font-semibold text-lg">
-                              N{collection.price.toFixed(2)}
+                              ₦{collection.price.toFixed(2)}
                             </span>
                           )}
                         </div>

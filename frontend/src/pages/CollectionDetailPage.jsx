@@ -227,10 +227,10 @@ const CollectionDetailsPage = () => {
                 collection.discountedPrice !== undefined ? (
                   <>
                     <span className="text-red-600 font-bold text-xl">
-                      N{collection.discountedPrice.toFixed(2)}
+                      ₦{collection.discountedPrice.toFixed(2)}
                     </span>
                     <span className="text-gray-500 line-through text">
-                      N{collection.price.toFixed(2)}
+                      ₦{collection.price.toFixed(2)}
                     </span>
                     <span className="text-green-600 text font-semibold">
                       (
@@ -244,7 +244,7 @@ const CollectionDetailsPage = () => {
                   </>
                 ) : (
                   <span className="text-red-600 font-bold text-xl">
-                    N{collection.price.toFixed(2)}
+                    ₦{collection.price.toFixed(2)}
                   </span>
                 )}
               </div>

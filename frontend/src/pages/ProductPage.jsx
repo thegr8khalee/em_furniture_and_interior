@@ -322,10 +322,10 @@ const ProductPage = () => {
             {product.isPromo && product.discountedPrice !== undefined ? (
               <>
                 <span className="text-red-600 font-bold text-xl">
-                  N{product.discountedPrice.toFixed(2)}
+                  ₦{product.discountedPrice.toFixed(2)}
                 </span>
                 <span className="text-gray-500 line-through text">
-                  N{product.price.toFixed(2)}
+                  ₦{product.price.toFixed(2)}
                 </span>
                 <span className="text-green-600 text font-semibold">
                   (
@@ -339,7 +339,7 @@ const ProductPage = () => {
               </>
             ) : (
               <span className="text-red-600 font-bold text-xl">
-                N{product.price.toFixed(2)}
+                ₦{product.price.toFixed(2)}
               </span>
             )}
           </div>{' '}
