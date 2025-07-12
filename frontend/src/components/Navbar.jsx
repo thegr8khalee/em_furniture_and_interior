@@ -127,7 +127,7 @@ const Navbar = () => {
           checked={isDrawerChecked}
           onChange={handleDrawerCheckboxChange}
         />
-        <div className="px-4 fixed navbar backdrop-blur-lg bg-base-100/80 items-center w-full top-0 z-20 drawer-content">
+        <div className="fixed navbar backdrop-blur-lg bg-base-100/80 items-center w-full top-0 z-20 drawer-content">
           <div className="navbar-start">
             {isAdmin && isDashboard ? (
               <button
