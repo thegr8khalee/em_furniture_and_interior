@@ -33,7 +33,7 @@ const BottomNavbar = () => {
     { name: isAdmin? 'Product' : 'Cart', icon: isAdmin ? Plus : ShoppingCart, path: isAdmin ? '/admin/products/new' :'/cart' }, // Example cart page
     { name: isAdmin? 'Collection' : 'Wishlist', icon: isAdmin ? Plus :  Heart, path: isAdmin ? '/admin/collections/new' : '/wishlist' }, // Example wishlist page
     {
-      name: 'Profile',
+      name: isAdmin ? 'Dasboard' : 'Profile',
       icon: isAdmin ? LayoutDashboard : User,
       path: isAdmin ? '/admin/dashboard' : '/profile',
     }, // Example profile page
