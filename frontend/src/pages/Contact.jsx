@@ -156,7 +156,7 @@ const Contact = () => {
                 <h3 className="font-bold text-lg">Email:</h3>
                 <p>
                   <a
-                    href="mailto:info@emgroup.com"
+                    href="mailto:emfurnitureandinterior@gmial.com.com"
                     className=" hover:underline"
                   >
                     emfurnitureandinterior@gmail.com
@@ -188,7 +188,7 @@ const Contact = () => {
                 <h3 className="font-bold text-lg">Follow Us:</h3>
                 <div className="flex space-x-4 mt-2">
                   <a
-                    href="https://wa.me/"
+                    href="https://wa.me/2349037691860"
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="WhatsApp"
