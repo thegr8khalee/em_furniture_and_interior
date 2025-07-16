@@ -119,7 +119,7 @@ const AdminAddProductPage = () => {
     }
 
     // Call the addProduct action from useAdminStore
-    addProduct(formData); // addProduct should return true/false based on success
+    await addProduct(formData); // addProduct should return true/false based on success
 
     navigate(-1); // Redirect on success
 

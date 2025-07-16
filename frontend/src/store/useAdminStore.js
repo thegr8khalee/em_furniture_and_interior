@@ -68,6 +68,7 @@ export const useAdminStore = create((set) => ({
       toast.success('success');
     } catch (error) {
       toast.error(error.message);
+      console.log(error.message);
     } finally {
       set({ isAddingProduct: false });
     }
