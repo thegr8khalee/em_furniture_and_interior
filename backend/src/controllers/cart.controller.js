@@ -8,24 +8,19 @@ import mongoose from 'mongoose';
 
 export const getCart = async (req, res) => {
   try {
-    let cart = [];
+    let entity = null; // Will hold either the User or GuestSession document
+    let modelToUpdate = null; // Will hold the Mongoose model (User or GuestSession)
+
     if (req.user) {
       // Authenticated user
-      const user = await User.findById(req.user._id).populate(
-        'cart.item',
-        'name price images'
-      ); // Populate product/collection details
-      if (user) {
-        cart = user.cart;
-      }
+      entity = await User.findById(req.user._id);
+      modelToUpdate = User;
     } else if (req.guestSession) {
       // Guest user
-      const guestSession = await GuestSession.findOne({
+      entity = await GuestSession.findOne({
         anonymousId: req.guestSession.anonymousId,
-      }).populate('cart.item', 'name price images'); // Populate product/collection details
-      if (guestSession) {
-        cart = guestSession.cart;
-      }
+      });
+      modelToUpdate = GuestSession;
     } else {
       // No user or guest session, return empty cart
       return res
@@ -33,7 +28,81 @@ export const getCart = async (req, res) => {
         .json({ message: 'No active cart found.', cart: [] });
     }
 
-    res.status(200).json({ message: 'Cart retrieved successfully.', cart });
+    if (!entity) {
+      // This case should ideally not happen if req.user or req.guestSession exists,
+      // but good for robustness.
+      return res
+        .status(404)
+        .json({ message: 'User or guest session not found.' });
+    }
+
+    let rawCart = entity.cart; // Get the raw cart array from the entity
+    const productIdsInCart = [];
+    const collectionIdsInCart = [];
+
+    // Separate item IDs by type
+    rawCart.forEach((cartItem) => {
+      // Ensure cartItem.item is a string for map keys and $in query
+      if (cartItem.item && typeof cartItem.item.toString === 'function') {
+        if (cartItem.itemType === 'Product') {
+          productIdsInCart.push(cartItem.item);
+        } else if (cartItem.itemType === 'Collection') {
+          collectionIdsInCart.push(cartItem.item);
+        }
+      }
+    });
+
+    // Fetch only the _id of existing products and collections in batch queries
+    const [existingProducts, existingCollections] = await Promise.all([
+      Product.find({ _id: { $in: productIdsInCart } }).select('_id'),
+      Collection.find({ _id: { $in: collectionIdsInCart } }).select('_id'),
+    ]);
+
+    // Create sets for efficient O(1) lookup of existing IDs
+    const existingProductIdsSet = new Set(
+      existingProducts.map((p) => p._id.toString())
+    );
+    const existingCollectionIdsSet = new Set(
+      existingCollections.map((c) => c._id.toString())
+    );
+
+    const cleanedRawCart = [];
+    const itemIdsToRemoveFromDb = []; // Store the _id of the cart entries to remove
+
+    // Reconstruct the cart, keeping only items that still exist in the DB
+    for (const cartItem of rawCart) {
+      const itemIdString = cartItem.item.toString(); // Convert ObjectId to string for comparison
+
+      let existsInDb = false;
+      if (cartItem.itemType === 'Product') {
+        existsInDb = existingProductIdsSet.has(itemIdString);
+      } else if (cartItem.itemType === 'Collection') {
+        existsInDb = existingCollectionIdsSet.has(itemIdString);
+      }
+
+      if (existsInDb) {
+        // Item still exists in DB, keep it in the cart
+        cleanedRawCart.push(cartItem);
+      } else {
+        // Item not found in DB (it was deleted), mark this cart entry for removal
+        itemIdsToRemoveFromDb.push(cartItem._id);
+      }
+    }
+
+    // If any items were identified as deleted, update the cart in the database
+    if (itemIdsToRemoveFromDb.length > 0) {
+      await modelToUpdate.findByIdAndUpdate(
+        entity._id,
+        { $pull: { cart: { _id: { $in: itemIdsToRemoveFromDb } } } },
+        { new: true } // Return the updated document, though not strictly used here
+      );
+      // The `cleanedRawCart` array already contains only valid items, so we'll send that.
+    }
+
+    // Send the cleaned, but UNPOPULATED, cart back to the frontend
+    res
+      .status(200)
+      .json({ message: 'Cart retrieved successfully.', cart: cleanedRawCart });
   } catch (error) {
     console.error('Error in getCart controller: ', error.message);
     res.status(500).json({ message: 'Internal Server Error' });
@@ -246,11 +315,9 @@ export const clearCart = async (req, res) => {
         cart: currentCartOwner.cart, // This will be []
       });
     } else {
-      return res
-        .status(401)
-        .json({
-          message: 'Unauthorized: No valid user or guest session found.',
-        });
+      return res.status(401).json({
+        message: 'Unauthorized: No valid user or guest session found.',
+      });
     }
   } catch (error) {
     console.error('Error in clearCart controller:', error.message); // Log only message for cleaner output
@@ -348,5 +415,39 @@ export const updateCartItemQuantity = async (req, res) => {
     res
       .status(500)
       .json({ message: 'Internal Server Error during cart quantity update.' });
+  }
+};
+
+export const checkItemExistence = async (req, res) => {
+  try {
+    const { productIds = [], collectionIds = [] } = req.body;
+
+    // Ensure IDs are valid ObjectId types
+    const validProductIds = productIds.filter(
+      (id) => id && typeof id === 'string' && id.match(/^[0-9a-fA-F]{24}$/)
+    );
+    const validCollectionIds = collectionIds.filter(
+      (id) => id && typeof id === 'string' && id.match(/^[0-9a-fA-F]{24}$/)
+    );
+
+    const [existingProducts, existingCollections] = await Promise.all([
+      Product.find({ _id: { $in: validProductIds } }).select('_id'), // Only fetch _id for existence check
+      Collection.find({ _id: { $in: validCollectionIds } }).select('_id'), // Only fetch _id for existence check
+    ]);
+
+    const existingProductMap = new Set(
+      existingProducts.map((p) => p._id.toString())
+    );
+    const existingCollectionMap = new Set(
+      existingCollections.map((c) => c._id.toString())
+    );
+
+    res.status(200).json({
+      existingProductIds: Array.from(existingProductMap),
+      existingCollectionIds: Array.from(existingCollectionMap),
+    });
+  } catch (error) {
+    console.error('Error checking item existence:', error.message);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 };

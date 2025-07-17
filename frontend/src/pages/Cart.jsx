@@ -10,8 +10,8 @@ import Hero1 from '../images/Hero1.png';
 const CartPage = () => {
   const {
     cart, // This is now an array of cart items: [{item: ID, itemType: Type, quantity: N, _id: CART_ENTRY_ID}, ...]
-    isGettingCart,
-    isAddingToCart,
+    // isGettingCart,
+    // isAddingToCart,
     isRemovingFromCart,
     isUpdatingCartItem,
     getCart,
@@ -22,7 +22,7 @@ const CartPage = () => {
   } = useCartStore();
 
   const [detailedCartItems, setDetailedCartItems] = useState([]);
-  const [isFetchingDetails, setIsFetchingDetails] = useState(false);
+  // const [isFetchingDetails, setIsFetchingDetails] = useState(false);
 
   useEffect(() => {
     // Always fetch the raw cart data from the store on component mount
@@ -35,7 +35,7 @@ const CartPage = () => {
       // Only proceed if cart data is available and has items
       // cart is now an array, so check cart.length
       if (cart && cart.length > 0) {
-        setIsFetchingDetails(true);
+        // setIsFetchingDetails(true);
         const fetchedDetails = [];
 
         for (const cartItem of cart) {
@@ -97,10 +97,10 @@ const CartPage = () => {
           }
         }
         setDetailedCartItems(fetchedDetails);
-        setIsFetchingDetails(false);
+        // setIsFetchingDetails(false);
       } else {
         setDetailedCartItems([]); // Clear detailed items if cart is empty or not yet loaded
-        setIsFetchingDetails(false);
+        // setIsFetchingDetails(false);
       }
     };
 
@@ -213,25 +213,25 @@ const CartPage = () => {
   };
 
   // Overall loading state for the page
-  const isLoadingPage =
-    isGettingCart ||
-    isFetchingDetails ||
-    isAddingToCart ||
-    isRemovingFromCart ||
-    isUpdatingCartItem;
+  // const isLoadingPage =
+  //   isGettingCart ||
+  //   isFetchingDetails ||
+  //   isAddingToCart ||
+  //   isRemovingFromCart ||
+  //   isUpdatingCartItem;
 
-  console.log(detailedCartItems);
+  // console.log(detailedCartItems);
 
-  if (isLoadingPage) {
-    return (
-      <div className="pt-16">
-        <div className="flex justify-center items-center min-h-screen">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="ml-2 text-lg">Loading cart...</p>
-        </div>
-      </div>
-    );
-  }
+  // if (isGettingCart) {
+  //   return (
+  //     <div className="pt-16">
+  //       <div className="flex justify-center items-center min-h-screen">
+  //         <Loader2 className="h-10 w-10 animate-spin text-primary" />
+  //         <p className="ml-2 text-lg">Loading cart...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   // Check if cart is empty after loading and fetching details
   // cart is now an array, so check cart.length
@@ -299,7 +299,11 @@ const CartPage = () => {
                             handleRemoveItem(item._id, item.itemType)
                           }
                         >
-                          <X className="size-4" />
+                          {!isRemovingFromCart ? (
+                            <X className="size-4" />
+                          ) : (
+                            <Loader2 className="animate-spin" />
+                          )}
                         </button>
                       </div>
                       <div className="items-center  font-[montserrat]">
@@ -325,7 +329,11 @@ const CartPage = () => {
                             className="btn btn-xs  btn-outline btn-primary rounded-xl"
                             disabled={isUpdatingCartItem || item.quantity <= 1}
                           >
-                            <Minus size={16} />
+                            {!isUpdatingCartItem ? (
+                              <Minus size={16} />
+                            ) : (
+                              <Loader2 className="animate-spin" />
+                            )}
                           </button>
 
                           <span className="font-semibold text-lg w-8 text-center">
@@ -343,7 +351,11 @@ const CartPage = () => {
                             className="btn btn-xs btn-outline btn-primary rounded-xl"
                             disabled={isUpdatingCartItem}
                           >
-                            <Plus size={16} />
+                            {!isUpdatingCartItem ? (
+                              <Plus size={16} />
+                            ) : (
+                              <Loader2 className="animate-spin" />
+                            )}
                           </button>
                         </div>
                       </div>

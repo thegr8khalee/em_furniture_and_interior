@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   addToCart,
+  checkItemExistence,
   clearCart,
   getCart,
   removeFromCart,
@@ -21,4 +22,6 @@ router.put(
   protectRoute,
   updateCartItemQuantity
 );
+router.post('/check-existence', checkItemExistence);
+
 export default router;

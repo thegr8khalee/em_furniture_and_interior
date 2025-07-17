@@ -1,7 +1,7 @@
 // src/pages/AdminAddCollectionPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-// import { toast } from 'react-toastify'; // For notifications
+import { Editor } from '@tinymce/tinymce-react';
 import { ChevronDown, ChevronUp, Loader2, Search, XCircle } from 'lucide-react'; // For loading spinner and remove icon
 import { useAdminStore } from '../store/useAdminStore'; // Import useAdminStore for addCollection and getProducts
 import { useProductsStore } from '../store/useProductsStore';
@@ -10,6 +10,13 @@ const AddCollection = () => {
   const { addCollection, isAddingCollection } = useAdminStore();
   const { getProducts, isGettingProducts, products } = useProductsStore();
   const navigate = useNavigate();
+
+  const editorRef = useRef(null);
+
+  const handleEditorInit = (evt, editor) => {
+    editorRef.current = editor;
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -109,6 +116,21 @@ const AddCollection = () => {
     e.preventDefault();
     setError(null);
 
+    const htmlDescription = editorRef.current
+      ? editorRef.current.getContent()
+      : '';
+
+    // Client-side validation for description
+    const strippedDescription = htmlDescription.replace(/<[^>]*>/g, '').trim();
+    if (!strippedDescription) {
+      setError('Description cannot be empty.');
+      return;
+    }
+
+    // IMPORTANT: Only update the description field in dataToSubmit.
+    // All other fields and their processing remain exactly as they were.
+    const dataToSubmit = { ...formData, description: htmlDescription };
+
     // Validate required fields
     if (formData.productIds.length === 0) {
       setError('Please select at least one product for the collection.');
@@ -120,7 +142,7 @@ const AddCollection = () => {
       return;
     }
 
-    const dataToSubmit = { ...formData };
+    // const dataToSubmit = { ...formData };
 
     const parsedPrice = parseFloat(dataToSubmit.price);
     const parsedDiscountedPrice = parseFloat(dataToSubmit.discountedPrice);
@@ -207,14 +229,27 @@ const AddCollection = () => {
             <label className="label">
               <span className="label-text">Description</span>
             </label>
-            <textarea
-              name="description"
-              placeholder="A collection inspired by minimalist design..."
-              className="textarea textarea-bordered h-24 w-full rounded-md"
-              value={formData.description}
-              onChange={handleChange}
-              required
-            ></textarea>
+            <Editor
+              onInit={handleEditorInit}
+              apiKey="esh5bav8bmcm4mdbribpsniybxdqty6jszu5ctwihsw35a5y" // <--- IMPORTANT: Replace with your TinyMCE API key
+              initialValue={formData.description} // Set initial value from fetched product data
+              init={{
+                height: 300,
+                menubar: false,
+                plugins: [
+                  'advlist autolink lists link image charmap print preview anchor',
+                  'searchreplace visualblocks code fullscreen',
+                  'insertdatetime media table paste code help wordcount',
+                ],
+                toolbar:
+                  'undo redo | formatselect | ' +
+                  'bold italic backcolor | alignleft aligncenter ' +
+                  'alignright alignjustify | bullist numlist outdent indent | ' +
+                  'removeformat | help',
+                content_style:
+                  'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+              }}
+            />
           </div>
 
           {/* <div className="form-control">
@@ -335,7 +370,7 @@ const AddCollection = () => {
                       <li key={product._id}>
                         <label className="flex items-center justify-between w-full p-2 cursor-pointer hover:bg-base-200 rounded-none">
                           <span>
-                            {product.name} (${product.price?.toFixed(2)})
+                            {product.name} (₦{product.price?.toFixed(2)})
                           </span>
                           <input
                             type="checkbox"

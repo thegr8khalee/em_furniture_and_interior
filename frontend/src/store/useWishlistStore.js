@@ -10,9 +10,10 @@ const LOCAL_STORAGE_WISHLIST_KEY = 'localWishlist';
 
 // Helper to get wishlist from local storage
 const getLocalWishlist = () => {
-  try {
+ try {
     const storedWishlist = localStorage.getItem(LOCAL_STORAGE_WISHLIST_KEY);
-    // For local storage, we'll store just an array of item IDs
+    // Local storage wishlist will now be an array of wishlist items, matching backend's expected structure
+    // e.g., [{item: ID, itemType: Type, _id: WISHLIST_ENTRY_ID}, ...]
     return storedWishlist ? JSON.parse(storedWishlist) : [];
   } catch (error) {
     console.error('Error parsing local storage wishlist:', error);
@@ -45,6 +46,64 @@ export const useWishlistStore = create((set, get) => ({
     return !!authUser || !!anonymousId;
   },
 
+  cleanAndGetLocalWishlist: async () => {
+    const rawLocalWishlist = getLocalWishlist();
+    if (rawLocalWishlist.length === 0) {
+      return []; // Nothing to clean
+    }
+
+    const productIds = [];
+    const collectionIds = [];
+
+    rawLocalWishlist.forEach((item) => {
+      // Ensure item.item is a string for map keys and $in query
+      if (item.item && typeof item.item.toString === 'function') {
+        if (item.itemType === 'Product') {
+          productIds.push(item.item);
+        } else if (item.itemType === 'Collection') {
+          collectionIds.push(item.item);
+        }
+      }
+    });
+
+    try {
+      // Use the backend endpoint created for checking item existence
+      const res = await axiosInstance.post('/cart/check-existence', {
+        productIds,
+        collectionIds,
+      });
+      const { existingProductIds, existingCollectionIds } = res.data;
+
+      const existingProductsSet = new Set(existingProductIds);
+      const existingCollectionsSet = new Set(existingCollectionIds);
+
+      const cleanedWishlist = rawLocalWishlist.filter((item) => {
+        const itemIdString = item.item.toString(); // Convert ObjectId to string for comparison
+        if (item.itemType === 'Product') {
+          return existingProductsSet.has(itemIdString);
+        } else if (item.itemType === 'Collection') {
+          return existingCollectionsSet.has(itemIdString);
+        }
+        return false; // Should not happen for valid itemTypes
+      });
+
+      // Update local storage only if the wishlist was actually modified
+      if (cleanedWishlist.length !== rawLocalWishlist.length) {
+        saveLocalWishlist(cleanedWishlist);
+        toast.success(
+          'Some items in your wishlist were removed as they are no longer available.'
+        );
+      }
+      return cleanedWishlist;
+    } catch (error) {
+      console.error('Error cleaning local wishlist:', error);
+      toast.error(
+        'Could not verify some wishlist items. Displaying wishlist as is.'
+      );
+      return rawLocalWishlist; // Return raw wishlist on error to avoid breaking functionality
+    }
+  },
+
   /**
    * Fetches the current user's or guest's wishlist from backend, or from local storage.
    */
@@ -54,19 +113,28 @@ export const useWishlistStore = create((set, get) => ({
       // Use backend if user is authenticated or has a guest session
       try {
         const res = await axiosInstance.get('/wishlist');
+        // The backend's /wishlist endpoint now returns the already cleaned wishlist
         set({ wishlist: res.data.wishlist || [] }); // Ensure it defaults to an empty array
       } catch (error) {
         console.error('Error loading wishlist from backend:', error);
-        // toast.error(
-        //   error.response?.data?.message || 'Failed to load wishlist.'
-        // );
+        toast.error(
+          error.response?.data?.message || 'Failed to load wishlist.'
+        );
       } finally {
         set({ isGettingWishlist: false });
       }
     } else {
-      // Use local storage if no user or guest session
-      const localWishlist = getLocalWishlist();
-      set({ wishlist: localWishlist, isGettingWishlist: false });
+      // Use local storage and clean it before setting
+      try {
+        const cleanedLocalWishlist = await get().cleanAndGetLocalWishlist(); // Await the cleanup
+        set({ wishlist: cleanedLocalWishlist });
+      } catch (error) {
+        console.log(error.message)
+        // Error already logged/toasted by cleanAndGetLocalWishlist
+        set({ wishlist: getLocalWishlist() }); // Fallback to raw local wishlist
+      } finally {
+        set({ isGettingWishlist: false });
+      }
     }
   },
 

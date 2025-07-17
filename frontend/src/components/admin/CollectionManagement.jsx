@@ -17,7 +17,7 @@ const CollectionManagement = () => {
   }, [getCollections]);
 
   const handleAddCollection = () => {
-    navigate('/admin/collections/new')
+    navigate('/admin/collections/new');
   };
 
   const handleEditCollection = async (collection) => {
@@ -25,17 +25,21 @@ const CollectionManagement = () => {
   };
 
   const handleDeleteCollection = async (collectionId) => {
-   if (window.confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
-            const success = await delCollection(collectionId);
-            if (success) {
-                // toast.success('Product deleted successfully!'); // Uncomment if using toast
-            } else {
-                // toast.error(adminError || 'Failed to delete product.'); // Uncomment if using toast
-            }
-        } else {
-            // User cancelled the deletion
-            // toast.info('Product deletion cancelled.'); // Optional: inform user
-        }
+    if (
+      window.confirm(
+        'Are you sure you want to delete this product? This action cannot be undone.'
+      )
+    ) {
+      const success = await delCollection(collectionId);
+      if (success) {
+        // toast.success('Product deleted successfully!'); // Uncomment if using toast
+      } else {
+        // toast.error(adminError || 'Failed to delete product.'); // Uncomment if using toast
+      }
+    } else {
+      // User cancelled the deletion
+      // toast.info('Product deletion cancelled.'); // Optional: inform user
+    }
   };
 
   return (
@@ -71,7 +75,13 @@ const CollectionManagement = () => {
             {collections.map((collection) => (
               <tr key={collection._id}>
                 <td>{collection.name}</td>
-                <td>₦{collection.price.toFixed(2)}</td>
+                <td>
+                  ₦
+                  {Number(collection.price).toLocaleString('en-NG', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </td>
                 <td>
                   {collection.productIds ? collection.productIds.length : 0}
                 </td>

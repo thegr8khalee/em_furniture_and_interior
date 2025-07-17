@@ -30,19 +30,23 @@ const ProductManagement = () => {
   };
 
   const handleDeleteProduct = async (productId) => {
-        // NEW: Add a confirmation prompt before deleting
-        if (window.confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
-            const success = await delProduct(productId);
-            if (success) {
-                // toast.success('Product deleted successfully!'); // Uncomment if using toast
-            } else {
-                // toast.error(adminError || 'Failed to delete product.'); // Uncomment if using toast
-            }
-        } else {
-            // User cancelled the deletion
-            // toast.info('Product deletion cancelled.'); // Optional: inform user
-        }
-    };
+    // NEW: Add a confirmation prompt before deleting
+    if (
+      window.confirm(
+        'Are you sure you want to delete this product? This action cannot be undone.'
+      )
+    ) {
+      const success = await delProduct(productId);
+      if (success) {
+        // toast.success('Product deleted successfully!'); // Uncomment if using toast
+      } else {
+        // toast.error(adminError || 'Failed to delete product.'); // Uncomment if using toast
+      }
+    } else {
+      // User cancelled the deletion
+      // toast.info('Product deletion cancelled.'); // Optional: inform user
+    }
+  };
 
   if (isGettingProducts) {
     // Show a loading indicator while authentication status is being determined
@@ -76,7 +80,13 @@ const ProductManagement = () => {
               <tr key={product._id}>
                 <td>{product.name}</td>
                 <td>{product.category}</td>
-                <td>₦{product.price.toFixed(2)}</td>
+                <td>
+                  ₦
+                  {Number(product.price).toLocaleString('en-NG', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </td>
                 <td className="space-y-1 sm:flex">
                   <button
                     className="btn btn-circle btn-warning mr-2"

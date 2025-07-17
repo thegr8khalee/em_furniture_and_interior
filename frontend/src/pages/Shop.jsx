@@ -84,7 +84,7 @@ const ShopPage = () => {
       getwishlist();
     }
     checkAuth();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getProducts, getCollections, getwishlist, checkAuth]);
 
   useEffect(() => {
@@ -113,7 +113,7 @@ const ShopPage = () => {
         navigate(location.pathname, { replace: true, state: {} });
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state?.focusSearch, productSearchInputRef, viewMode, navigate]);
 
   // NEW: Effect to read category from URL on initial load
@@ -567,7 +567,7 @@ const ShopPage = () => {
                 No products found for the selected filters.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {filteredProducts.map((product) => (
                   <div
                     key={product._id}
@@ -645,15 +645,30 @@ const ShopPage = () => {
                           product.discountedPrice !== undefined ? (
                             <div className="flex flex-col">
                               <span className="text-red-600 font-bold text-lg">
-                                ₦{product.discountedPrice.toFixed(2)}
+                                ₦
+                                {Number(product.discountedPrice).toLocaleString(
+                                  'en-NG',
+                                  {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  }
+                                )}
                               </span>
                               <span className="text-gray-500 line-through text-sm">
-                                ₦{product.price.toFixed(2)}
+                                ₦
+                                {Number(product.price).toLocaleString('en-NG', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
                               </span>
                             </div>
                           ) : (
                             <span className="font-semibold text-lg">
-                              ₦{product.price.toFixed(2)}
+                              ₦
+                              {Number(product.price).toLocaleString('en-NG', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
                             </span>
                           )}
                         </div>
@@ -723,7 +738,7 @@ const ShopPage = () => {
                 No collections found for the selected filters.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-4 gap-6">
                 {filteredCollections.map((collection) => (
                   <div
                     key={collection._id}
@@ -802,15 +817,35 @@ const ShopPage = () => {
                           collection.discountedPrice !== undefined ? (
                             <div className="flex flex-col">
                               <span className="text-red-600 font-bold text-lg">
-                                ₦{collection.discountedPrice.toFixed(2)}
+                                ₦
+                                {Number(
+                                  collection.discountedPrice
+                                ).toLocaleString('en-NG', {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
                               </span>
                               <span className="text-gray-500 line-through text-sm">
-                                ₦{collection.price.toFixed(2)}
+                                ₦
+                                {Number(collection.price).toLocaleString(
+                                  'en-NG',
+                                  {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  }
+                                )}
                               </span>
                             </div>
                           ) : (
                             <span className="font-semibold text-lg">
-                              ₦{collection.price.toFixed(2)}
+                              ₦
+                              {Number(collection.price).toLocaleString(
+                                'en-NG',
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                }
+                              )}
                             </span>
                           )}
                         </div>

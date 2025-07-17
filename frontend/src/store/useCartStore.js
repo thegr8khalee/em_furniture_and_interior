@@ -12,7 +12,6 @@ const LOCAL_STORAGE_CART_KEY = 'localCart';
 const getLocalCart = () => {
   try {
     const storedCart = localStorage.getItem(LOCAL_STORAGE_CART_KEY);
-    // Local storage cart will now be an array of cart items, matching backend's expected structure
     return storedCart ? JSON.parse(storedCart) : [];
   } catch (error) {
     console.error('Error parsing local storage cart:', error);
@@ -38,6 +37,57 @@ export const useCartStore = create((set, get) => ({
   isUpdatingCartItem: false,
   cartError: null,
 
+  cleanAndGetLocalCart: async () => {
+    const rawLocalCart = getLocalCart();
+    if (rawLocalCart.length === 0) {
+      return []; // Nothing to clean
+    }
+
+    const productIds = [];
+    const collectionIds = [];
+
+    rawLocalCart.forEach((item) => {
+      if (item.itemType === 'Product') {
+        productIds.push(item.item); // Assuming item.item is the ID
+      } else if (item.itemType === 'Collection') {
+        collectionIds.push(item.item); // Assuming item.item is the ID
+      }
+    });
+
+    try {
+      const res = await axiosInstance.post('/cart/check-existence', {
+        productIds,
+        collectionIds,
+      });
+      const { existingProductIds, existingCollectionIds } = res.data;
+
+      const existingProductsSet = new Set(existingProductIds);
+      const existingCollectionsSet = new Set(existingCollectionIds);
+
+      const cleanedCart = rawLocalCart.filter((item) => {
+        if (item.itemType === 'Product') {
+          return existingProductsSet.has(item.item);
+        } else if (item.itemType === 'Collection') {
+          return existingCollectionsSet.has(item.item);
+        }
+        return false; // Should not happen for valid itemTypes
+      });
+
+      // Update local storage only if the cart was actually modified
+      if (cleanedCart.length !== rawLocalCart.length) {
+        saveLocalCart(cleanedCart);
+        toast.success(
+          'Some items in your cart were removed as they are no longer available.'
+        );
+      }
+      return cleanedCart;
+    } catch (error) {
+      console.error('Error cleaning local cart:', error);
+      toast.error('Could not verify some cart items. Displaying cart as is.');
+      return rawLocalCart; // Return raw cart on error to avoid breaking functionality
+    }
+  },
+
   /**
    * Determines if the current user is authenticated or has a guest session.
    * @returns {boolean} True if authenticated or guest, false otherwise.
@@ -57,19 +107,26 @@ export const useCartStore = create((set, get) => ({
       // Use backend if user is authenticated or has a guest session
       try {
         const res = await axiosInstance.get('/cart');
-        // FIX: Assume backend returns an object { cart: [...] } where cart is the array of items
-        // If backend returns just the array directly, change to `set({ cart: res.data || [] });`
+        // The backend's /cart endpoint now returns the already cleaned cart
         set({ cart: res.data.cart || [] });
       } catch (error) {
         console.error('Error loading cart from backend:', error);
-        toast.error(error.message);
+        toast.error('Failed to load cart. Please try again.');
+        // Consider handling logout or other error states here if authentication fails
       } finally {
         set({ isGettingCart: false });
       }
     } else {
-      // Use local storage if no user or guest session
-      const localCart = getLocalCart();
-      set({ cart: localCart, isGettingCart: false });
+      // Use local storage and clean it before setting
+      try {
+        const cleanedLocalCart = await get().cleanAndGetLocalCart(); // Await the cleanup
+        set({ cart: cleanedLocalCart });
+      } catch (error) {
+        console.log(error.message);
+        set({ cart: getLocalCart() }); // Fallback to raw local cart
+      } finally {
+        set({ isGettingCart: false });
+      }
     }
   },
 

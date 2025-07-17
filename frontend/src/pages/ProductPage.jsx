@@ -49,7 +49,7 @@ const ProductPage = () => {
       )
     ) {
       delProduct(productId);
-      navigate(-1)
+      navigate(-1);
       // User cancelled the deletion
       // toast.info('Product deletion cancelled.'); // Optional: inform user
     }
@@ -304,7 +304,7 @@ const ProductPage = () => {
         </div>
 
         {/* Product Details */}
-        <div className="lg:w-1/2 space-y-1">
+        <div className="md:w-1/2 space-y-1">
           <div className="flex space-x-2 font-normal text-gray-500 items-center text-xs sm:text-base">
             <p>{product.style}</p>
             <p>| {product.category}</p>
@@ -322,10 +322,18 @@ const ProductPage = () => {
             {product.isPromo && product.discountedPrice !== undefined ? (
               <>
                 <span className="text-red-600 font-bold text-xl">
-                  ₦{product.discountedPrice.toFixed(2)}
+                  ₦
+                  {Number(product.discountedPrice).toLocaleString('en-NG', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
                 <span className="text-gray-500 line-through text">
-                  ₦{product.price.toFixed(2)}
+                  ₦
+                  {Number(product.price).toLocaleString('en-NG', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
                 <span className="text-green-600 text font-semibold">
                   (
@@ -339,13 +347,18 @@ const ProductPage = () => {
               </>
             ) : (
               <span className="text-red-600 font-bold text-xl">
-                ₦{product.price.toFixed(2)}
+                ₦
+                {Number(product.price).toLocaleString('en-NG', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </span>
             )}
           </div>{' '}
-          <p className="text text-gray-700 font-[montserrat]">
-            {product.description}
-          </p>
+          {/* <p
+            className="text text-gray-700 font-[montserrat]"
+            dangerouslySetInnerHTML={{ __html: product.description }}
+          ></p> */}
           {!isAdmin ? (
             <a
               className="my-4 btn bg-green-500 text-base-100 w-full rounded-xl font-[poppins] shadow-none border-0"
@@ -415,6 +428,10 @@ const ProductPage = () => {
               )}
             </div>
           ) : null}
+          <p
+            className="text text-gray-700 font-[montserrat]"
+            dangerouslySetInnerHTML={{ __html: product.description }}
+          ></p>
         </div>
       </div>
     </div>

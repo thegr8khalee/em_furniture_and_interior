@@ -7,42 +7,98 @@ import Collection from '../models/collection.model.js'; // Import Collection mod
 import mongoose from 'mongoose';
 
 export const getWishlist = async (req, res) => {
-  try {
-    let wishlist = [];
-    console.log(req.user)
-    if (req.user.role === 'admin') {
-      return;
-    } else if (req.user) {
-      // Authenticated user
-      const user = await User.findById(req.user._id).populate(
-        'wishlist.item',
-        'name price images'
-      ); // Populate product/collection details
-      if (user) {
-        wishlist = user.wishlist;
-      }
-    } else if (req.guestSession) {
-      // Guest user
-      const guestSession = await GuestSession.findOne({
-        anonymousId: req.guestSession.anonymousId,
-      }).populate('wishlist.item', 'name price images'); // Populate product/collection details
-      if (guestSession) {
-        wishlist = guestSession.wishlist;
-      }
-    } else {
-      // No user or guest session, return empty wishlist
-      return res
-        .status(200)
-        .json({ message: 'No active wishlist found.', wishlist: [] });
-    }
+    try {
+        let entity = null; // Will hold either the User or GuestSession document
+        let modelToUpdate = null; // Will hold the Mongoose model (User or GuestSession)
 
-    res
-      .status(200)
-      .json({ message: 'Wishlist retrieved successfully.', wishlist });
-  } catch (error) {
-    console.error('Error in getWishlist controller: ', error.message);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
+        // Handle admin role: Admins typically don't have a personal wishlist
+        if (req.user && req.user.role === 'admin') {
+            return res.status(200).json({ message: 'Admin accounts do not have a wishlist.', wishlist: [] });
+        }
+
+        if (req.user) {
+            // Authenticated user (non-admin)
+            entity = await User.findById(req.user._id);
+            modelToUpdate = User;
+        } else if (req.guestSession) {
+            // Guest user
+            entity = await GuestSession.findOne({ anonymousId: req.guestSession.anonymousId });
+            modelToUpdate = GuestSession;
+        } else {
+            // No user or guest session, return empty wishlist
+            return res.status(200).json({ message: 'No active wishlist found.', wishlist: [] });
+        }
+
+        if (!entity) {
+            // This case should ideally not happen if req.user or req.guestSession exists
+            return res.status(404).json({ message: 'User or guest session not found.' });
+        }
+
+        let rawWishlist = entity.wishlist; // Get the raw wishlist array from the entity
+        const productIdsInWishlist = [];
+        const collectionIdsInWishlist = [];
+
+        // Separate item IDs by type
+        rawWishlist.forEach(wishlistItem => {
+            // Ensure wishlistItem.item is a string for map keys and $in query
+            if (wishlistItem.item && typeof wishlistItem.item.toString === 'function') {
+                if (wishlistItem.itemType === 'Product') {
+                    productIdsInWishlist.push(wishlistItem.item);
+                } else if (wishlistItem.itemType === 'Collection') {
+                    collectionIdsInWishlist.push(wishlistItem.item);
+                }
+            }
+        });
+
+        // Fetch only the _id of existing products and collections in batch queries
+        const [existingProducts, existingCollections] = await Promise.all([
+            Product.find({ _id: { $in: productIdsInWishlist } }).select('_id'),
+            Collection.find({ _id: { $in: collectionIdsInWishlist } }).select('_id')
+        ]);
+
+        // Create sets for efficient O(1) lookup of existing IDs
+        const existingProductIdsSet = new Set(existingProducts.map(p => p._id.toString()));
+        const existingCollectionIdsSet = new Set(existingCollections.map(c => c._id.toString()));
+
+        const cleanedRawWishlist = [];
+        const itemIdsToRemoveFromDb = []; // Store the _id of the wishlist entries to remove
+
+        // Reconstruct the wishlist, keeping only items that still exist in the DB
+        for (const wishlistItem of rawWishlist) {
+            const itemIdString = wishlistItem.item.toString(); // Convert ObjectId to string for comparison
+
+            let existsInDb = false;
+            if (wishlistItem.itemType === 'Product') {
+                existsInDb = existingProductIdsSet.has(itemIdString);
+            } else if (wishlistItem.itemType === 'Collection') {
+                existsInDb = existingCollectionIdsSet.has(itemIdString);
+            }
+
+            if (existsInDb) {
+                // Item still exists in DB, keep it in the wishlist
+                cleanedRawWishlist.push(wishlistItem);
+            } else {
+                // Item not found in DB (it was deleted), mark this wishlist entry for removal
+                itemIdsToRemoveFromDb.push(wishlistItem._id);
+            }
+        }
+
+        // If any items were identified as deleted, update the wishlist in the database
+        if (itemIdsToRemoveFromDb.length > 0) {
+            await modelToUpdate.findByIdAndUpdate(
+                entity._id,
+                { $pull: { wishlist: { _id: { $in: itemIdsToRemoveFromDb } } } },
+                { new: true } // Return the updated document, though not strictly used here
+            );
+            // The `cleanedRawWishlist` array already contains only valid items, so we'll send that.
+        }
+
+        // Send the cleaned, but UNPOPULATED, wishlist back to the frontend
+        res.status(200).json({ message: 'Wishlist retrieved successfully.', wishlist: cleanedRawWishlist });
+    } catch (error) {
+        console.error('Error in getWishlist controller: ', error.message);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
 };
 
 export const addToWishlist = async (req, res) => {

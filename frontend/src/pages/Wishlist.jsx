@@ -10,8 +10,8 @@ import Hero1 from '../images/Hero1.png';
 const WishlistPage = () => {
   const {
     wishlist, // This is now an array of wishlist items: [{item: ID, itemType: Type, _id: WISHLIST_ENTRY_ID}, ...]
-    isGettingWishlist,
-    isAddingToWishlist, // Used for general wishlist operations loading
+    // isGettingWishlist,
+    // isAddingToWishlist, // Used for general wishlist operations loading
     isRemovingFromWishlist, // Specific for remove/clear
     getwishlist,
     removeFromwishlist,
@@ -24,7 +24,7 @@ const WishlistPage = () => {
   } = useCartStore();
 
   const [detailedWishlistItems, setDetailedWishlistItems] = useState([]);
-  const [isFetchingDetails, setIsFetchingDetails] = useState(false);
+  // const [isFetchingDetails, setIsFetchingDetails] = useState(false);
 
   useEffect(() => {
     // Always fetch the raw wishlist data from the store on component mount
@@ -36,7 +36,7 @@ const WishlistPage = () => {
     const fetchItemDetails = async () => {
       // Only proceed if wishlist data is available and has items
       if (wishlist && wishlist.length > 0) {
-        setIsFetchingDetails(true);
+        // setIsFetchingDetails(true);
         const fetchedDetails = [];
 
         for (const wishlistItem of wishlist) {
@@ -95,10 +95,10 @@ const WishlistPage = () => {
           }
         }
         setDetailedWishlistItems(fetchedDetails);
-        setIsFetchingDetails(false);
+        // setIsFetchingDetails(false);
       } else {
         setDetailedWishlistItems([]); // Clear detailed items if wishlist is empty or not yet loaded
-        setIsFetchingDetails(false);
+        // setIsFetchingDetails(false);
       }
     };
 
@@ -135,19 +135,19 @@ const WishlistPage = () => {
   };
 
   // Overall loading state for the page
-  const isLoadingPage =
-    isGettingWishlist || isFetchingDetails || isAddingToWishlist;
+  // const isLoadingPage =
+  //   isGettingWishlist || isFetchingDetails || isAddingToWishlist;
 
-  if (isLoadingPage) {
-    return (
-      <div className="pt-16">
-        <div className="flex justify-center items-center min-h-screen">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="ml-2 text-lg">Loading wishlist...</p>
-        </div>
-      </div>
-    );
-  }
+  // if (isLoadingPage) {
+  //   return (
+  //     <div className="pt-16">
+  //       <div className="flex justify-center items-center min-h-screen">
+  //         <Loader2 className="h-10 w-10 animate-spin text-primary" />
+  //         <p className="ml-2 text-lg">Loading wishlist...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   // Check if wishlist is empty after loading and fetching details
   if (

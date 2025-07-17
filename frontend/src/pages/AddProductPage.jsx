@@ -1,33 +1,38 @@
 // src/pages/AdminAddProductPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // Import useRef for TinyMCE
 import { useNavigate } from 'react-router-dom';
-// import axiosInstance from '../../utils/axiosInstance'; // For API calls
-// import { toast } from 'react-toastify'; // For notifications
-import { Loader2, XCircle } from 'lucide-react'; // For loading spinner and remove icon
+import { Editor } from '@tinymce/tinymce-react'; // Import TinyMCE Editor component
+
+import { toast } from 'react-hot-toast';
+import { Loader2, XCircle } from 'lucide-react';
 import { useCollectionStore } from '../store/useCollectionStore';
-import { useAdminStore } from '../store/useAdminStore'; // Import useAdminStore
+import { useAdminStore } from '../store/useAdminStore';
 
 const AdminAddProductPage = () => {
-  const { addProduct, isAddingProduct } = useAdminStore(); // Use isAddingProduct for loading state
+  const { addProduct, isAddingProduct } = useAdminStore();
   const navigate = useNavigate();
+
+  // Ref for TinyMCE editor instance (useful for getting content directly)
+  const editorRef = useRef(null);
+
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
+    description: '', // This will be set from TinyMCE's content on submit
     items: '',
     price: '',
     category: '',
     style: '',
     collectionId: '',
-    images: [], // Will now store Base64 strings
+    images: [],
     isBestSeller: false,
     isPromo: false,
     discountedPrice: '',
-    isForeign: false, // NEW: Added isForeign field
-    origin: '', // NEW: Added origin field
+    isForeign: false,
+    origin: '',
   });
-  // REMOVED: local 'loading' state, now using isAddingProduct from store
-  const [error, setError] = useState(null); // Keep local error for client-side validation
-  const [imagePreviews, setImagePreviews] = useState([]); // For displaying image previews
+
+  const [error, setError] = useState(null);
+  const [imagePreviews, setImagePreviews] = useState([]);
 
   const { collections, isGettingCollections, getCollections } =
     useCollectionStore();
@@ -35,6 +40,13 @@ const AdminAddProductPage = () => {
   useEffect(() => {
     getCollections();
   }, [getCollections]);
+
+  // TinyMCE doesn't use a direct value prop for controlled component like input.
+  // We'll get its content on form submission.
+  // The onInit prop is useful if you need to access the editor instance.
+  const handleEditorInit = (evt, editor) => {
+    editorRef.current = editor;
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -45,32 +57,28 @@ const AdminAddProductPage = () => {
     setError(null);
   };
 
-  // Handles image file selection and converts to Base64 (one by one)
   const handleImageChange = (e) => {
-    const file = e.target.files[0]; // Get only the first file
+    const file = e.target.files[0];
     if (!file) return;
 
-    // Reset the file input value to allow selecting the same file again after removal
     e.target.value = null;
 
     const reader = new FileReader();
     reader.onloadend = () => {
       setFormData((prevData) => ({
         ...prevData,
-        images: [...prevData.images, reader.result], // Add new Base64 string
+        images: [...prevData.images, reader.result],
       }));
-      setImagePreviews((prevPreviews) => [...prevPreviews, reader.result]); // Add for preview
+      setImagePreviews((prevPreviews) => [...prevPreviews, reader.result]);
       setError(null);
     };
     reader.onerror = () => {
       setError('Failed to read image file.');
-      // toast.error('Failed to read image file.'); // Use toast for user feedback
-      // setLoading(false); // This was local loading, now handled by store's isAddingProduct
+      toast.error('Failed to read image file.');
     };
-    reader.readAsDataURL(file); // Read file as Base64 Data URL
+    reader.readAsDataURL(file);
   };
 
-  // Handles removing an image by its index
   const handleRemoveImage = (indexToRemove) => {
     setFormData((prevData) => ({
       ...prevData,
@@ -84,8 +92,17 @@ const AdminAddProductPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // setLoading(true); // Handled by isAddingProduct in store
-    setError(null); // Clear local error before submission
+    setError(null);
+
+    // Get content from TinyMCE editor
+    const htmlDescription = editorRef.current ? editorRef.current.getContent() : '';
+
+    // Client-side validation for description
+    const strippedDescription = htmlDescription.replace(/<[^>]*>/g, '').trim();
+    if (!strippedDescription) {
+        setError('Description cannot be empty.');
+        return;
+    }
 
     // Client-side validation for discountedPrice
     if (
@@ -96,8 +113,6 @@ const AdminAddProductPage = () => {
       setError(
         'Discounted price is required and must be greater than 0 if product is on promotion.'
       );
-      // setLoading(false); // Handled by isAddingProduct in store
-      // toast.error('Discounted price is required and must be greater than 0 if product is on promotion.');
       return;
     }
     if (
@@ -105,8 +120,6 @@ const AdminAddProductPage = () => {
       parseFloat(formData.discountedPrice) >= parseFloat(formData.price)
     ) {
       setError('Discounted price must be less than the original price.');
-      // setLoading(false); // Handled by isAddingProduct in store
-      // toast.error('Discounted price must be less than the original price.');
       return;
     }
     // Client-side validation for isForeign and origin
@@ -118,24 +131,27 @@ const AdminAddProductPage = () => {
       return;
     }
 
-    // Call the addProduct action from useAdminStore
-    await addProduct(formData); // addProduct should return true/false based on success
+    // Prepare formData for submission, including the HTML description
+    const productData = {
+      ...formData,
+      description: htmlDescription, // Set the HTML string here
+    };
 
-    navigate(-1); // Redirect on success
+    const success = await addProduct(productData);
 
-    // Error handling for addProduct is now managed within useAdminStore (e.g., via toast.error)
-    // No need for local alert() or simulated delay.
+    if (success) {
+      navigate('/admin/dashboard?section=products');
+    }
   };
 
   return (
-    // Wrapper div for centering and max-width
     <div className="flex justify-center items-start min-h-screen py-8 bg-base-200">
       <div className="p-4 py-12 bg-base-100 rounded-lg shadow-xl w-full max-w-3xl">
         <h2 className="text-3xl font-bold mb-6 text-primary font-[poppins]">
           Add New Product
         </h2>
 
-        {error && ( // Display local client-side validation errors
+        {error && (
           <div role="alert" className="alert alert-error mb-4 rounded-md">
             <span>{error}</span>
           </div>
@@ -157,18 +173,32 @@ const AdminAddProductPage = () => {
             />
           </div>
 
+          {/* The Advanced Text Area (TinyMCE React) */}
           <div className="form-control">
             <label className="label">
               <span className="label-text">Description</span>
             </label>
-            <textarea
-              name="description"
-              placeholder="A comfortable and stylish sofa..."
-              className="textarea textarea-bordered h-24 w-full rounded-md"
-              value={formData.description}
-              onChange={handleChange}
-              required
-            ></textarea>
+            <div className="border border-base-300 rounded-md overflow-hidden"> {/* Container for TinyMCE */}
+              <Editor
+                onInit={handleEditorInit}
+                apiKey="esh5bav8bmcm4mdbribpsniybxdqty6jszu5ctwihsw35a5y" // <--- IMPORTANT: Replace with your TinyMCE API key
+                init={{
+                  height: 300,
+                  menubar: false,
+                  plugins: [
+                    'advlist autolink lists link image charmap print preview anchor',
+                    'searchreplace visualblocks code fullscreen',
+                    'insertdatetime media table paste code help wordcount'
+                  ],
+                  toolbar: 'undo redo | formatselect | ' +
+                           'bold italic backcolor | alignleft aligncenter ' +
+                           'alignright alignjustify | bullist numlist outdent indent | ' +
+                           'removeformat | help',
+                  content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
+                }}
+                // initialValue={formData.description} // Use this if you're editing an existing product
+              />
+            </div>
           </div>
 
           <div className="form-control">

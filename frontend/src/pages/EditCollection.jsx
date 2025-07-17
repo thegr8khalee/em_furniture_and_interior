@@ -1,7 +1,7 @@
 // src/pages/AdminEditCollectionPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom'; // NEW: Import useParams
-// import { toast } from 'react-toastify'; // For notifications
+import { Editor } from '@tinymce/tinymce-react';
 import { Loader2, XCircle, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
 import { useProductsStore } from '../store/useProductsStore';
@@ -15,6 +15,12 @@ const EditCollection = () => {
   const { getCollectionById } = useCollectionStore();
   const { products, getProducts, isGettingProducts } = useProductsStore();
   const navigate = useNavigate();
+
+  const editorRef = useRef(null);
+
+  const handleEditorInit = (evt, editor) => {
+    editorRef.current = editor;
+  };
 
   const [formData, setFormData] = useState({
     name: '',
@@ -152,7 +158,20 @@ const EditCollection = () => {
     e.preventDefault();
     setError(null);
 
-    const dataToSubmit = { ...formData };
+    const htmlDescription = editorRef.current
+      ? editorRef.current.getContent()
+      : '';
+
+    // Client-side validation for description
+    const strippedDescription = htmlDescription.replace(/<[^>]*>/g, '').trim();
+    if (!strippedDescription) {
+      setError('Description cannot be empty.');
+      return;
+    }
+
+    // IMPORTANT: Only update the description field in dataToSubmit.
+    // All other fields and their processing remain exactly as they were.
+    const dataToSubmit = { ...formData, description: htmlDescription };
 
     const parsedPrice = parseFloat(dataToSubmit.price);
     const parsedDiscountedPrice = parseFloat(dataToSubmit.discountedPrice);
@@ -264,14 +283,27 @@ const EditCollection = () => {
                 Description<span className="text-red-500">*</span>
               </span>
             </label>
-            <textarea
-              name="description"
-              placeholder="A collection inspired by minimalist design..."
-              className="textarea textarea-bordered h-24 w-full rounded-md"
-              value={formData.description}
-              onChange={handleChange}
-              required
-            ></textarea>
+            <Editor
+              onInit={handleEditorInit}
+              apiKey="esh5bav8bmcm4mdbribpsniybxdqty6jszu5ctwihsw35a5y" // <--- IMPORTANT: Replace with your TinyMCE API key
+              initialValue={formData.description} // Set initial value from fetched product data
+              init={{
+                height: 300,
+                menubar: false,
+                plugins: [
+                  'advlist autolink lists link image charmap print preview anchor',
+                  'searchreplace visualblocks code fullscreen',
+                  'insertdatetime media table paste code help wordcount',
+                ],
+                toolbar:
+                  'undo redo | formatselect | ' +
+                  'bold italic backcolor | alignleft aligncenter ' +
+                  'alignright alignjustify | bullist numlist outdent indent | ' +
+                  'removeformat | help',
+                content_style:
+                  'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+              }}
+            />
           </div>
 
           {/* <div className="form-control">
@@ -394,7 +426,7 @@ const EditCollection = () => {
                       <li key={product._id}>
                         <label className="flex items-center justify-between w-full p-2 cursor-pointer hover:bg-base-200 rounded-none">
                           <span>
-                            {product.name} (${product.price?.toFixed(2)})
+                            {product.name} (₦{product.price?.toFixed(2)})
                           </span>
                           <input
                             type="checkbox"

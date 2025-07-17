@@ -227,10 +227,21 @@ const CollectionDetailsPage = () => {
                 collection.discountedPrice !== undefined ? (
                   <>
                     <span className="text-red-600 font-bold text-xl">
-                      ₦{collection.discountedPrice.toFixed(2)}
+                      ₦
+                      {Number(collection.discountedPrice).toLocaleString(
+                        'en-NG',
+                        {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }
+                      )}
                     </span>
                     <span className="text-gray-500 line-through text">
-                      ₦{collection.price.toFixed(2)}
+                      ₦
+                      {Number(collection.price).toLocaleString('en-NG', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                     <span className="text-green-600 text font-semibold">
                       (
@@ -244,13 +255,17 @@ const CollectionDetailsPage = () => {
                   </>
                 ) : (
                   <span className="text-red-600 font-bold text-xl">
-                    ₦{collection.price.toFixed(2)}
+                    ₦
+                    {Number(collection.price).toLocaleString('en-NG', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </span>
                 )}
               </div>
-              <p className="text text-gray-700 font-[montserrat]">
+              {/* <p className="text text-gray-700 font-[montserrat]">
                 {collection.description}
-              </p>
+              </p> */}
               {/* <button
                 className="my-4 btn bg-green-500 text-base-100 w-full rounded-xl font-[poppins] shadow-none border-0"
                 onClick={handleAddToCart}
@@ -347,11 +362,15 @@ const CollectionDetailsPage = () => {
           )}
         </div>
       ) : null}
+      <p
+        className="px-4 text text-gray-700 font-[montserrat]"
+        dangerouslySetInnerHTML={{ __html: collection.description }}
+      ></p>
       {/* Products in this Collection */}
       <h2 className="text-xl font-bold mb-6 text-center font-[poppins]">
         Products in this Collection
       </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 px-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4">
         {productsInCollection.map((product) => (
           <div key={product._id} className=" rounded-xl overflow-hidden">
             <figure className="relative h-60 w-full overflow-hidden rounded-xl">
@@ -426,15 +445,30 @@ const CollectionDetailsPage = () => {
                   {product.isPromo && product.discountedPrice !== undefined ? (
                     <div className="flex flex-col">
                       <span className="text-red-600 font-bold text-xl">
-                        N{product.discountedPrice.toFixed(2)}
+                        ₦
+                        {Number(product.discountedPrice).toLocaleString(
+                          'en-NG',
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )}
                       </span>
                       <span className="text-gray-500 line-through text-sm">
-                        N{product.price.toFixed(2)}
+                        ₦
+                        {Number(product.price).toLocaleString('en-NG', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
                       </span>
                     </div>
                   ) : (
                     <span className="font-bold text-xl">
-                      N{product.price.toFixed(2)}
+                      ₦
+                      {Number(product.price).toLocaleString('en-NG', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                   )}
                 </div>
