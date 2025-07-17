@@ -367,7 +367,7 @@ const CollectionDetailsPage = () => {
         dangerouslySetInnerHTML={{ __html: collection.description }}
       ></p>
       {/* Products in this Collection */}
-      <h2 className="text-xl font-bold mb-6 text-center font-[poppins]">
+      <h2 className=" mt-4 text-xl font-bold mb-6 text-center font-[poppins]">
         Products in this Collection
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4">
@@ -437,11 +437,11 @@ const CollectionDetailsPage = () => {
                     {product.name}
                   </h2>
 
-                  {product.collectionId && product.collectionId.name && (
+                  {/* {product.collectionId && product.collectionId.name && (
                     <p className="text-sm text-gray-500 mb-1">
                       Collection: {product.collectionId.name}
                     </p>
-                  )}
+                  )} */}
                   {product.isPromo && product.discountedPrice !== undefined ? (
                     <div className="flex flex-col">
                       <span className="text-red-600 font-bold text-xl">
