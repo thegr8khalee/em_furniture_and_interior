@@ -344,12 +344,12 @@ const Navbar = () => {
             <SearchIcon />
           </button>
           {!isAdmin ? (
-            <div>
+            <div className='flex'>
               <button
                 className="relative btn btn-ghost"
                 onClick={() => handleCartClick()}
               >
-                {cart?.length !== 0 ? (
+                {cart?.length !== 0 && cart !== null ? (
                   <div className="absolute right-1 top-0 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
                     {cart?.length}
                   </div>
@@ -360,7 +360,7 @@ const Navbar = () => {
                 className="relative btn btn-ghost"
                 onClick={() => handleHeartClick()}
               >
-                {wishlist?.length !== 0 ? (
+                {wishlist?.length !== 0 && wishlist !== null ? (
                   <div className="absolute top-0 right-1 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
                     {wishlist?.length}
                   </div>
