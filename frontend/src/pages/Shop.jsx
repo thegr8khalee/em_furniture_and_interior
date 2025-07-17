@@ -629,7 +629,7 @@ const ShopPage = () => {
                         {product.style}{' '}
                         {product.collectionId && product.collectionId.name && (
                           <span className="text-sm mb-1">
-                            | Collection: {product.collectionId.name}
+                            | {product.collectionId.name}
                           </span>
                         )}
                       </span>

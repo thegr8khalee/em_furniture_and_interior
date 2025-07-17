@@ -305,7 +305,7 @@ const ProductPage = () => {
 
         {/* Product Details */}
         <div className="md:w-1/2 space-y-1">
-          <div className="flex space-x-2 font-normal text-gray-500 items-center text-xs sm:text-base">
+          <div className="flex flex-wrap space-x-2 font-normal text-gray-500 items-center text-xs sm:text-base">
             <p>{product.style}</p>
             <p>| {product.category}</p>
             {product.isForeign && product.origin && (

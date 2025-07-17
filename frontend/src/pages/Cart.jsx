@@ -10,7 +10,7 @@ import Hero1 from '../images/Hero1.png';
 const CartPage = () => {
   const {
     cart, // This is now an array of cart items: [{item: ID, itemType: Type, quantity: N, _id: CART_ENTRY_ID}, ...]
-    // isGettingCart,
+    isGettingCart,
     // isAddingToCart,
     isRemovingFromCart,
     isUpdatingCartItem,
@@ -115,7 +115,8 @@ const CartPage = () => {
   };
 
   // Handler for clearing the entire cart
-  const handleClearCart = async () => {
+  const handleClearCart = async (e) => {
+    e.preventDefault();
     await clearCart();
   };
 
@@ -126,6 +127,7 @@ const CartPage = () => {
     currentQuantity,
     change
   ) => {
+    console.log('yes');
     const newQuantity = currentQuantity + change;
     if (newQuantity < 1) {
       // If quantity drops to 0 or less, confirm removal
@@ -222,16 +224,16 @@ const CartPage = () => {
 
   // console.log(detailedCartItems);
 
-  // if (isGettingCart) {
-  //   return (
-  //     <div className="pt-16">
-  //       <div className="flex justify-center items-center min-h-screen">
-  //         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-  //         <p className="ml-2 text-lg">Loading cart...</p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (isGettingCart) {
+    return (
+      <div className="pt-16">
+        <div className="flex justify-center items-center min-h-screen">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="ml-2 text-lg">Loading cart...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Check if cart is empty after loading and fetching details
   // cart is now an array, so check cart.length
@@ -294,6 +296,7 @@ const CartPage = () => {
                       <div className="flex justify-between w-full items-center font-[poppins]">
                         <h3 className="text-lg font-medium">{item.name}</h3>
                         <button
+                          type="button"
                           className="btn btn-xs btn-circle"
                           onClick={() =>
                             handleRemoveItem(item._id, item.itemType)
@@ -306,58 +309,70 @@ const CartPage = () => {
                           )}
                         </button>
                       </div>
-                      <div className="items-center  font-[montserrat]">
+                      {/* <div className="items-center  font-[montserrat]">
                         {item.itemType}
-                      </div>
+                      </div> */}
                       <div className=" flex justify-between w-full items-center">
                         {/* <span className="font-light">Price:</span> */}
                       </div>{' '}
                       <div className="flex items-end space-x-1 justify-between w-full">
                         <div className="text font-[montserrat]">
-                          ₦{item.displayPrice?.toFixed(2) || '0.00'}
-                        </div>
-                        <div className="space-x-2 items-center">
-                          <button
-                            onClick={() =>
-                              handleUpdateQuantity(
-                                item.item,
-                                item.itemType,
-                                item.quantity,
-                                -1
+                          ₦
+                          {item.displayPrice !== undefined &&
+                          item.displayPrice !== null
+                            ? Number(item.displayPrice).toLocaleString(
+                                'en-NG',
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                }
                               )
-                            } // Pass item.item (original ID)
-                            className="btn btn-xs  btn-outline btn-primary rounded-xl"
-                            disabled={isUpdatingCartItem || item.quantity <= 1}
-                          >
-                            {!isUpdatingCartItem ? (
-                              <Minus size={16} />
-                            ) : (
-                              <Loader2 className="animate-spin" />
-                            )}
-                          </button>
+                            : '0.00'}
+                        </div>
+                      </div>
+                      <div className="space-x-2 flex items-center w-full justify-end">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleUpdateQuantity(
+                              item.item,
+                              item.itemType,
+                              item.quantity,
+                              -1
+                            )
+                          } // Pass item.item (original ID)
+                          className="btn btn-circle btn-sm  btn-outline btn-primary"
+                          disabled={isUpdatingCartItem || item.quantity <= 1}
+                        >
+                          {!isUpdatingCartItem ? (
+                            <Minus size={16} />
+                          ) : (
+                            <Loader2 className="animate-spin" />
+                          )}
+                        </button>
 
-                          <span className="font-semibold text-lg w-8 text-center">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() =>
-                              handleUpdateQuantity(
-                                item.item,
-                                item.itemType,
-                                item.quantity,
-                                1
-                              )
-                            } // Pass item.item (original ID)
-                            className="btn btn-xs btn-outline btn-primary rounded-xl"
-                            disabled={isUpdatingCartItem}
-                          >
-                            {!isUpdatingCartItem ? (
-                              <Plus size={16} />
-                            ) : (
-                              <Loader2 className="animate-spin" />
-                            )}
-                          </button>
-                        </div>
+                        <span className="font-semibold text-lg w-8 text-center">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleUpdateQuantity(
+                              item.item,
+                              item.itemType,
+                              item.quantity,
+                              1
+                            )
+                          } // Pass item.item (original ID)
+                          className="btn btn-circle btn-sm btn-outline btn-primary"
+                          disabled={isUpdatingCartItem}
+                        >
+                          {!isUpdatingCartItem ? (
+                            <Plus size={16} />
+                          ) : (
+                            <Loader2 className="animate-spin" />
+                          )}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -366,6 +381,7 @@ const CartPage = () => {
             </div>
             <div className="mt-6 flex justify-end">
               <button
+                type="button"
                 onClick={handleClearCart}
                 className="btn btn-error rounded-xl"
                 disabled={isRemovingFromCart}
@@ -387,13 +403,23 @@ const CartPage = () => {
               <div className="flex justify-between text-lg">
                 <span>Subtotal ({totalItemsInCart} items)</span>
                 <span className="font-medium">
-                  ₦{calculateOverallTotal().toFixed(2)}
+                  ₦
+                  {Number(calculateOverallTotal()).toLocaleString('en-NG', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </span>
               </div>
               <div className="border-t border-base-200 my-4"></div>
               <div className="flex justify-between text-xl font-bold text-red-500">
                 <span>Total</span>
-                <span>₦{calculateOverallTotal().toFixed(2)}</span>
+                <span>
+                  ₦
+                  {Number(calculateOverallTotal()).toLocaleString('en-NG', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </span>
               </div>
             </div>
             <a
