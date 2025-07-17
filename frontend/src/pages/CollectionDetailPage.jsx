@@ -497,7 +497,7 @@ const CollectionDetailsPage = () => {
           </div>
         ))}
       </div>
-      )
+      
     </div>
   );
 };
