@@ -49,6 +49,9 @@ const BottomNavbar = () => {
     }, // Example profile page
   ];
 
+  console.log(wishlist);
+  
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 w-full bg-base-100 shadow-lg p-2 z-50 lg:hidden">
       {/* md:hidden makes it visible only on screens smaller than 'md' (768px) */}
@@ -76,7 +79,9 @@ const BottomNavbar = () => {
                 </div>
               ) : null}
 
-              {item.name === 'Wishlist' && wishlist?.length !== 0 ? (
+              {/* console.log(wishlist) */}
+
+              {item.name === 'Wishlist' && wishlist?.length !== 0 && wishlist !== null ? (
                 <div className="absolute right-0 top-0 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
                   {wishlist?.length}
                 </div>
