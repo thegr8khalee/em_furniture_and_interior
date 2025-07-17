@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { axiosInstance } from '../lib/axios.js';
 import whatsapp from '../images/whatsapp.png';
 import Hero1 from '../images/Hero1.png';
+import { useAuthStore } from '../store/useAuthStore.js';
 
 const CartPage = () => {
   const {
@@ -21,13 +22,16 @@ const CartPage = () => {
     _isUserOrGuestIdentified, // Helper to check if identified (for knowing cart source)
   } = useCartStore();
 
+  const { isAuthReady } = useAuthStore();
+
   const [detailedCartItems, setDetailedCartItems] = useState([]);
   // const [isFetchingDetails, setIsFetchingDetails] = useState(false);
 
   useEffect(() => {
-    // Always fetch the raw cart data from the store on component mount
-    getCart();
-  }, [getCart]);
+    if (isAuthReady) {
+      getCart();
+    }
+  }, [getCart, isAuthReady]);
 
   // Effect to fetch detailed product/collection info for each item in the cart
   useEffect(() => {

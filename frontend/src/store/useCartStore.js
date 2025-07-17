@@ -129,9 +129,12 @@ export const useCartStore = create((set, get) => ({
    * @returns {boolean} True if authenticated or guest, false otherwise.
    */
   _isUserOrGuestIdentified: () => {
-    const authUser = useAuthStore.getState().authUser;
+    // Access isAuthReady from useAuthStore's state
+    const { authUser, isAuthReady } = useAuthStore.getState();
     const anonymousId = Cookies.get('anonymousId');
-    return !!authUser || !!anonymousId;
+
+    // Only consider identified if auth check is complete AND (user or anonymousId exists)
+    return isAuthReady && (!!authUser || !!anonymousId);
   },
 
   /**
@@ -139,6 +142,17 @@ export const useCartStore = create((set, get) => ({
    */
   getCart: async () => {
     set({ isGettingCart: true });
+
+    const { isAuthReady } = useAuthStore.getState();
+
+    // Only proceed if auth status has been determined
+    if (!isAuthReady) {
+      // If auth is not ready, defer the call or handle appropriately
+      console.warn('getCart called before auth is ready. Deferring...');
+      set({ isGettingCart: false });
+      return;
+    }
+
     if (get()._isUserOrGuestIdentified()) {
       // Use backend if user is authenticated or has a guest session
       try {

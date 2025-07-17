@@ -6,6 +6,7 @@ import { Loader2, Trash2, ShoppingCart, Heart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { axiosInstance } from '../lib/axios.js'; // For fetching product/collection details
 import Hero1 from '../images/Hero1.png';
+import { useAuthStore } from '../store/useAuthStore.js';
 
 const WishlistPage = () => {
   const {
@@ -23,13 +24,16 @@ const WishlistPage = () => {
     isAddingToCart, // Loading state for adding to cart
   } = useCartStore();
 
+  const { isAuthReady } = useAuthStore();
+
   const [detailedWishlistItems, setDetailedWishlistItems] = useState([]);
   // const [isFetchingDetails, setIsFetchingDetails] = useState(false);
 
   useEffect(() => {
-    // Always fetch the raw wishlist data from the store on component mount
-    getwishlist();
-  }, [getwishlist]);
+    if (isAuthReady) {
+      getwishlist();
+    }
+  }, [getwishlist, isAuthReady]);
 
   // Effect to fetch detailed product/collection info for each item in the wishlist
   useEffect(() => {
@@ -150,10 +154,7 @@ const WishlistPage = () => {
   }
 
   // Check if wishlist is empty after loading and fetching details
-  if (
-    !wishlist ||
-    wishlist.length === 0
-  ) {
+  if (!wishlist || wishlist.length === 0) {
     return (
       <div className="py-16 overflow-x-hidden">
         <div className="text-center text-xl text-gray-600 mt-16">

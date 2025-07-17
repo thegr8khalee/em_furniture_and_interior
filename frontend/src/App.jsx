@@ -38,7 +38,7 @@ import Showroom from './pages/Showroom';
 import CookieConsentBanner from './components/CookieConsentBanner';
 
 function App() {
-  const { checkAuth, authUser, isAdmin } = useAuthStore();
+  const { checkAuth, authUser, isAdmin, isAuthReady } = useAuthStore();
   const { getProducts } = useProductsStore();
   const { getCollections } = useCollectionStore();
   // Initialize auth state when the component mounts
@@ -56,13 +56,16 @@ function App() {
 
   const whatsappLink = `https://wa.me/${whatsappPhoneNumber}?text=${presetMessage}`;
 
-  // console.log('AuthUser', authUser);
+  console.log('AuthUser', authUser);
   // console.log('Products', products);
   // console.log('Collections', collections);
   return (
     <div className="max-h-screen">
       <Navbar />
       <BottomNavbar />
+      {/* {!authUser && 
+        <CookieConsentBanner/>
+      } */}
       <main className="">
         <Routes>
           {/* Public product/collection/cart/wishlist routes */}
@@ -140,7 +143,7 @@ function App() {
           className="w-full h-full object-contain"
         />
       </a>
-      {!authUser && 
+      {!authUser && isAuthReady &&
         <CookieConsentBanner/>
       }
       <Toaster />

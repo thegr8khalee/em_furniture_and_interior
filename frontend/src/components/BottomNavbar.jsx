@@ -19,19 +19,29 @@ import { useWishlistStore } from '../store/useWishlistStore';
 
 const BottomNavbar = () => {
   const location = useLocation(); // Get current location to highlight active link
-  const { isAdmin } = useAuthStore();
+  const { isAdmin, isAuthReady } = useAuthStore();
   const { cart, getCart } = useCartStore();
   const { wishlist, getwishlist } = useWishlistStore();
 
   useEffect(() => {
-    getCart();
-    getwishlist();
-  }, [getCart, getwishlist]);
+    if (isAuthReady) {
+      getCart();
+      getwishlist();
+    }
+  }, [getCart, getwishlist, isAuthReady]);
   // Define your navigation items
   const navItems = [
     { name: 'Shop', icon: ShoppingBag, path: '/shop' }, // Example shop page
-    { name: isAdmin? 'Product' : 'Cart', icon: isAdmin ? Plus : ShoppingCart, path: isAdmin ? '/admin/products/new' :'/cart' }, // Example cart page
-    { name: isAdmin? 'Collection' : 'Wishlist', icon: isAdmin ? Plus :  Heart, path: isAdmin ? '/admin/collections/new' : '/wishlist' }, // Example wishlist page
+    {
+      name: isAdmin ? 'Product' : 'Cart',
+      icon: isAdmin ? Plus : ShoppingCart,
+      path: isAdmin ? '/admin/products/new' : '/cart',
+    }, // Example cart page
+    {
+      name: isAdmin ? 'Collection' : 'Wishlist',
+      icon: isAdmin ? Plus : Heart,
+      path: isAdmin ? '/admin/collections/new' : '/wishlist',
+    }, // Example wishlist page
     {
       name: isAdmin ? 'Dasboard' : 'Profile',
       icon: isAdmin ? LayoutDashboard : User,

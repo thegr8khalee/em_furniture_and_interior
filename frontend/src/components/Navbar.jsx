@@ -21,15 +21,17 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isDashboard = location.pathname === '/admin/dashboard';
-  const { authUser, isAdmin } = useAuthStore();
+  const { authUser, isAdmin, isAuthReady } = useAuthStore();
   const { toggleSidebar, closeSidebar: closeAdminSidebar } = useAdminStore();
   const { getCart, cart } = useCartStore();
   const { getwishlist, wishlist } = useWishlistStore();
 
   useEffect(() => {
-    getCart();
-    getwishlist();
-  }, [getCart, getwishlist]);
+    if (isAuthReady) {
+      getCart();
+      getwishlist();
+    }
+  }, [getCart, getwishlist, isAuthReady]);
 
   // console.log(wishlist)
 
@@ -296,34 +298,19 @@ const Navbar = () => {
           </Link>
         </div>
         <div className="navbar-center space-x-6">
-          <Link
-            to="/"
-            className=" border-0 shadow-none btn-ghost"
-          >
+          <Link to="/" className=" border-0 shadow-none btn-ghost">
             Home
           </Link>
-          <Link
-            to="/shop"
-            className=" border-0 shadow-none btn-ghost"
-          >
+          <Link to="/shop" className=" border-0 shadow-none btn-ghost">
             Shop
           </Link>
-          <Link
-            to="/e-catalog"
-            className=" border-0 shadow-none btn-ghost"
-          >
+          <Link to="/e-catalog" className=" border-0 shadow-none btn-ghost">
             E-Catalog
           </Link>
-          <Link
-            to="/showroom"
-            className=" border-0 shadow-none btn-ghost"
-          >
+          <Link to="/showroom" className=" border-0 shadow-none btn-ghost">
             Showroom
           </Link>
-          <Link
-            to="/aboutUs"
-            className=" border-0 shadow-none btn-ghost"
-          >
+          <Link to="/aboutUs" className=" border-0 shadow-none btn-ghost">
             About Us
           </Link>
         </div>
