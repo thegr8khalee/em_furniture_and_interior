@@ -237,7 +237,7 @@ const CartPage = () => {
 
   // Check if cart is empty after loading and fetching details
   // cart is now an array, so check cart.length
-  if (!cart || cart.length === 0 || detailedCartItems.length === 0) {
+  if (!cart || cart.length === 0) {
     return (
       <div className="py-16 overflow-x-hidden">
         <div className="text-center text-xl text-gray-600 mt-16">

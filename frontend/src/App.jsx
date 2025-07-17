@@ -35,6 +35,7 @@ import Privacy from './pages/Privacy';
 import Contact from './pages/Contact';
 import ECatalog from './pages/ECatalog';
 import Showroom from './pages/Showroom';
+import CookieConsentBanner from './components/CookieConsentBanner';
 
 function App() {
   const { checkAuth, authUser, isAdmin } = useAuthStore();
@@ -139,6 +140,9 @@ function App() {
           className="w-full h-full object-contain"
         />
       </a>
+      {!authUser && 
+        <CookieConsentBanner/>
+      }
       <Toaster />
       {/* ... other layout components */}
     </div>

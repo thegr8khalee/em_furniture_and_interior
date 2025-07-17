@@ -7,26 +7,68 @@ import { useAuthStore } from './useAuthStore.js';
 
 // Key for local storage wishlist
 const LOCAL_STORAGE_WISHLIST_KEY = 'localWishlist';
+const SESSION_STORAGE_WISHLIST_KEY = 'sessionWishlist';
 
-// Helper to get wishlist from local storage
 const getLocalWishlist = () => {
- try {
-    const storedWishlist = localStorage.getItem(LOCAL_STORAGE_WISHLIST_KEY);
-    // Local storage wishlist will now be an array of wishlist items, matching backend's expected structure
-    // e.g., [{item: ID, itemType: Type, _id: WISHLIST_ENTRY_ID}, ...]
-    return storedWishlist ? JSON.parse(storedWishlist) : [];
+  try {
+    const consentAccepted =
+      localStorage.getItem('cookie_consent_accepted') === 'true';
+
+    if (consentAccepted) {
+      // If consent is accepted, prioritize localStorage
+      const storedWishlist = localStorage.getItem(LOCAL_STORAGE_WISHLIST_KEY);
+      if (storedWishlist) return JSON.parse(storedWishlist);
+    }
+
+    // Always check sessionStorage as a fallback or if consent is not given for persistence
+    const sessionWishlist = sessionStorage.getItem(
+      SESSION_STORAGE_WISHLIST_KEY
+    );
+    return sessionWishlist ? JSON.parse(sessionWishlist) : [];
   } catch (error) {
-    console.error('Error parsing local storage wishlist:', error);
-    return []; // Return empty array on error
+    console.error('Error parsing local/session storage wishlist:', error);
+    // Fallback to trying the other storage if one fails, or return empty
+    try {
+      const storedWishlist = localStorage.getItem(LOCAL_STORAGE_WISHLIST_KEY);
+      if (storedWishlist) return JSON.parse(storedWishlist);
+    } catch (e) {
+      console.error('Fallback to localStorage also failed for wishlist:', e);
+    }
+    try {
+      const sessionWishlist = sessionStorage.getItem(
+        SESSION_STORAGE_WISHLIST_KEY
+      );
+      if (sessionWishlist) return JSON.parse(sessionWishlist);
+    } catch (e) {
+      console.error('Fallback to sessionStorage also failed for wishlist:', e);
+    }
+    return []; // Return empty array if all fails
   }
 };
 
-// Helper to save wishlist to local storage
+// Helper to save wishlist to local storage or session storage based on consent
 const saveLocalWishlist = (wishlist) => {
   try {
-    localStorage.setItem(LOCAL_STORAGE_WISHLIST_KEY, JSON.stringify(wishlist));
+    const consentAccepted =
+      localStorage.getItem('cookie_consent_accepted') === 'true';
+
+    if (consentAccepted) {
+      // If consent is accepted, save to localStorage and clear sessionStorage
+      localStorage.setItem(
+        LOCAL_STORAGE_WISHLIST_KEY,
+        JSON.stringify(wishlist)
+      );
+      sessionStorage.removeItem(SESSION_STORAGE_WISHLIST_KEY); // Clear session storage if persistent is used
+    } else {
+      // If consent is false or not given, save to sessionStorage and clear localStorage
+      sessionStorage.setItem(
+        SESSION_STORAGE_WISHLIST_KEY,
+        JSON.stringify(wishlist)
+      );
+      localStorage.removeItem(LOCAL_STORAGE_WISHLIST_KEY); // Ensure persistent storage is cleared
+    }
   } catch (error) {
-    console.error('Error saving local storage wishlist:', error);
+    console.error('Error saving local/session storage wishlist:', error);
   }
 };
 
@@ -129,7 +171,7 @@ export const useWishlistStore = create((set, get) => ({
         const cleanedLocalWishlist = await get().cleanAndGetLocalWishlist(); // Await the cleanup
         set({ wishlist: cleanedLocalWishlist });
       } catch (error) {
-        console.log(error.message)
+        console.log(error.message);
         // Error already logged/toasted by cleanAndGetLocalWishlist
         set({ wishlist: getLocalWishlist() }); // Fallback to raw local wishlist
       } finally {

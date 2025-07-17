@@ -8,23 +8,59 @@ import { useAuthStore } from './useAuthStore.js';
 // Key for local storage cart
 const LOCAL_STORAGE_CART_KEY = 'localCart';
 
-// Helper to get cart from local storage
+const SESSION_STORAGE_CART_KEY = 'sessionCart'; // New key for session storage
+
+// Helper to get cart from local storage or session storage based on consent
 const getLocalCart = () => {
   try {
-    const storedCart = localStorage.getItem(LOCAL_STORAGE_CART_KEY);
-    return storedCart ? JSON.parse(storedCart) : [];
+    const consentAccepted =
+      localStorage.getItem('cookie_consent_accepted') === 'true';
+
+    if (consentAccepted) {
+      // If consent is accepted, prioritize localStorage
+      const storedCart = localStorage.getItem(LOCAL_STORAGE_CART_KEY);
+      if (storedCart) return JSON.parse(storedCart);
+    }
+
+    // Always check sessionStorage as a fallback or if consent is not given for persistence
+    const sessionCart = sessionStorage.getItem(SESSION_STORAGE_CART_KEY);
+    return sessionCart ? JSON.parse(sessionCart) : [];
   } catch (error) {
-    console.error('Error parsing local storage cart:', error);
-    return []; // Return empty array on error
+    console.error('Error parsing local/session storage cart:', error);
+    // Fallback to trying the other storage if one fails, or return empty
+    try {
+      const storedCart = localStorage.getItem(LOCAL_STORAGE_CART_KEY);
+      if (storedCart) return JSON.parse(storedCart);
+    } catch (e) {
+      console.error('Fallback to localStorage also failed:', e);
+    }
+    try {
+      const sessionCart = sessionStorage.getItem(SESSION_STORAGE_CART_KEY);
+      if (sessionCart) return JSON.parse(sessionCart);
+    } catch (e) {
+      console.error('Fallback to sessionStorage also failed:', e);
+    }
+    return []; // Return empty array if all fails
   }
 };
 
-// Helper to save cart to local storage
+// Helper to save cart to local storage or session storage based on consent
 const saveLocalCart = (cart) => {
   try {
-    localStorage.setItem(LOCAL_STORAGE_CART_KEY, JSON.stringify(cart));
+    const consentAccepted =
+      localStorage.getItem('cookie_consent_accepted') === 'true';
+
+    if (consentAccepted) {
+      // If consent is accepted, save to localStorage and clear sessionStorage
+      localStorage.setItem(LOCAL_STORAGE_CART_KEY, JSON.stringify(cart));
+      sessionStorage.removeItem(SESSION_STORAGE_CART_KEY); // Clear session storage if persistent is used
+    } else {
+      // If consent is false or not given, save to sessionStorage and clear localStorage
+      sessionStorage.setItem(SESSION_STORAGE_CART_KEY, JSON.stringify(cart));
+      localStorage.removeItem(LOCAL_STORAGE_CART_KEY); // Ensure persistent storage is cleared
+    }
   } catch (error) {
-    console.error('Error saving local storage cart:', error);
+    console.error('Error saving local/session storage cart:', error);
   }
 };
 

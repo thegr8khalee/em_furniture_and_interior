@@ -10,7 +10,7 @@ import Hero1 from '../images/Hero1.png';
 const WishlistPage = () => {
   const {
     wishlist, // This is now an array of wishlist items: [{item: ID, itemType: Type, _id: WISHLIST_ENTRY_ID}, ...]
-    // isGettingWishlist,
+    isGettingWishlist,
     // isAddingToWishlist, // Used for general wishlist operations loading
     isRemovingFromWishlist, // Specific for remove/clear
     getwishlist,
@@ -138,22 +138,21 @@ const WishlistPage = () => {
   // const isLoadingPage =
   //   isGettingWishlist || isFetchingDetails || isAddingToWishlist;
 
-  // if (isLoadingPage) {
-  //   return (
-  //     <div className="pt-16">
-  //       <div className="flex justify-center items-center min-h-screen">
-  //         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-  //         <p className="ml-2 text-lg">Loading wishlist...</p>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (isGettingWishlist) {
+    return (
+      <div className="pt-16">
+        <div className="flex justify-center items-center min-h-screen">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="ml-2 text-lg">Loading wishlist...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Check if wishlist is empty after loading and fetching details
   if (
     !wishlist ||
-    wishlist.length === 0 ||
-    detailedWishlistItems.length === 0
+    wishlist.length === 0
   ) {
     return (
       <div className="py-16 overflow-x-hidden">
