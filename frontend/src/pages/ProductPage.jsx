@@ -21,7 +21,7 @@ import { useAdminStore } from '../store/useAdminStore';
 const ProductPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
-  const { product, getProductById, isGettingProduct } = useProductsStore();
+  const { product, getProductById, isGettingProducts } = useProductsStore();
   const { addToCart, isAddingToCart } = useCartStore();
   const {
     addToWishlist,
@@ -163,7 +163,7 @@ const ProductPage = () => {
     `https://wa.me/${whatsappNumber}?text=${fullMessage(product)}`;
 
   // Loading state
-  if (isGettingProduct) {
+  if (isGettingProducts) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -183,7 +183,7 @@ const ProductPage = () => {
   // }
 
   // If product is null (e.g., ID not found after loading)
-  if (!product) {
+  if (!product && !isGettingProducts) {
     return (
       <div className="text-center text-xl text-gray-600 mt-16">
         Product not found.
