@@ -16,13 +16,12 @@ export const useAuthStore = create((set, get) => ({
       set({
         authUser: res.data, // Assuming backend returns { user: { _id, username, email, role } }
         isAdmin: res.data.role === 'admin', // Set isAdmin based on backend response
-        isAuthReady: true
       });
     } catch (error) {
       console.log('Error in checkAuth:', error);
       set({ authUser: null });
     } finally {
-      set({ isLoading: false });
+      set({ isLoading: false, isAuthReady: true });
     }
   },
 
