@@ -1,5 +1,6 @@
+/* eslint-disable no-unused-vars */
 // src/pages/Styles.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Loader2,
   ChevronDown,
@@ -11,7 +12,6 @@ import {
 } from 'lucide-react';
 import FilterModal from '../components/FilterModal';
 import { useProductsStore } from '../store/useProductsStore';
-// import { useAdminStore } from '../store/useAdminStore'; // To get collections data
 import Hero1 from '../images/Hero1.png';
 import whatsapp from '../images/whatsapp.png';
 import { useCollectionStore } from '../store/useCollectionStore';
@@ -20,45 +20,37 @@ import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
 import { useAuthStore } from '../store/useAuthStore';
 
+const ITEMS_PER_PAGE = 12;
+
 const Styles = () => {
   const { style } = useParams();
-  // console.log(style);
-  const { products, getProducts, isGettingProducts } = useProductsStore();
-  const { collections, getCollections, isGettingCollections } =
-    useCollectionStore();
+  const navigate = useNavigate();
+
+  // --- Zustand Store States and Actions ---
+  const { products, getProducts, isGettingProducts, hasMoreProducts } =
+    useProductsStore();
+  const {
+    collections,
+    getCollections,
+    isGettingCollections,
+    hasMoreCollections,
+  } = useCollectionStore();
   const { addToCart, isAddingToCart } = useCartStore();
   const {
     addToWishlist,
-    isAddingTowishlist,
+    isAddingToWishlist,
     wishlist,
     getwishlist,
-    removeFromwishlist,
-    isRemovingFromwishlist,
+    removeFromWishlist,
+    isRemovingFromWishlist,
   } = useWishlistStore();
-  const { isAdmin } = useAuthStore();
+  const { isAdmin, checkAuth, isAuthReady } = useAuthStore();
 
-  const handleAddtoCart = (id, quantity, type) => {
-    addToCart(id, quantity, type);
-  };
-
+  // --- View Mode State ('products' or 'collections') ---
   const [viewMode, setViewMode] = useState('products');
 
-  const designs = [
-    { id: '1', name: 'Modern', link: 'modern' },
-    {
-      id: '2',
-      name: 'Contemporary',
-      link: 'contemporary',
-    },
-    { id: '3', name: 'Antique/Royal', link: 'antique%2Froyal' },
-    { id: '4', name: 'Bespoke', link: 'bespoke' },
-    { id: '5', name: 'Minimalist', link: 'minimalist' },
-    { id: '6', name: 'Glam', link: 'glam' }, // Using Hero1 as a placeholder for now
-  ];
-
-  // Product-specific states
+  // --- Product-specific Filter States ---
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [filteredProducts, setFilteredProducts] = useState([]);
   const [uniqueCategories, setUniqueCategories] = useState([]);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isStyleDropdownOpen, setIsStyleDropdownOpen] = useState(false);
@@ -66,54 +58,60 @@ const Styles = () => {
   const [styleSearchQuery, setStyleSearchQuery] = useState('');
   const dropdownRef = useRef(null);
   const StyledropdownRef = useRef(null);
-  const [productSearchQuery, setProductSearchQuery] = useState(''); // Renamed from searchQuery to productSearchQuery
+
+  const [productSearchQuery, setProductSearchQuery] = useState('');
   const [minPriceProduct, setMinPriceProduct] = useState('');
   const [maxPriceProduct, setMaxPriceProduct] = useState('');
   const [isBestSellerFilterProduct, setIsBestSellerFilterProduct] =
     useState(false);
   const [isPromoFilterProduct, setIsPromoFilterProduct] = useState(false);
   const [isForeignFilterProduct, setIsForeignFilterProduct] = useState(false);
-  const [isForeignFilterCollection, setIsForeignFilterCollection] =
-    useState(false);
   const [isPriceFilterAppliedProduct, setIsPriceFilterAppliedProduct] =
     useState(false);
   const [isProductFilterModalOpen, setIsProductFilterModalOpen] =
-    useState(false); // Renamed from isFilterModalOpen
+    useState(false);
 
-  // Collection-specific states
-  const [filteredCollections, setFilteredCollections] = useState([]);
+  // --- Collection-specific Filter States ---
   const [collectionSearchQuery, setCollectionSearchQuery] = useState('');
   const [minPriceCollection, setMinPriceCollection] = useState('');
   const [maxPriceCollection, setMaxPriceCollection] = useState('');
   const [isBestSellerFilterCollection, setIsBestSellerFilterCollection] =
     useState(false);
   const [isPromoFilterCollection, setIsPromoFilterCollection] = useState(false);
+  const [isForeignFilterCollection, setIsForeignFilterCollection] =
+    useState(false);
   const [isPriceFilterAppliedCollection, setIsPriceFilterAppliedCollection] =
     useState(false);
   const [isCollectionFilterModalOpen, setIsCollectionFilterModalOpen] =
     useState(false);
 
-  // Fetch products AND collections on component mount
+  // --- Local Page States for Load More (tracks the next page to request) ---
+  const [localPageProduct, setLocalPageProduct] = useState(1);
+  const [localPageCollection, setLocalPageCollection] = useState(1);
+
+  // --- Static Designs List (for style dropdown) ---
+  const designs = [
+    { id: '1', name: 'Modern', link: 'modern' },
+    { id: '2', name: 'Contemporary', link: 'contemporary' },
+    { id: '3', name: 'Antique/Royal', link: 'antique%2Froyal' },
+    { id: '4', name: 'Bespoke', link: 'bespoke' },
+    { id: '5', name: 'Minimalist', link: 'minimalist' },
+    { id: '6', name: 'Glam', link: 'glam' },
+  ];
+
+  // --- Initial Auth Check ---
   useEffect(() => {
-    getProducts();
-    getCollections();
-    if (!isAdmin) {
+    checkAuth();
+  }, [checkAuth]);
+
+  // --- Fetch Wishlist ONLY when auth is ready and user is not admin ---
+  useEffect(() => {
+    if (isAuthReady && !isAdmin) {
       getwishlist();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getProducts, getCollections, getwishlist]);
+  }, [isAuthReady, getwishlist, isAdmin]);
 
-  // NEW: Effect to read category from URL on initial load
-  //   useEffect(() => {
-  //     const queryParams = new URLSearchParams(location.search);
-  //     const categoryFromUrl = queryParams.get('category');
-  //     if (categoryFromUrl) {
-  //       setSelectedCategory(categoryFromUrl);
-  //       setViewMode('products'); // Ensure we are in products view if a category is selected
-  //     }
-  //   }, [location.search]); // Re-run if URL search params change
-
-  // Effect to extract unique categories once products are loaded
+  // --- Effect to extract unique categories once products are loaded ---
   useEffect(() => {
     if (products.length > 0) {
       const categoriesSet = new Set();
@@ -128,72 +126,36 @@ const Styles = () => {
     }
   }, [products]);
 
-  // Effect to filter PRODUCTS based on all criteria
-  useEffect(() => {
-    let currentProducts = products;
-
-    // 1. Apply Search Query Filter
-    if (productSearchQuery.trim() !== '') {
-      const lowerCaseQuery = productSearchQuery.toLowerCase();
-      currentProducts = currentProducts.filter(
-        (product) =>
-          product.name.toLowerCase().includes(lowerCaseQuery) ||
-          product.description.toLowerCase().includes(lowerCaseQuery)
-      );
-    }
-
-    // 2. Apply Category Filter
-    if (selectedCategory !== 'all') {
-      currentProducts = currentProducts.filter(
-        (product) => product.category === selectedCategory
-      );
-    }
-
-    // 3. Apply Price Filter
-    const parsedMinPrice = parseFloat(minPriceProduct);
-    const parsedMaxPrice = parseFloat(maxPriceProduct);
-
-    if (isPriceFilterAppliedProduct) {
-      if (!isNaN(parsedMinPrice)) {
-        currentProducts = currentProducts.filter(
-          (product) => product.price >= parsedMinPrice
-        );
-      }
-      if (!isNaN(parsedMaxPrice)) {
-        currentProducts = currentProducts.filter(
-          (product) => product.price <= parsedMaxPrice
-        );
-      }
-    }
-
-    // 4. Apply Best Seller Filter
-    if (isBestSellerFilterProduct) {
-      currentProducts = currentProducts.filter(
-        (product) => product.isBestSeller
-      );
-    }
-
-    // 5. Apply Promo Filter
-    if (isPromoFilterProduct) {
-      currentProducts = currentProducts.filter((product) => product.isPromo);
-    }
-
-    // 6. Apply Foreign Filter
-    if (isForeignFilterProduct) {
-      currentProducts = currentProducts.filter((product) => product.isForeign);
-    }
-
+  // --- Filter Construction Callbacks (Memoized) ---
+  const buildProductFilters = useCallback(() => {
+    const filters = {};
     if (style) {
-      currentProducts = currentProducts.filter(
-        (product) => product.style?.toLowerCase() === style.toLowerCase()
-      );
+      filters.style = style;
     }
-
-    // console.log(filteredProducts);
-
-    setFilteredProducts(currentProducts);
+    if (productSearchQuery.trim() !== '') {
+      filters.search = productSearchQuery.trim();
+    }
+    if (selectedCategory !== 'all') {
+      filters.category = selectedCategory;
+    }
+    if (minPriceProduct !== '' && !isNaN(parseFloat(minPriceProduct))) {
+      filters.minPrice = parseFloat(minPriceProduct);
+    }
+    if (maxPriceProduct !== '' && !isNaN(parseFloat(maxPriceProduct))) {
+      filters.maxPrice = parseFloat(maxPriceProduct);
+    }
+    if (isBestSellerFilterProduct) {
+      filters.isBestSeller = true;
+    }
+    if (isPromoFilterProduct) {
+      filters.isPromo = true;
+    }
+    if (isForeignFilterProduct) {
+      filters.isForeign = true;
+    }
+    return filters;
   }, [
-    products,
+    style,
     productSearchQuery,
     selectedCategory,
     minPriceProduct,
@@ -201,83 +163,79 @@ const Styles = () => {
     isBestSellerFilterProduct,
     isPromoFilterProduct,
     isForeignFilterProduct,
-    isPriceFilterAppliedProduct,
-    style,
   ]);
 
-  // console.log(filteredProducts);
-
-  // Effect to filter COLLECTIONS based on all criteria
-  useEffect(() => {
-    let currentCollections = collections;
-
-    // 1. Apply Search Query Filter
-    if (collectionSearchQuery.trim() !== '') {
-      const lowerCaseQuery = collectionSearchQuery.toLowerCase();
-      currentCollections = currentCollections.filter(
-        (collection) =>
-          collection.name.toLowerCase().includes(lowerCaseQuery) ||
-          collection.description.toLowerCase().includes(lowerCaseQuery)
-      );
-    }
-
-    // 2. Apply Price Filter (assuming collections have a 'price' field for filtering)
-    const parsedMinPrice = parseFloat(minPriceCollection);
-    const parsedMaxPrice = parseFloat(maxPriceCollection);
-
-    if (isPriceFilterAppliedCollection) {
-      if (!isNaN(parsedMinPrice)) {
-        currentCollections = currentCollections.filter(
-          (collection) => collection.price >= parsedMinPrice
-        );
-      }
-      if (!isNaN(parsedMaxPrice)) {
-        currentCollections = currentCollections.filter(
-          (collection) => collection.price <= parsedMaxPrice
-        );
-      }
-    }
-
-    // 3. Apply Best Seller Filter (assuming collections have an 'isBestSeller' field)
-    if (isBestSellerFilterCollection) {
-      currentCollections = currentCollections.filter(
-        (collection) => collection.isBestSeller
-      );
-    }
-
-    // 4. Apply Promo Filter (assuming collections have an 'isPromo' field)
-    if (isPromoFilterCollection) {
-      currentCollections = currentCollections.filter(
-        (collection) => collection.isPromo
-      );
-    }
-
+  const buildCollectionFilters = useCallback(() => {
+    const filters = {};
     if (style) {
-      currentCollections = currentCollections.filter(
-        (collection) => collection.style.toLowerCase() === style.toLowerCase()
-      );
+      filters.style = style;
     }
-
+    if (collectionSearchQuery.trim() !== '') {
+      filters.search = collectionSearchQuery.trim();
+    }
+    if (minPriceCollection !== '' && !isNaN(parseFloat(minPriceCollection))) {
+      filters.minPrice = parseFloat(minPriceCollection);
+    }
+    if (maxPriceCollection !== '' && !isNaN(parseFloat(maxPriceCollection))) {
+      filters.maxPrice = parseFloat(maxPriceCollection);
+    }
+    if (isBestSellerFilterCollection) {
+      filters.isBestSeller = true;
+    }
+    if (isPromoFilterCollection) {
+      filters.isPromo = true;
+    }
     if (isForeignFilterCollection) {
-      currentCollections = currentCollections.filter(
-        (collection) => collection.isForeign
-      );
+      filters.isForeign = true;
     }
-
-    setFilteredCollections(currentCollections);
+    return filters;
   }, [
-    collections,
+    style,
     collectionSearchQuery,
-    isForeignFilterCollection,
     minPriceCollection,
     maxPriceCollection,
     isBestSellerFilterCollection,
     isPromoFilterCollection,
-    isPriceFilterAppliedCollection,
-    style,
+    isForeignFilterCollection,
   ]);
 
-  // Close category dropdown when clicking outside
+  // --- Effects to Trigger Backend Fetches Based on Filter Changes (Initial Load & Filter Change) ---
+  useEffect(() => {
+    if (isAuthReady) {
+      setLocalPageProduct(1);
+      const filters = buildProductFilters();
+      getProducts(1, ITEMS_PER_PAGE, filters, false);
+    }
+  }, [isAuthReady, buildProductFilters, getProducts]);
+
+  useEffect(() => {
+    if (isAuthReady) {
+      setLocalPageCollection(1);
+      const filters = buildCollectionFilters();
+      getCollections(1, ITEMS_PER_PAGE, filters, false);
+    }
+  }, [isAuthReady, buildCollectionFilters, getCollections]);
+
+  // --- Load More Handlers ---
+  const handleLoadMoreProducts = () => {
+    if (!isGettingProducts && hasMoreProducts) {
+      const nextPage = localPageProduct + 1;
+      const filters = buildProductFilters();
+      getProducts(nextPage, ITEMS_PER_PAGE, filters, true);
+      setLocalPageProduct(nextPage);
+    }
+  };
+
+  const handleLoadMoreCollections = () => {
+    if (!isGettingCollections && hasMoreCollections) {
+      const nextPage = localPageCollection + 1;
+      const filters = buildCollectionFilters();
+      getCollections(nextPage, ITEMS_PER_PAGE, filters, true);
+      setLocalPageCollection(nextPage);
+    }
+  };
+
+  // --- Dropdown Logic (Category & Style) ---
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -296,33 +254,14 @@ const Styles = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      // if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-      //   setIsCategoryDropdownOpen(false);
-      // }
-      if (
-        StyledropdownRef.current &&
-        !StyledropdownRef.current.contains(event.target)
-      ) {
-        setIsStyleDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  // Handle category selection and close dropdown
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
     setIsCategoryDropdownOpen(false);
     setCategorySearchQuery('');
   };
 
-  const handleStyleChange = (category) => {
-    navigate(`/styles/${category}`);
+  const handleStyleChange = (selectedStyleLink) => {
+    navigate(`/styles/${selectedStyleLink}`);
     setTimeout(() => {
       window.scrollTo(0, 0);
     }, 10);
@@ -330,16 +269,22 @@ const Styles = () => {
     setStyleSearchQuery('');
   };
 
-  // Filter categories based on search query
-  const filteredCategories = uniqueCategories.filter((category) =>
-    category.toLowerCase().includes(categorySearchQuery.toLowerCase())
+  const filteredCategories = [
+    'Living Room',
+    'Armchair',
+    'Bedroom',
+    'Dining Room',
+    'Center Table',
+    'Wardrobe',
+    'TV Unit',
+    'Carpet',
+  ];
+
+  const filteredStyle = designs.filter((design) =>
+    design.name.toLowerCase().includes(styleSearchQuery.toLowerCase())
   );
 
-  const filteredStyle = designs.filter((category) =>
-    category.name.toLowerCase().includes(styleSearchQuery.toLowerCase())
-  );
-
-  // Handlers for Product Filter Modal
+  // --- Product Filter Modal Handlers ---
   const handleOpenProductFilterModal = () => setIsProductFilterModalOpen(true);
   const handleCloseProductFilterModal = () =>
     setIsProductFilterModalOpen(false);
@@ -347,6 +292,8 @@ const Styles = () => {
     setIsProductFilterModalOpen(false);
   };
   const handleClearProductFilters = () => {
+    setProductSearchQuery('');
+    setSelectedCategory('all');
     setMinPriceProduct('');
     setMaxPriceProduct('');
     setIsBestSellerFilterProduct(false);
@@ -356,7 +303,7 @@ const Styles = () => {
     setIsProductFilterModalOpen(false);
   };
 
-  // Handlers for Collection Filter Modal
+  // --- Collection Filter Modal Handlers ---
   const handleOpenCollectionFilterModal = () =>
     setIsCollectionFilterModalOpen(true);
   const handleCloseCollectionFilterModal = () =>
@@ -365,8 +312,9 @@ const Styles = () => {
     setIsCollectionFilterModalOpen(false);
   };
   const handleClearCollectionFilters = () => {
-    setMinPriceCollection(''); // Corrected setter name
-    setMaxPriceCollection(''); // Corrected setter name
+    setCollectionSearchQuery('');
+    setMinPriceCollection('');
+    setMaxPriceCollection('');
     setIsBestSellerFilterCollection(false);
     setIsPromoFilterCollection(false);
     setIsForeignFilterCollection(false);
@@ -374,8 +322,7 @@ const Styles = () => {
     setIsCollectionFilterModalOpen(false);
   };
 
-  const navigate = useNavigate();
-
+  // --- Navigation & Cart/Wishlist Handlers ---
   const handleProductClick = (Id) => {
     navigate(`/product/${Id}`);
     setTimeout(() => {
@@ -390,63 +337,68 @@ const Styles = () => {
     }, 10);
   };
 
+  const handleAddToCart = (id, quantity, type) => {
+    addToCart(id, quantity, type);
+  };
+
   const isInWishlist = (id) =>
     (wishlist || []).some((wishlistItem) => wishlistItem.item === id);
+
   const handleAddToWishlist = (id, type) => {
     addToWishlist(id, type);
   };
 
   const handleRemovefromWishlist = (id, type) => {
-    removeFromwishlist(id, type);
+    removeFromWishlist(id, type);
   };
 
-  const whatsappNumber = '2349037691860'; // Your actual WhatsApp number
-
-  // Construct the base product URL dynamically using window.location.origin
-  // This will correctly resolve to http://localhost:5173 or your actual deployed domain
-  const productLink = (id) => `${window.location.origin}/product/${id}`;
-
-  // Construct the full message, ensuring it's fully URL-encoded
-  const fullMessage = (product) =>
-    encodeURIComponent(
-      `I want to Order this: ${product.name}.\n` + // Use \n for new lines in WhatsApp
-        `Price: N${
-          product?.discountedPrice?.toFixed(2) || product.price?.toFixed(2)
-        }.\n` +
-        `Link: ${productLink(product._id)}`
+  // Helper for WhatsApp link
+  const whatsappPhoneNumber = '2349037691860';
+  const whatsappHref = (item) => {
+    const itemName = item.name || 'item';
+    const itemPrice =
+      item.isPromo && item.discountedPrice !== undefined
+        ? Number(item.discountedPrice).toLocaleString('en-NG', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        : Number(item.price).toLocaleString('en-NG', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+    const message = encodeURIComponent(
+      `Hello, I'm interested in "${itemName}" (Price: ₦${itemPrice}). I saw it on your website and would like to inquire more.`
     );
+    return `https://wa.me/${whatsappPhoneNumber}?text=${message}`;
+  };
 
-  const whatsappHref = (product) =>
-    `https://wa.me/${whatsappNumber}?text=${fullMessage(product)}`;
-
-  // Combined loading state
-  if (isGettingProducts || isGettingCollections) {
+  // Combined loading state for initial full page load
+  if (
+    !isAuthReady ||
+    (isGettingProducts && products.length === 0) ||
+    (isGettingCollections && collections.length === 0)
+  ) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="ml-2 text-lg">Loading shop data...</p>
+        <p className="ml-2 text-lg">Loading styles data...</p>
       </div>
     );
   }
 
-  // if (adminError) {
-  //     return (
-  //         <div role="alert" className="alert alert-error my-8 mx-auto w-full max-w-lg">
-  //             <span>Error: {adminError}</span>
-  //         </div>
-  //     );
-  // }
-
   return (
     <div className="">
       <div className="relative">
-        <img src={Hero1} alt="" className="object-cover h-50 w-full" />
+        <img src={Hero1} alt="Shop Hero" className="object-cover h-50 w-full" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
           <h1 className="absolute bottom-15 left-1/2 -translate-x-1/2 mt-20 mb-2 text-4xl font-bold text-center text-base-100 font-[poppins]">
-            {style ? style.charAt(0).toUpperCase() + style.slice(1) : ''}
+            {style
+              ? style.charAt(0).toUpperCase() +
+                style.slice(1).replace(/%2F/g, '/')
+              : ''}
           </h1>
 
-          {/* Filters Section: Category Dropdown (conditionally rendered) */}
+          {/* Filters Section: Category and Style Dropdown */}
           <div className="absolute bottom-1 flex flex-col justify-center items-center gap-4 w-full">
             {viewMode === 'products' && (
               <div
@@ -591,7 +543,7 @@ const Styles = () => {
                     </div>
                     {
                       <ul className="menu p-0 w-full">
-                        {filteredStyle.map((category) => (
+                        {designs.map((category) => (
                           <li key={category.id}>
                             <button
                               onClick={() => handleStyleChange(category.link)}
@@ -617,6 +569,7 @@ const Styles = () => {
         <div className="flex justify-center my-5">
           <div className="tabs tabs-boxed space-x-4">
             <button
+              type="button"
               className={`btn tab rounded-xl ${
                 viewMode === 'products' ? 'tab-active bg-primary' : ''
               }`}
@@ -625,6 +578,7 @@ const Styles = () => {
               Products
             </button>
             <button
+              type="button"
               className={`btn tab rounded-xl ${
                 viewMode === 'collections' ? 'tab-active bg-primary' : ''
               }`}
@@ -655,6 +609,7 @@ const Styles = () => {
               {/* "More Filters" Button for Products */}
               <div className="form-control w-full sm:ml-2 sm:mt-0 mt-2 sm:w-auto">
                 <button
+                  type="button"
                   className="btn text-secondary btn-primary rounded-xl w-full"
                   onClick={handleOpenProductFilterModal}
                 >
@@ -664,19 +619,25 @@ const Styles = () => {
             </div>
 
             {/* Product Grid */}
-            {filteredProducts.length === 0 ? (
-              <div className="text-center text-xl text-gray-600 mt-16">
+            {isGettingProducts && products.length === 0 ? (
+              <div className="flex justify-center items-center min-h-[200px]">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="ml-2 text-lg">Loading products...</p>
+              </div>
+            ) : products.length === 0 && !isGettingProducts ? (
+              <div className="text-center text-xl text-gray-600 my-16">
                 No products found for the selected filters.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-4 gap-6">
-                {filteredProducts.map((product) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {products.map((product) => (
                   <div
                     key={product._id}
                     className=" rounded-xl overflow-hidden"
                   >
                     <figure className="relative h-60 w-full overflow-hidden rounded-xl">
                       <button
+                        type="button"
                         className="w-full h-full"
                         onClick={() => handleProductClick(product._id)}
                       >
@@ -699,13 +660,14 @@ const Styles = () => {
                       {!isAdmin ? (
                         isInWishlist(product._id) ? (
                           <button
+                            type="button"
                             className="absolute top-3 right-3"
-                            aria-label="reomove from wishlist"
+                            aria-label="Remove from wishlist"
                             onClick={() =>
                               handleRemovefromWishlist(product._id, 'Product')
                             }
                           >
-                            {isRemovingFromwishlist ? (
+                            {isRemovingFromWishlist ? (
                               <Loader2 className="animate-spin" />
                             ) : (
                               <Heart className="text-primary size-7 fill-primary" />
@@ -713,13 +675,14 @@ const Styles = () => {
                           </button>
                         ) : (
                           <button
+                            type="button"
                             className="absolute top-3 right-3"
                             aria-label="Add to wishlist"
                             onClick={() =>
                               handleAddToWishlist(product._id, 'Product')
                             }
                           >
-                            {isAddingTowishlist ? (
+                            {isAddingToWishlist ? (
                               <Loader2 className="animate-spin" />
                             ) : (
                               <Heart className="text-primary size-7" />
@@ -740,7 +703,7 @@ const Styles = () => {
                     <div className="p-2">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h2 className="text font whitespace-nowrap truncate">
+                          <h2 className="text max-w-50 font whitespace-nowrap truncate">
                             {product.name}
                           </h2>
                           {product.isPromo &&
@@ -779,6 +742,8 @@ const Styles = () => {
                             <a
                               href={whatsappHref(product)}
                               className="btn rounded-xl bg-green-400"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               <img
                                 src={whatsapp}
@@ -787,10 +752,12 @@ const Styles = () => {
                               />
                             </a>
                             <button
+                              type="button"
                               className="btn rounded-xl bg-primary"
                               onClick={() =>
-                                handleAddtoCart(product._id, 1, 'Product')
+                                handleAddToCart(product._id, 1, 'Product')
                               }
+                              disabled={isAddingToCart}
                             >
                               {isAddingToCart ? (
                                 <Loader2 className="animate-spin" />
@@ -806,6 +773,49 @@ const Styles = () => {
                 ))}
               </div>
             )}
+
+            
+
+            {hasMoreProducts && !isGettingProducts && (
+              <div className="flex justify-center mt-8">
+                <button
+                  type="button"
+                  onClick={handleLoadMoreProducts}
+                  className="mb-4 btn bg-primary px-8 py-3 rounded-xl font-semibold"
+                >
+                  {!isGettingProducts ? (
+                    'Load More'
+                  ) : (
+                    <Loader2 className="animate-spin" />
+                  )}
+                </button>
+              </div>
+            )}
+
+            {!hasMoreProducts && products.length > 0 && !isGettingProducts && (
+              <p className="text-center text-gray-600 my-8">
+                You've reached the end of the products!
+              </p>
+            )}
+
+            {/* Product Filter Modal */}
+            <FilterModal
+              isOpen={isProductFilterModalOpen}
+              onClose={handleCloseProductFilterModal}
+              minPrice={minPriceProduct}
+              setMinPrice={setMinPriceProduct}
+              maxPrice={maxPriceProduct}
+              setMaxPrice={setMaxPriceProduct}
+              isBestSellerFilter={isBestSellerFilterProduct}
+              setIsBestSellerFilter={setIsBestSellerFilterProduct}
+              isPromoFilter={isPromoFilterProduct}
+              setIsPromoFilter={setIsPromoFilterProduct}
+              isForeignFilter={isForeignFilterProduct}
+              setIsForeignFilter={setIsForeignFilterProduct}
+              setIsPriceFilterApplied={setIsPriceFilterAppliedProduct}
+              onApplyFilters={handleApplyProductFilters}
+              onClearFilters={handleClearProductFilters}
+            />
           </>
         ) : (
           // Collections Grid with Search and Filters
@@ -827,6 +837,7 @@ const Styles = () => {
               {/* "More Filters" Button for Collections */}
               <div className="form-control w-full sm:ml-2 sm:mt-0 mt-2 sm:w-auto">
                 <button
+                  type="button"
                   className="btn text-secondary btn-primary rounded-xl w-full"
                   onClick={handleOpenCollectionFilterModal}
                 >
@@ -835,19 +846,26 @@ const Styles = () => {
               </div>
             </div>
 
-            {filteredCollections.length === 0 ? (
-              <div className="text-center text-xl text-gray-600 mt-16">
+            {/* Collection List */}
+            {isGettingCollections && collections.length === 0 ? (
+              <div className="flex justify-center items-center min-h-[200px]">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="ml-2 text-lg">Loading collections...</p>
+              </div>
+            ) : collections.length === 0 && !isGettingCollections ? (
+              <div className="text-center text-xl text-gray-600 my-16">
                 No collections found for the selected filters.
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {filteredCollections.map((collection) => (
+                {collections.map((collection) => (
                   <div
                     key={collection._id}
                     className="rounded-xl overflow-hidden"
                   >
                     <figure className="relative h-60 w-full overflow-hidden rounded-xl">
                       <button
+                        type="button"
                         className="w-full h-full"
                         onClick={() => handleCollectionClick(collection._id)}
                       >
@@ -868,8 +886,9 @@ const Styles = () => {
                       {!isAdmin ? (
                         isInWishlist(collection._id) ? (
                           <button
+                            type="button"
                             className="absolute top-3 right-3"
-                            aria-label="reomove from wishlist"
+                            aria-label="remove from wishlist"
                             onClick={() =>
                               handleRemovefromWishlist(
                                 collection._id,
@@ -877,7 +896,7 @@ const Styles = () => {
                               )
                             }
                           >
-                            {isRemovingFromwishlist ? (
+                            {isRemovingFromWishlist ? (
                               <Loader2 className="animate-spin" />
                             ) : (
                               <Heart className="text-primary size-7 fill-primary" />
@@ -885,13 +904,14 @@ const Styles = () => {
                           </button>
                         ) : (
                           <button
+                            type="button"
                             className="absolute top-3 right-3"
                             aria-label="Add to wishlist"
                             onClick={() =>
                               handleAddToWishlist(collection._id, 'Collection')
                             }
                           >
-                            {isAddingTowishlist ? (
+                            {isAddingToWishlist ? (
                               <Loader2 className="animate-spin" />
                             ) : (
                               <Heart className="text-primary size-7" />
@@ -906,15 +926,9 @@ const Styles = () => {
                     <div className="p-2">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h2 className="font whitespace-nowrap truncate">
+                          <h2 className="text max-w-50 font whitespace-nowrap truncate">
                             {collection.name}
                           </h2>
-                          {/* {collection.collectionId &&
-                            collection.collectionId.name && (
-                              <p className="text-sm text-gray-500 mb-1">
-                                Collection: {collection.collectionId.name}
-                              </p>
-                            )} */}
                           {collection.isPromo &&
                           collection.discountedPrice !== undefined ? (
                             <div className="flex flex-col">
@@ -956,6 +970,8 @@ const Styles = () => {
                             <a
                               href={whatsappHref(collection)}
                               className="btn rounded-xl bg-green-400"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               <img
                                 src={whatsapp}
@@ -964,10 +980,12 @@ const Styles = () => {
                               />
                             </a>
                             <button
+                              type="button"
                               className="btn rounded-xl bg-primary"
                               onClick={() =>
-                                handleAddtoCart(collection._id, 1, 'Collection')
+                                handleAddToCart(collection._id, 1, 'Collection')
                               }
+                              disabled={isAddingToCart}
                             >
                               {isAddingToCart ? (
                                 <Loader2 className="animate-spin" />
@@ -983,46 +1001,58 @@ const Styles = () => {
                 ))}
               </div>
             )}
+
+            {/* {isGettingCollections && collections.length > 0 && (
+              <div className="flex justify-center items-center mt-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-2 text-lg">Loading more collections...</p>
+              </div>
+            )} */}
+
+            {hasMoreCollections && (
+              <div className="flex justify-center mt-8">
+                <button
+                  type="button"
+                  onClick={handleLoadMoreCollections}
+                  className="mb-4 btn bg-primary px-8 py-3 rounded-xl font-semibold"
+                >
+                  {!isGettingCollections ? (
+                    'Load More'
+                  ) : (
+                    <Loader2 className="animate-spin" />
+                  )}
+                </button>
+              </div>
+            )}
+
+            {!hasMoreCollections &&
+              collections.length > 0 &&
+              !isGettingCollections && (
+                <p className="text-center text-gray-600 my-8">
+                  You've reached the end of the collections!
+                </p>
+              )}
+
+            {/* Collection Filter Modal */}
+            <FilterModal
+              isOpen={isCollectionFilterModalOpen}
+              onClose={handleCloseCollectionFilterModal}
+              minPrice={minPriceCollection}
+              setMinPrice={setMinPriceCollection}
+              maxPrice={maxPriceCollection}
+              setMaxPrice={setMaxPriceCollection}
+              isBestSellerFilter={isBestSellerFilterCollection}
+              setIsBestSellerFilter={setIsBestSellerFilterCollection}
+              isPromoFilter={isPromoFilterCollection}
+              setIsPromoFilter={setIsPromoFilterCollection}
+              isForeignFilter={isForeignFilterCollection}
+              setIsForeignFilter={setIsForeignFilterCollection}
+              setIsPriceFilterApplied={setIsPriceFilterAppliedCollection}
+              onApplyFilters={handleApplyCollectionFilters}
+              onClearFilters={handleClearCollectionFilters}
+            />
           </>
         )}
-
-        {/* Product Filter Modal Component */}
-        <FilterModal
-          isOpen={isProductFilterModalOpen}
-          onClose={handleCloseProductFilterModal}
-          minPrice={minPriceProduct}
-          setMinPrice={setMinPriceProduct}
-          maxPrice={maxPriceProduct}
-          setMaxPrice={setMaxPriceProduct}
-          isBestSellerFilter={isBestSellerFilterProduct}
-          setIsBestSellerFilter={setIsBestSellerFilterProduct}
-          isPromoFilter={isPromoFilterProduct}
-          setIsPromoFilter={setIsPromoFilterProduct}
-          isForeignFilter={isForeignFilterProduct} // This filter is only for products
-          setIsForeignFilter={setIsForeignFilterProduct}
-          setIsPriceFilterApplied={setIsPriceFilterAppliedProduct}
-          onApplyFilters={handleApplyProductFilters}
-          onClearFilters={handleClearProductFilters}
-        />
-
-        {/* NEW: Collection Filter Modal Component */}
-        <FilterModal
-          isOpen={isCollectionFilterModalOpen}
-          onClose={handleCloseCollectionFilterModal}
-          minPrice={minPriceCollection}
-          setMinPrice={setMinPriceCollection}
-          maxPrice={maxPriceCollection}
-          setMaxPrice={setMaxPriceCollection}
-          isBestSellerFilter={isBestSellerFilterCollection}
-          setIsBestSellerFilter={setIsBestSellerFilterCollection}
-          isPromoFilter={isPromoFilterCollection}
-          setIsPromoFilter={setIsPromoFilterCollection}
-          isForeignFilter={isForeignFilterCollection}
-          setIsForeignFilter={setIsForeignFilterCollection}
-          setIsPriceFilterApplied={setIsPriceFilterAppliedCollection}
-          onApplyFilters={handleApplyCollectionFilters}
-          onClearFilters={handleClearCollectionFilters}
-        />
       </div>
     </div>
   );

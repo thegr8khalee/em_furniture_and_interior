@@ -1,92 +1,106 @@
-// src/pages/ShopPage.jsx
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Loader2,
-  ChevronDown,
-  ChevronUp,
-  Search,
-  Filter,
-  ShoppingCart,
-  Heart,
-} from 'lucide-react';
-import FilterModal from '../components/FilterModal';
+/* eslint-disable no-unused-vars */
+// src/pages/Shop.jsx
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useProductsStore } from '../store/useProductsStore';
-// import { useAdminStore } from '../store/useAdminStore'; // To get collections data
-import Hero1 from '../images/Hero1.png';
-import whatsapp from '../images/whatsapp.png';
 import { useCollectionStore } from '../store/useCollectionStore';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
 import { useAuthStore } from '../store/useAuthStore';
-// import { useAuthStore } from '../store/useAuthStore';
+import {
+  Loader2,
+  Filter,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  Heart,
+  ShoppingCart,
+} from 'lucide-react'; // Added ChevronUp, Heart, ShoppingCart
+// import { toast } from 'react-hot-toast';
+import FilterModal from '../components/FilterModal';
+import Hero1 from '../images/Hero1.png'; // Assuming your hero image path
+import whatsapp from '../images/whatsapp.png'; // Assuming your whatsapp icon path
 
-const ShopPage = () => {
+const ITEMS_PER_PAGE = 12; // Define how many items to load per click for both products and collections
+
+const Shop = () => {
   const location = useLocation();
-  const { products, getProducts, isGettingProducts } = useProductsStore();
-  const { collections, getCollections, isGettingCollections } =
-    useCollectionStore();
+  const navigate = useNavigate();
+
+  // --- Zustand Store States and Actions ---
+  const { products, getProducts, isGettingProducts, hasMoreProducts } =
+    useProductsStore();
+  const {
+    collections,
+    getCollections,
+    isGettingCollections,
+    hasMoreCollections,
+  } = useCollectionStore();
   const { addToCart, isAddingToCart } = useCartStore();
   const {
     addToWishlist,
-    isAddingTowishlist,
+    isAddingToWishlist,
     wishlist,
     getwishlist,
-    removeFromwishlist,
-    isRemovingFromwishlist,
+    removeFromWishlist,
+    isRemovingFromWishlist,
   } = useWishlistStore();
-  const { isAdmin, checkAuth } = useAuthStore();
+  const { isAdmin, checkAuth, isAuthReady } = useAuthStore();
 
-  const navigate = useNavigate();
-
+  // --- View Mode State ('products' or 'collections') ---
   const [viewMode, setViewMode] = useState('products');
 
-  const productSearchInputRef = useRef(null);
-  // Product-specific states
+  // --- Product-specific Filter States ---
+  const productSearchInputRef = useRef(null); // Ref for product search input
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [uniqueCategories, setUniqueCategories] = useState([]);
+  const [uniqueCategories, setUniqueCategories] = useState([]); // Populated from fetched products
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
-  const [categorySearchQuery, setCategorySearchQuery] = useState('');
-  const dropdownRef = useRef(null);
-  const [productSearchQuery, setProductSearchQuery] = useState(''); // Renamed from searchQuery to productSearchQuery
+  const [categorySearchQuery, setCategorySearchQuery] = useState(''); // For searching categories in dropdown
+  const dropdownRef = useRef(null); // Ref for category dropdown container
+
+  const [productSearchQuery, setProductSearchQuery] = useState('');
   const [minPriceProduct, setMinPriceProduct] = useState('');
   const [maxPriceProduct, setMaxPriceProduct] = useState('');
   const [isBestSellerFilterProduct, setIsBestSellerFilterProduct] =
     useState(false);
   const [isPromoFilterProduct, setIsPromoFilterProduct] = useState(false);
   const [isForeignFilterProduct, setIsForeignFilterProduct] = useState(false);
-  const [isForeignFilterCollection, setIsForeignFilterCollection] =
-    useState(false);
   const [isPriceFilterAppliedProduct, setIsPriceFilterAppliedProduct] =
-    useState(false);
+    useState(false); // Indicates if price inputs were used
   const [isProductFilterModalOpen, setIsProductFilterModalOpen] =
-    useState(false); // Renamed from isFilterModalOpen
+    useState(false); // Controls product filter modal visibility
 
-  // Collection-specific states
-  const [filteredCollections, setFilteredCollections] = useState([]);
+  // --- Collection-specific Filter States ---
   const [collectionSearchQuery, setCollectionSearchQuery] = useState('');
   const [minPriceCollection, setMinPriceCollection] = useState('');
   const [maxPriceCollection, setMaxPriceCollection] = useState('');
   const [isBestSellerFilterCollection, setIsBestSellerFilterCollection] =
     useState(false);
   const [isPromoFilterCollection, setIsPromoFilterCollection] = useState(false);
+  const [isForeignFilterCollection, setIsForeignFilterCollection] =
+    useState(false);
   const [isPriceFilterAppliedCollection, setIsPriceFilterAppliedCollection] =
-    useState(false);
+    useState(false); // Indicates if price inputs were used
   const [isCollectionFilterModalOpen, setIsCollectionFilterModalOpen] =
-    useState(false);
+    useState(false); // Controls collection filter modal visibility
 
-  // Fetch products AND collections on component mount
+  // --- Local Page States for Load More (tracks the next page to request) ---
+  const [localPageProduct, setLocalPageProduct] = useState(1);
+  const [localPageCollection, setLocalPageCollection] = useState(1);
+
+  // --- Initial Auth Check ---
   useEffect(() => {
-    getProducts();
-    getCollections();
-    if (!isAdmin) {
+    checkAuth();
+  }, [checkAuth]);
+
+  // --- Fetch Wishlist ONLY when auth is ready and user is not admin ---
+  useEffect(() => {
+    if (isAuthReady && !isAdmin) {
       getwishlist();
     }
-    checkAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getProducts, getCollections, getwishlist, checkAuth]);
+  }, [isAuthReady, getwishlist, isAdmin]);
 
+  // --- URL Param Handling for initial viewMode and category ---
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const categoryFromUrl = queryParams.get('category');
@@ -100,33 +114,18 @@ const ShopPage = () => {
     }
   }, [location.search]);
 
-  // NEW: Dedicated useEffect for focusing the search bar
+  // --- Search Bar Focus (for Product Search) ---
   useEffect(() => {
-    // Check if focusSearch state was passed and if the ref is available
     if (location.state?.focusSearch && productSearchInputRef.current) {
-      // Ensure we are in the 'products' view mode before attempting to focus
-      // as the search bar is only visible in this mode.
       if (viewMode === 'products') {
         productSearchInputRef.current.focus();
         // Clear the state after focusing to prevent re-focusing on subsequent renders
-        // This uses `replace: true` so it doesn't add a new entry to browser history.
         navigate(location.pathname, { replace: true, state: {} });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state?.focusSearch, productSearchInputRef, viewMode, navigate]);
 
-  // NEW: Effect to read category from URL on initial load
-  useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    const categoryFromUrl = queryParams.get('category');
-    if (categoryFromUrl) {
-      setSelectedCategory(categoryFromUrl);
-      setViewMode('products'); // Ensure we are in products view if a category is selected
-    }
-  }, [location.search]); // Re-run if URL search params change
-
-  // Effect to extract unique categories once products are loaded
+  // --- Unique Categories Extraction from Products ---
   useEffect(() => {
     if (products.length > 0) {
       const categoriesSet = new Set();
@@ -139,68 +138,35 @@ const ShopPage = () => {
     } else {
       setUniqueCategories([]);
     }
-  }, [products]);
+  }, [products]); // Depends on `products` from the store
 
-  // Effect to filter PRODUCTS based on all criteria
-  useEffect(() => {
-    let currentProducts = products;
-
-    // 1. Apply Search Query Filter
+  // --- Filter Construction Callbacks (Memoized) ---
+  // These functions build the filter object to be sent to the backend
+  const buildProductFilters = useCallback(() => {
+    const filters = {};
     if (productSearchQuery.trim() !== '') {
-      const lowerCaseQuery = productSearchQuery.toLowerCase();
-      currentProducts = currentProducts.filter(
-        (product) =>
-          product.name.toLowerCase().includes(lowerCaseQuery) ||
-          product.description.toLowerCase().includes(lowerCaseQuery)
-      );
+      filters.search = productSearchQuery.trim();
     }
-
-    // 2. Apply Category Filter
     if (selectedCategory !== 'all') {
-      currentProducts = currentProducts.filter(
-        (product) => product.category === selectedCategory
-      );
+      filters.category = selectedCategory;
     }
-
-    // 3. Apply Price Filter
-    const parsedMinPrice = parseFloat(minPriceProduct);
-    const parsedMaxPrice = parseFloat(maxPriceProduct);
-
-    if (isPriceFilterAppliedProduct) {
-      if (!isNaN(parsedMinPrice)) {
-        currentProducts = currentProducts.filter(
-          (product) => product.price >= parsedMinPrice
-        );
-      }
-      if (!isNaN(parsedMaxPrice)) {
-        currentProducts = currentProducts.filter(
-          (product) => product.price <= parsedMaxPrice
-        );
-      }
+    if (minPriceProduct !== '' && !isNaN(parseFloat(minPriceProduct))) {
+      filters.minPrice = parseFloat(minPriceProduct);
     }
-
-    // 4. Apply Best Seller Filter
+    if (maxPriceProduct !== '' && !isNaN(parseFloat(maxPriceProduct))) {
+      filters.maxPrice = parseFloat(maxPriceProduct);
+    }
     if (isBestSellerFilterProduct) {
-      currentProducts = currentProducts.filter(
-        (product) => product.isBestSeller
-      );
+      filters.isBestSeller = true;
     }
-
-    // 5. Apply Promo Filter
     if (isPromoFilterProduct) {
-      currentProducts = currentProducts.filter((product) => product.isPromo);
+      filters.isPromo = true;
     }
-
-    // 6. Apply Foreign Filter
     if (isForeignFilterProduct) {
-      currentProducts = currentProducts.filter((product) => product.isForeign);
+      filters.isForeign = true;
     }
-
-    // console.log(filteredProducts);
-
-    setFilteredProducts(currentProducts);
+    return filters;
   }, [
-    products,
     productSearchQuery,
     selectedCategory,
     minPriceProduct,
@@ -208,73 +174,82 @@ const ShopPage = () => {
     isBestSellerFilterProduct,
     isPromoFilterProduct,
     isForeignFilterProduct,
-    isPriceFilterAppliedProduct,
   ]);
 
-  // Effect to filter COLLECTIONS based on all criteria
-  useEffect(() => {
-    let currentCollections = collections;
-
-    // 1. Apply Search Query Filter
+  const buildCollectionFilters = useCallback(() => {
+    const filters = {};
     if (collectionSearchQuery.trim() !== '') {
-      const lowerCaseQuery = collectionSearchQuery.toLowerCase();
-      currentCollections = currentCollections.filter(
-        (collection) =>
-          collection.name.toLowerCase().includes(lowerCaseQuery) ||
-          collection.description.toLowerCase().includes(lowerCaseQuery)
-      );
+      filters.search = collectionSearchQuery.trim();
     }
-
-    // 2. Apply Price Filter (assuming collections have a 'price' field for filtering)
-    const parsedMinPrice = parseFloat(minPriceCollection);
-    const parsedMaxPrice = parseFloat(maxPriceCollection);
-
-    if (isPriceFilterAppliedCollection) {
-      if (!isNaN(parsedMinPrice)) {
-        currentCollections = currentCollections.filter(
-          (collection) => collection.price >= parsedMinPrice
-        );
-      }
-      if (!isNaN(parsedMaxPrice)) {
-        currentCollections = currentCollections.filter(
-          (collection) => collection.price <= parsedMaxPrice
-        );
-      }
+    if (minPriceCollection !== '' && !isNaN(parseFloat(minPriceCollection))) {
+      filters.minPrice = parseFloat(minPriceCollection);
     }
-
-    // 3. Apply Best Seller Filter (assuming collections have an 'isBestSeller' field)
+    if (maxPriceCollection !== '' && !isNaN(parseFloat(maxPriceCollection))) {
+      filters.maxPrice = parseFloat(maxPriceCollection);
+    }
     if (isBestSellerFilterCollection) {
-      currentCollections = currentCollections.filter(
-        (collection) => collection.isBestSeller
-      );
+      filters.isBestSeller = true;
     }
-
-    // 4. Apply Promo Filter (assuming collections have an 'isPromo' field)
     if (isPromoFilterCollection) {
-      currentCollections = currentCollections.filter(
-        (collection) => collection.isPromo
-      );
+      filters.isPromo = true;
     }
-
     if (isForeignFilterCollection) {
-      currentCollections = currentCollections.filter(
-        (collection) => collection.isForeign
-      );
+      filters.isForeign = true;
     }
-
-    setFilteredCollections(currentCollections);
+    return filters;
   }, [
-    collections,
-    isForeignFilterCollection,
     collectionSearchQuery,
     minPriceCollection,
     maxPriceCollection,
     isBestSellerFilterCollection,
     isPromoFilterCollection,
-    isPriceFilterAppliedCollection,
+    isForeignFilterCollection,
   ]);
 
-  // Close category dropdown when clicking outside
+  // --- Effects to Trigger Backend Fetches Based on Filter Changes (Initial Load & Filter Change) ---
+
+  // Effect for Product Filters & Initial Product Load - ONLY run if auth is ready
+  useEffect(() => {
+    if (isAuthReady) {
+      setLocalPageProduct(1); // Reset page to 1 for new filter set
+      const filters = buildProductFilters();
+      // Fetch first page with current filters, replacing existing products
+      getProducts(1, ITEMS_PER_PAGE, filters, false);
+    }
+  }, [isAuthReady, buildProductFilters, getProducts]); // Depend on isAuthReady, buildProductFilters, and getProducts
+
+  // Effect for Collection Filters & Initial Collection Load - ONLY run if auth is ready
+  useEffect(() => {
+    if (isAuthReady) {
+      setLocalPageCollection(1); // Reset page to 1 for new filter set
+      const filters = buildCollectionFilters();
+      // Fetch first page with current filters, replacing existing collections
+      getCollections(1, ITEMS_PER_PAGE, filters, false);
+    }
+  }, [isAuthReady, buildCollectionFilters, getCollections]); // Depend on isAuthReady, buildCollectionFilters, and getCollections
+
+  // --- Load More Handlers ---
+  const handleLoadMoreProducts = () => {
+    // Only load more if not currently loading and there are more products to fetch
+    if (!isGettingProducts && hasMoreProducts) {
+      const nextPage = localPageProduct + 1;
+      const filters = buildProductFilters(); // Get current filters
+      getProducts(nextPage, ITEMS_PER_PAGE, filters, true); // Fetch next page, append, with current filters
+      setLocalPageProduct(nextPage); // Update local page state
+    }
+  };
+
+  const handleLoadMoreCollections = () => {
+    // Only load more if not currently loading and there are more collections to fetch
+    if (!isGettingCollections && hasMoreCollections) {
+      const nextPage = localPageCollection + 1;
+      const filters = buildCollectionFilters(); // Get current filters
+      getCollections(nextPage, ITEMS_PER_PAGE, filters, true); // Fetch next page, append, with current filters
+      setLocalPageCollection(nextPage); // Update local page state
+    }
+  };
+
+  // --- Category Dropdown Logic ---
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -287,53 +262,70 @@ const ShopPage = () => {
     };
   }, []);
 
-  // Handle category selection and close dropdown
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
     setIsCategoryDropdownOpen(false);
-    setCategorySearchQuery('');
+    setCategorySearchQuery(''); // Clear category search when one is selected
   };
 
-  // Filter categories based on search query
-  const filteredCategories = uniqueCategories.filter((category) =>
-    category.toLowerCase().includes(categorySearchQuery.toLowerCase())
-  );
+  // Filter categories displayed in the dropdown based on search query
+  const filteredCategories = [
+    'Living Room',
+    'Armchair',
+    'Bedroom',
+    'Dining Room',
+    'Center Table',
+    'Wardrobe',
+    'TV Unit',
+    'Carpet',
+  ];
 
-  // Handlers for Product Filter Modal
+  // --- Product Filter Modal Handlers ---
   const handleOpenProductFilterModal = () => setIsProductFilterModalOpen(true);
   const handleCloseProductFilterModal = () =>
     setIsProductFilterModalOpen(false);
   const handleApplyProductFilters = () => {
-    setIsProductFilterModalOpen(false);
+    // Filter states are already updated by modal inputs (setMinPriceProduct, etc.)
+    // The useEffect dependent on `buildProductFilters` will automatically trigger a new fetch.
+    setIsProductFilterModalOpen(false); // Close the modal
   };
   const handleClearProductFilters = () => {
+    // Reset all product filter states to their defaults
+    setProductSearchQuery('');
     setMinPriceProduct('');
     setMaxPriceProduct('');
     setIsBestSellerFilterProduct(false);
     setIsPromoFilterProduct(false);
     setIsForeignFilterProduct(false);
-    setIsPriceFilterAppliedProduct(false);
-    setIsProductFilterModalOpen(false);
+    setIsPriceFilterAppliedProduct(false); // Reset this too
+    // The useEffect dependent on `buildProductFilters` will automatically re-fetch with empty filters.
+    setIsProductFilterModalOpen(false); // Close the modal
   };
 
-  // Handlers for Collection Filter Modal
+  // --- Collection Filter Modal Handlers ---
   const handleOpenCollectionFilterModal = () =>
     setIsCollectionFilterModalOpen(true);
   const handleCloseCollectionFilterModal = () =>
     setIsCollectionFilterModalOpen(false);
   const handleApplyCollectionFilters = () => {
-    setIsCollectionFilterModalOpen(false);
+    // Filter states are already updated by modal inputs (setMinPriceCollection, etc.)
+    // The useEffect dependent on `buildCollectionFilters` will automatically trigger a new fetch.
+    setIsCollectionFilterModalOpen(false); // Close the modal
   };
   const handleClearCollectionFilters = () => {
-    setMinPriceCollection(''); // Corrected setter name
-    setMaxPriceCollection(''); // Corrected setter name
+    // Reset all collection filter states to their defaults
+    setCollectionSearchQuery('');
+    setMinPriceCollection('');
+    setMaxPriceCollection('');
     setIsBestSellerFilterCollection(false);
     setIsPromoFilterCollection(false);
     setIsForeignFilterCollection(false);
-    setIsPriceFilterAppliedCollection(false);
-    setIsCollectionFilterModalOpen(false);
+    setIsPriceFilterAppliedCollection(false); // Reset this too
+    // The useEffect dependent on `buildCollectionFilters` will automatically re-fetch with empty filters.
+    setIsCollectionFilterModalOpen(false); // Close the modal
   };
 
+  // --- Cart/Wishlist Handlers (remain mostly unchanged) ---
   const handleProductClick = (Id) => {
     navigate(`/product/${Id}`);
     setTimeout(() => {
@@ -352,60 +344,41 @@ const ShopPage = () => {
     addToCart(id, quantity, type);
   };
 
-  // console.log(wishlist);
-
   const isInWishlist = (id) =>
     (wishlist || []).some((wishlistItem) => wishlistItem.item === id);
+
   const handleAddToWishlist = (id, type) => {
     addToWishlist(id, type);
   };
 
   const handleRemovefromWishlist = (id, type) => {
-    removeFromwishlist(id, type);
+    removeFromWishlist(id, type);
   };
 
-  const whatsappNumber = '2349037691860'; // Your actual WhatsApp number
-
-  // Construct the base product URL dynamically using window.location.origin
-  // This will correctly resolve to http://localhost:5173 or your actual deployed domain
-  const productLink = (id) => `${window.location.origin}/product/${id}`;
-
-  // Construct the full message, ensuring it's fully URL-encoded
-  const fullMessage = (product) =>
-    encodeURIComponent(
-      `I want to Order this: ${product.name}.\n` + // Use \n for new lines in WhatsApp
-        `Price: N${
-          product?.discountedPrice?.toFixed(2) || product.price?.toFixed(2)
-        }.\n` +
-        `Link: ${productLink(product._id)}`
+  // Helper for WhatsApp link
+  const whatsappPhoneNumber = '2349037691860'; // Your actual WhatsApp number
+  const whatsappHref = (item) => {
+    const itemName = item.name || 'item';
+    const itemPrice =
+      item.isPromo && item.discountedPrice !== undefined
+        ? Number(item.discountedPrice).toLocaleString('en-NG', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        : Number(item.price).toLocaleString('en-NG', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+    const message = encodeURIComponent(
+      `Hello, I'm interested in "${itemName}" (Price: ₦${itemPrice}). I saw it on your website and would like to inquire more.`
     );
-
-  const whatsappHref = (product) =>
-    `https://wa.me/${whatsappNumber}?text=${fullMessage(product)}`;
-  //   console.log(location.state)
-
-  // Combined loading state
-  if (isGettingProducts || isGettingCollections) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="ml-2 text-lg">Loading shop data...</p>
-      </div>
-    );
-  }
-
-  // if (adminError) {
-  //     return (
-  //         <div role="alert" className="alert alert-error my-8 mx-auto w-full max-w-lg">
-  //             <span>Error: {adminError}</span>
-  //         </div>
-  //     );
-  // }
+    return `https://wa.me/${whatsappPhoneNumber}?text=${message}`;
+  };
 
   return (
     <div className="">
       <div className="relative">
-        <img src={Hero1} alt="" className="object-cover h-50 w-full" />
+        <img src={Hero1} alt="Shop Hero" className="object-cover h-50 w-full" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
           <h1 className="absolute bottom-15 left-1/2 -translate-x-1/2 mt-20 mb-2 text-5xl font-bold text-center text-base-100 font-[poppins]">
             Shop
@@ -473,12 +446,11 @@ const ShopPage = () => {
                           <button
                             onClick={() => handleCategoryChange('all')}
                             className={`font-[montserrat] btn border-0 shadow-0 w-full p-2 hover:bg-base-200 rounded-none
-                                                            ${
-                                                              selectedCategory ===
-                                                              'all'
-                                                                ? 'font-bold bg-base-200'
-                                                                : ''
-                                                            }`}
+                                          ${
+                                            selectedCategory === 'all'
+                                              ? 'font-bold bg-base-200'
+                                              : ''
+                                          }`}
                           >
                             All Products
                           </button>
@@ -488,12 +460,11 @@ const ShopPage = () => {
                             <button
                               onClick={() => handleCategoryChange(category)}
                               className={`font-[montserrat] btn border-0 shadow-0 bg-base-100 w-full text-left p-2 hover:bg-base-200 rounded-none
-                                                                ${
-                                                                  selectedCategory ===
-                                                                  category
-                                                                    ? 'font-bold bg-base-200'
-                                                                    : ''
-                                                                }`}
+                                          ${
+                                            selectedCategory === category
+                                              ? 'font-bold bg-base-200'
+                                              : ''
+                                          }`}
                             >
                               {category}
                             </button>
@@ -514,6 +485,7 @@ const ShopPage = () => {
         <div className="flex justify-center my-5">
           <div className="tabs tabs-boxed space-x-4">
             <button
+              type="button"
               className={`btn tab rounded-xl ${
                 viewMode === 'products' ? 'tab-active bg-primary' : ''
               }`}
@@ -522,6 +494,7 @@ const ShopPage = () => {
               Products
             </button>
             <button
+              type="button"
               className={`btn tab rounded-xl ${
                 viewMode === 'collections' ? 'tab-active bg-primary' : ''
               }`}
@@ -553,6 +526,7 @@ const ShopPage = () => {
               {/* "More Filters" Button for Products */}
               <div className="form-control w-full sm:ml-2 sm:mt-0 mt-2 sm:w-auto">
                 <button
+                  type="button"
                   className="btn text-secondary btn-primary rounded-xl w-full"
                   onClick={handleOpenProductFilterModal}
                 >
@@ -562,19 +536,25 @@ const ShopPage = () => {
             </div>
 
             {/* Product Grid */}
-            {filteredProducts.length === 0 ? (
-              <div className="text-center text-xl text-gray-600 mt-16">
+            {isGettingProducts && products.length === 0 ? (
+              <div className="flex justify-center items-center min-h-[200px]">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="ml-2 text-lg">Loading products...</p>
+              </div>
+            ) : products.length === 0 && !isGettingProducts ? (
+              <div className="text-center text-xl text-gray-600 my-16">
                 No products found for the selected filters.
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {filteredProducts.map((product) => (
+                {products.map((product) => (
                   <div
                     key={product._id}
                     className=" rounded-xl overflow-hidden"
                   >
                     <figure className="relative h-60 w-full overflow-hidden rounded-xl">
                       <button
+                        type="button"
                         className="w-full h-full"
                         onClick={() => handleProductClick(product._id)}
                       >
@@ -596,13 +576,14 @@ const ShopPage = () => {
                       {!isAdmin ? (
                         isInWishlist(product._id) ? (
                           <button
+                            type="button"
                             className="absolute top-3 right-3"
                             aria-label="Remove from wishlist"
                             onClick={() =>
                               handleRemovefromWishlist(product._id, 'Product')
                             }
                           >
-                            {isRemovingFromwishlist ? (
+                            {isRemovingFromWishlist ? (
                               <Loader2 className="animate-spin" />
                             ) : (
                               <Heart className="text-primary size-7 fill-primary" />
@@ -610,13 +591,14 @@ const ShopPage = () => {
                           </button>
                         ) : (
                           <button
+                            type="button"
                             className="absolute top-3 right-3"
                             aria-label="Add to wishlist"
                             onClick={() =>
                               handleAddToWishlist(product._id, 'Product')
                             }
                           >
-                            {isAddingTowishlist ? (
+                            {isAddingToWishlist ? (
                               <Loader2 className="animate-spin" />
                             ) : (
                               <Heart className="text-primary size-7" />
@@ -638,7 +620,7 @@ const ShopPage = () => {
                     <div className="p-2">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h2 className="text truncate whitespace-nowrap">
+                          <h2 className="text max-w-50 truncate whitespace-nowrap">
                             {product.name}
                           </h2>
                           {product.isPromo &&
@@ -677,6 +659,8 @@ const ShopPage = () => {
                             <a
                               href={whatsappHref(product)}
                               className="btn rounded-xl bg-green-400"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               <img
                                 src={whatsapp}
@@ -685,10 +669,12 @@ const ShopPage = () => {
                               />
                             </a>
                             <button
+                              type="button"
                               className="btn rounded-xl bg-primary"
                               onClick={() =>
                                 handleAddToCart(product._id, 1, 'Product')
                               }
+                              disabled={isAddingToCart}
                             >
                               {isAddingToCart ? (
                                 <Loader2 className="animate-spin" />
@@ -704,6 +690,54 @@ const ShopPage = () => {
                 ))}
               </div>
             )}
+
+            {/* {isGettingProducts && products.length > 0 && (
+              <div className="flex justify-center items-center mt-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-2 text-lg">Loading more products...</p>
+              </div>
+            )} */}
+
+            {hasMoreProducts  && (
+              <div className="flex justify-center mt-8">
+                <button
+                  type="button"
+                  onClick={handleLoadMoreProducts}
+                  className="mb-4 btn bg-primary px-8 py-3 rounded-xl font-semibold"
+                >
+                   {!isGettingProducts ? (
+                    'Load More'
+                  ) : (
+                    <Loader2 className="animate-spin" />
+                  )}
+                </button>
+              </div>
+            )}
+
+            {!hasMoreProducts && products.length > 0 && !isGettingProducts && (
+              <p className="text-center text-gray-600 my-8">
+                You've reached the end of the products!
+              </p>
+            )}
+
+            {/* Product Filter Modal */}
+            <FilterModal
+              isOpen={isProductFilterModalOpen}
+              onClose={handleCloseProductFilterModal}
+              minPrice={minPriceProduct}
+              setMinPrice={setMinPriceProduct}
+              maxPrice={maxPriceProduct}
+              setMaxPrice={setMaxPriceProduct}
+              isBestSellerFilter={isBestSellerFilterProduct}
+              setIsBestSellerFilter={setIsBestSellerFilterProduct}
+              isPromoFilter={isPromoFilterProduct}
+              setIsPromoFilter={setIsPromoFilterProduct}
+              isForeignFilter={isForeignFilterProduct} // This filter is only for products
+              setIsForeignFilter={setIsForeignFilterProduct}
+              setIsPriceFilterApplied={setIsPriceFilterAppliedProduct}
+              onApplyFilters={handleApplyProductFilters}
+              onClearFilters={handleClearProductFilters}
+            />
           </>
         ) : (
           // Collections Grid with Search and Filters
@@ -725,6 +759,7 @@ const ShopPage = () => {
               {/* "More Filters" Button for Collections */}
               <div className="form-control w-full sm:ml-2 sm:mt-0 mt-2 sm:w-auto">
                 <button
+                  type="button"
                   className="btn text-secondary btn-primary rounded-xl w-full"
                   onClick={handleOpenCollectionFilterModal}
                 >
@@ -733,19 +768,26 @@ const ShopPage = () => {
               </div>
             </div>
 
-            {filteredCollections.length === 0 ? (
-              <div className="text-center text-xl text-gray-600 mt-16">
+            {/* Collection List */}
+            {isGettingCollections && collections.length === 0 ? (
+              <div className="flex justify-center items-center min-h-[200px]">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="ml-2 text-lg">Loading collections...</p>
+              </div>
+            ) : collections.length === 0 && !isGettingCollections ? (
+              <div className="text-center text-xl text-gray-600 my-16">
                 No collections found for the selected filters.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-4 gap-6">
-                {filteredCollections.map((collection) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {collections.map((collection) => (
                   <div
                     key={collection._id}
                     className="rounded-xl overflow-hidden"
                   >
                     <figure className="relative h-60 w-full overflow-hidden rounded-xl">
                       <button
+                        type="button"
                         className="w-full h-full"
                         onClick={() => handleCollectionClick(collection._id)}
                       >
@@ -766,8 +808,9 @@ const ShopPage = () => {
                       {!isAdmin ? (
                         isInWishlist(collection._id) ? (
                           <button
+                            type="button"
                             className="absolute top-3 right-3"
-                            aria-label="reomove from wishlist"
+                            aria-label="remove from wishlist"
                             onClick={() =>
                               handleRemovefromWishlist(
                                 collection._id,
@@ -775,7 +818,7 @@ const ShopPage = () => {
                               )
                             }
                           >
-                            {isRemovingFromwishlist ? (
+                            {isRemovingFromWishlist ? (
                               <Loader2 className="animate-spin" />
                             ) : (
                               <Heart className="text-primary size-7 fill-primary" />
@@ -783,13 +826,14 @@ const ShopPage = () => {
                           </button>
                         ) : (
                           <button
+                            type="button"
                             className="absolute top-3 right-3"
                             aria-label="Add to wishlist"
                             onClick={() =>
                               handleAddToWishlist(collection._id, 'Collection')
                             }
                           >
-                            {isAddingTowishlist ? (
+                            {isAddingToWishlist ? (
                               <Loader2 className="animate-spin" />
                             ) : (
                               <Heart className="text-primary size-7" />
@@ -804,15 +848,9 @@ const ShopPage = () => {
                     <div className="p-2">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h2 className="text font truncate whitespace-nowrap">
+                          <h2 className="text max-w-50 font truncate whitespace-nowrap">
                             {collection.name}
                           </h2>
-                          {/* {collection.collectionId &&
-                            collection.collectionId.name && (
-                              <p className="text-sm text-gray-500 mb-1">
-                                Collection: {collection.collectionId.name}
-                              </p>
-                            )} */}
                           {collection.isPromo &&
                           collection.discountedPrice !== undefined ? (
                             <div className="flex flex-col">
@@ -854,6 +892,8 @@ const ShopPage = () => {
                             <a
                               href={whatsappHref(collection)}
                               className="btn rounded-xl bg-green-400"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
                               <img
                                 src={whatsapp}
@@ -862,10 +902,12 @@ const ShopPage = () => {
                               />
                             </a>
                             <button
+                              type="button"
                               className="btn rounded-xl bg-primary"
                               onClick={() =>
                                 handleAddToCart(collection._id, 1, 'Collection')
                               }
+                              disabled={isAddingToCart}
                             >
                               {isAddingToCart ? (
                                 <Loader2 className="animate-spin" />
@@ -881,49 +923,61 @@ const ShopPage = () => {
                 ))}
               </div>
             )}
+
+            {/* {isGettingCollections && collections.length > 0 && (
+              <div className="flex justify-center items-center mt-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-2 text-lg">Loading more collections...</p>
+              </div>
+            )} */}
+
+            {hasMoreCollections && (
+              <div className="flex justify-center mt-8">
+                <button
+                  type="button"
+                  onClick={handleLoadMoreCollections}
+                  className="mb-4 btn bg-primary px-8 py-3 rounded-xl font-semibold"
+                >
+                  {!isGettingCollections ? (
+                    'Load More'
+                  ) : (
+                    <Loader2 className="animate-spin" />
+                  )}
+                </button>
+              </div>
+            )}
+
+            {!hasMoreCollections &&
+              collections.length > 0 &&
+              !isGettingCollections && (
+                <p className="text-center text-gray-600 mt-8">
+                  You've reached the end of the collections!
+                </p>
+              )}
+
+            {/* Collection Filter Modal */}
+            <FilterModal
+              isOpen={isCollectionFilterModalOpen}
+              onClose={handleCloseCollectionFilterModal}
+              minPrice={minPriceCollection}
+              setMinPrice={setMinPriceCollection}
+              maxPrice={maxPriceCollection}
+              setMaxPrice={setMaxPriceCollection}
+              isBestSellerFilter={isBestSellerFilterCollection}
+              setIsBestSellerFilter={setIsBestSellerFilterCollection}
+              isPromoFilter={isPromoFilterCollection}
+              setIsPromoFilter={setIsPromoFilterCollection}
+              isForeignFilter={isForeignFilterCollection}
+              setIsForeignFilter={setIsForeignFilterCollection}
+              setIsPriceFilterApplied={setIsPriceFilterAppliedCollection}
+              onApplyFilters={handleApplyCollectionFilters}
+              onClearFilters={handleClearCollectionFilters}
+            />
           </>
         )}
-
-        {/* Product Filter Modal Component */}
-        <FilterModal
-          isOpen={isProductFilterModalOpen}
-          onClose={handleCloseProductFilterModal}
-          minPrice={minPriceProduct}
-          setMinPrice={setMinPriceProduct}
-          maxPrice={maxPriceProduct}
-          setMaxPrice={setMaxPriceProduct}
-          isBestSellerFilter={isBestSellerFilterProduct}
-          setIsBestSellerFilter={setIsBestSellerFilterProduct}
-          isPromoFilter={isPromoFilterProduct}
-          setIsPromoFilter={setIsPromoFilterProduct}
-          isForeignFilter={isForeignFilterProduct} // This filter is only for products
-          setIsForeignFilter={setIsForeignFilterProduct}
-          setIsPriceFilterApplied={setIsPriceFilterAppliedProduct}
-          onApplyFilters={handleApplyProductFilters}
-          onClearFilters={handleClearProductFilters}
-        />
-
-        {/* NEW: Collection Filter Modal Component */}
-        <FilterModal
-          isOpen={isCollectionFilterModalOpen}
-          onClose={handleCloseCollectionFilterModal}
-          minPrice={minPriceCollection}
-          setMinPrice={setMinPriceCollection}
-          maxPrice={maxPriceCollection}
-          setMaxPrice={setMaxPriceCollection}
-          isBestSellerFilter={isBestSellerFilterCollection}
-          setIsBestSellerFilter={setIsBestSellerFilterCollection}
-          isPromoFilter={isPromoFilterCollection}
-          setIsPromoFilter={setIsPromoFilterCollection}
-          isForeignFilter={isForeignFilterCollection}
-          setIsForeignFilter={setIsForeignFilterCollection}
-          setIsPriceFilterApplied={setIsPriceFilterAppliedCollection}
-          onApplyFilters={handleApplyCollectionFilters}
-          onClearFilters={handleClearCollectionFilters}
-        />
       </div>
     </div>
   );
 };
 
-export default ShopPage;
+export default Shop;

@@ -81,8 +81,8 @@ const HomePage = () => {
 
   //   console.log(promotionProducts);
   useEffect(() => {
-    getProducts();
-    getCollections();
+    getProducts(1, 10, {}, false);
+    getCollections(1, 10, {}, false);
   }, [getProducts, getCollections]);
 
   const categories = [
