@@ -202,7 +202,7 @@ const WishlistPage = () => {
                         'https://placehold.co/100x100/E0E0E0/333333?text=N/A'
                       }
                       alt={item.name}
-                      className="w-24 h-24 object-cover rounded-lg mr-4"
+                      className="w-35 h-24 object-cover rounded-lg mr-4"
                     />
                     <div className="w-full">
                       <div className="flex-1">

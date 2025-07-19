@@ -289,7 +289,7 @@ const CartPage = () => {
                         'https://placehold.co/100x100/E0E0E0/333333?text=N/A'
                       }
                       alt={item.name}
-                      className="size-24 object-cover rounded-lg mr-4"
+                      className="size-35 object-cover rounded-lg mr-4"
                       onError={(e) => {
                         e.target.onerror = null;
                         e.target.src =

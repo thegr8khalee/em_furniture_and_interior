@@ -52,7 +52,7 @@ const HomePage = () => {
 
     // Clear the interval when the component unmounts or dependencies change
     return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentSlide]); // Re-run effect when currentSlide changes to reset timer
 
   const designs = [
@@ -102,6 +102,13 @@ const HomePage = () => {
   const handleExploreLivingRoomsClick = () => {
     // Navigate to the shop page and pass 'Living Room' as a category query parameter
     navigate('/shop?category=Living%20Room');
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+  };
+
+  const handleShopNow = () => {
+    navigate('/shop');
     setTimeout(() => {
       window.scrollTo(0, 0);
     }, 10);
@@ -161,9 +168,9 @@ const HomePage = () => {
     setTimeout(() => {
       window.scrollTo(0, 0);
     }, 10);
-  }
+  };
 
-  console.log(promotionProducts)
+  console.log(promotionProducts);
 
   if (isGettingProducts || isGettingCollections) {
     return (
@@ -320,6 +327,14 @@ const HomePage = () => {
               </div>
             </div>
           ))}
+          <div className="w-full h-full py-20 lg:py-30">
+            <button
+              onClick={() => handleShopNow()}
+              className="btn bg-primary rounded-xl mx-4 w-30 font-semibold"
+            >
+              Shop Now
+            </button>
+          </div>
         </div>
       </section>
       <section className="pl-4 sm:pl-8 lg:pl-16">
@@ -357,6 +372,14 @@ const HomePage = () => {
               </div>
             </div>
           ))}
+          <div className="w-full h-full py-20 lg:py-30">
+            <button
+              onClick={() => handleShopNow()}
+              className="btn bg-primary rounded-xl mx-4 w-30 font-semibold"
+            >
+              Shop Now
+            </button>
+          </div>
         </div>
       </section>
       <section className="pl-4 sm:pl-8 lg:pl-16">
@@ -394,6 +417,14 @@ const HomePage = () => {
               </div>
             </div>
           ))}
+          <div className="w-full h-full py-20 lg:py-30">
+            <button
+              onClick={() => handleShopNow()}
+              className="btn bg-primary rounded-xl mx-4 w-30 font-semibold"
+            >
+              Shop Now
+            </button>
+          </div>
         </div>
       </section>
       <section className="my-10 pl-4 sm:pl-8 lg:pl-16">
@@ -593,8 +624,10 @@ const HomePage = () => {
         </div>
       </section>
       <div className="items-center justify-center flex px-8 mt-10 sm:px-8 lg:px-16">
-        <button className="btn bg-primary font-[poppins] rounded-xl w-full"
-        onClick={() => handleContatClick()}>
+        <button
+          className="btn bg-primary font-[poppins] rounded-xl w-full"
+          onClick={() => handleContatClick()}
+        >
           Contact Us
         </button>
       </div>
