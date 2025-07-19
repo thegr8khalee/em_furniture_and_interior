@@ -702,79 +702,90 @@ const Styles = () => {
 
                     <div className="p-2">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="text max-w-50 font whitespace-nowrap truncate">
-                            {product.name}
-                          </h2>
-                          {product.isPromo &&
-                          product.discountedPrice !== undefined ? (
-                            <div className="flex flex-col">
-                              <span className="text-red-600 font-bold text-lg">
-                                ₦
-                                {Number(product.discountedPrice).toLocaleString(
-                                  'en-NG',
-                                  {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  }
-                                )}
-                              </span>
-                              <span className="text-gray-500 line-through text-sm">
-                                ₦
-                                {Number(product.price).toLocaleString('en-NG', {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="font-semibold text-lg">
-                              ₦
-                              {Number(product.price).toLocaleString('en-NG', {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            </span>
-                          )}
-                        </div>
-                        {!isAdmin ? (
-                          <div className="space-x-1">
-                            <a
-                              href={whatsappHref(product)}
-                              className="btn rounded-xl bg-green-400"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <img
-                                src={whatsapp}
-                                alt="WhatsApp"
-                                className="size-5"
-                              />
-                            </a>
-                            <button
-                              type="button"
-                              className="btn rounded-xl bg-primary"
-                              onClick={() =>
-                                handleAddToCart(product._id, 1, 'Product')
-                              }
-                              disabled={isAddingToCart}
-                            >
-                              {isAddingToCart ? (
-                                <Loader2 className="animate-spin" />
-                              ) : (
-                                <ShoppingCart className="" />
-                              )}
-                            </button>
+                        <div className="w-full">
+                          <div>
+                            <h2 className="text truncate whitespace-nowrap">
+                              {product.name}
+                            </h2>
                           </div>
-                        ) : null}
+                          <div className="flex justify-between w-full items-center">
+                            <div>
+                              {product.isPromo &&
+                              product.discountedPrice !== undefined ? (
+                                <div className="flex flex-col">
+                                  <span className="text-red-600 font-bold text-lg">
+                                    ₦
+                                    {Number(
+                                      product.discountedPrice
+                                    ).toLocaleString('en-NG', {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </span>
+                                  <span className="text-gray-500 line-through text-sm">
+                                    ₦
+                                    {Number(product.price).toLocaleString(
+                                      'en-NG',
+                                      {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      }
+                                    )}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="font-semibold text-lg">
+                                  ₦
+                                  {Number(product.price).toLocaleString(
+                                    'en-NG',
+                                    {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    }
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              {!isAdmin ? (
+                                <div className="space-x-1">
+                                  <a
+                                    href={whatsappHref(product)}
+                                    className="btn rounded-xl bg-green-400"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <img
+                                      src={whatsapp}
+                                      alt="WhatsApp"
+                                      className="size-5"
+                                    />
+                                  </a>
+                                  <button
+                                    type="button"
+                                    className="btn rounded-xl bg-primary"
+                                    onClick={() =>
+                                      handleAddToCart(product._id, 1, 'Product')
+                                    }
+                                    disabled={isAddingToCart}
+                                  >
+                                    {isAddingToCart ? (
+                                      <Loader2 className="animate-spin" />
+                                    ) : (
+                                      <ShoppingCart className="" />
+                                    )}
+                                  </button>
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
-
-            
 
             {hasMoreProducts && !isGettingProducts && (
               <div className="flex justify-center mt-8">
@@ -925,76 +936,88 @@ const Styles = () => {
                     </figure>
                     <div className="p-2">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="text max-w-50 font whitespace-nowrap truncate">
-                            {collection.name}
-                          </h2>
-                          {collection.isPromo &&
-                          collection.discountedPrice !== undefined ? (
-                            <div className="flex flex-col">
-                              <span className="text-red-600 font-bold text-lg">
-                                ₦
-                                {Number(
-                                  collection.discountedPrice
-                                ).toLocaleString('en-NG', {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </span>
-                              <span className="text-gray-500 line-through text-sm">
-                                ₦
-                                {Number(collection.price).toLocaleString(
-                                  'en-NG',
-                                  {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  }
-                                )}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="font-semibold text-lg">
-                              ₦
-                              {Number(collection.price).toLocaleString(
-                                'en-NG',
-                                {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                }
-                              )}
-                            </span>
-                          )}
-                        </div>
-                        {!isAdmin ? (
-                          <div className="space-x-1">
-                            <a
-                              href={whatsappHref(collection)}
-                              className="btn rounded-xl bg-green-400"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <img
-                                src={whatsapp}
-                                alt="WhatsApp"
-                                className="size-5"
-                              />
-                            </a>
-                            <button
-                              type="button"
-                              className="btn rounded-xl bg-primary"
-                              onClick={() =>
-                                handleAddToCart(collection._id, 1, 'Collection')
-                              }
-                              disabled={isAddingToCart}
-                            >
-                              {isAddingToCart ? (
-                                <Loader2 className="animate-spin" />
-                              ) : (
-                                <ShoppingCart className="" />
-                              )}
-                            </button>
+                        <div className="w-full">
+                          <div>
+                            <h2 className="text truncate whitespace-nowrap">
+                              {collection.name}
+                            </h2>
                           </div>
-                        ) : null}
+                          <div className="flex justify-between w-full items-center">
+                            <div>
+                              {collection.isPromo &&
+                              collection.discountedPrice !== undefined ? (
+                                <div className="flex flex-col">
+                                  <span className="text-red-600 font-bold text-lg">
+                                    ₦
+                                    {Number(
+                                      collection.discountedPrice
+                                    ).toLocaleString('en-NG', {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </span>
+                                  <span className="text-gray-500 line-through text-sm">
+                                    ₦
+                                    {Number(collection.price).toLocaleString(
+                                      'en-NG',
+                                      {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      }
+                                    )}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="font-semibold text-lg">
+                                  ₦
+                                  {Number(collection.price).toLocaleString(
+                                    'en-NG',
+                                    {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    }
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              {!isAdmin ? (
+                                <div className="space-x-1">
+                                  <a
+                                    href={whatsappHref(collection)}
+                                    className="btn rounded-xl bg-green-400"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <img
+                                      src={whatsapp}
+                                      alt="WhatsApp"
+                                      className="size-5"
+                                    />
+                                  </a>
+                                  <button
+                                    type="button"
+                                    className="btn rounded-xl bg-primary"
+                                    onClick={() =>
+                                      handleAddToCart(
+                                        collection._id,
+                                        1,
+                                        'Collection'
+                                      )
+                                    }
+                                    disabled={isAddingToCart}
+                                  >
+                                    {isAddingToCart ? (
+                                      <Loader2 className="animate-spin" />
+                                    ) : (
+                                      <ShoppingCart className="" />
+                                    )}
+                                  </button>
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -25,7 +25,7 @@ const CartPage = () => {
   const { isAuthReady } = useAuthStore();
 
   const [detailedCartItems, setDetailedCartItems] = useState([]);
-  // const [isFetchingDetails, setIsFetchingDetails] = useState(false);
+  const [isFetchingDetails, setIsFetchingDetails] = useState(false);
 
   useEffect(() => {
     if (isAuthReady) {
@@ -39,7 +39,7 @@ const CartPage = () => {
       // Only proceed if cart data is available and has items
       // cart is now an array, so check cart.length
       if (cart && cart.length > 0) {
-        // setIsFetchingDetails(true);
+        setIsFetchingDetails(true);
         const fetchedDetails = [];
 
         for (const cartItem of cart) {
@@ -101,10 +101,10 @@ const CartPage = () => {
           }
         }
         setDetailedCartItems(fetchedDetails);
-        // setIsFetchingDetails(false);
+        setIsFetchingDetails(false);
       } else {
         setDetailedCartItems([]); // Clear detailed items if cart is empty or not yet loaded
-        // setIsFetchingDetails(false);
+        setIsFetchingDetails(false);
       }
     };
 
@@ -228,7 +228,7 @@ const CartPage = () => {
 
   // console.log(detailedCartItems);
 
-  if (isGettingCart) {
+  if (isGettingCart || isFetchingDetails) {
     return (
       <div className="pt-16">
         <div className="flex justify-center items-center min-h-screen">
@@ -283,20 +283,22 @@ const CartPage = () => {
                     key={item._id} // Use the unique ID of the cart entry for the key
                     className="flex border-b border-base-200 pb-4 last:border-b-0 overflow-x-auto"
                   >
-                    <img
-                      src={
-                        item.imageUrl ||
-                        'https://placehold.co/100x100/E0E0E0/333333?text=N/A'
-                      }
-                      alt={item.name}
-                      className="size-35 object-cover rounded-lg mr-4"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src =
-                          'https://placehold.co/100x100/E0E0E0/333333?text=Error';
-                      }}
-                    />
-                    <div className="flex flex-col w-full">
+                    <div className="w-35 h-24">
+                      <img
+                        src={
+                          item.imageUrl ||
+                          'https://placehold.co/100x100/E0E0E0/333333?text=N/A'
+                        }
+                        alt={item.name}
+                        className="h-full w-full object-cover rounded-lg mr-4"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src =
+                            'https://placehold.co/100x100/E0E0E0/333333?text=Error';
+                        }}
+                      />
+                    </div>
+                    <div className="flex flex-col w-full px-2">
                       <div className="flex justify-between w-full items-center font-[poppins]">
                         <h3 className="text-lg font-medium">{item.name}</h3>
                         <button

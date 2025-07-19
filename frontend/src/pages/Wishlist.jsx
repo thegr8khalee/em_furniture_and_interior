@@ -27,7 +27,7 @@ const WishlistPage = () => {
   const { isAuthReady } = useAuthStore();
 
   const [detailedWishlistItems, setDetailedWishlistItems] = useState([]);
-  // const [isFetchingDetails, setIsFetchingDetails] = useState(false);
+  const [isFetchingDetails, setIsFetchingDetails] = useState(false);
 
   useEffect(() => {
     if (isAuthReady) {
@@ -40,7 +40,7 @@ const WishlistPage = () => {
     const fetchItemDetails = async () => {
       // Only proceed if wishlist data is available and has items
       if (wishlist && wishlist.length > 0) {
-        // setIsFetchingDetails(true);
+        setIsFetchingDetails(true);
         const fetchedDetails = [];
 
         for (const wishlistItem of wishlist) {
@@ -99,10 +99,10 @@ const WishlistPage = () => {
           }
         }
         setDetailedWishlistItems(fetchedDetails);
-        // setIsFetchingDetails(false);
+        setIsFetchingDetails(false);
       } else {
         setDetailedWishlistItems([]); // Clear detailed items if wishlist is empty or not yet loaded
-        // setIsFetchingDetails(false);
+        setIsFetchingDetails(false);
       }
     };
 
@@ -142,7 +142,7 @@ const WishlistPage = () => {
   // const isLoadingPage =
   //   isGettingWishlist || isFetchingDetails || isAddingToWishlist;
 
-  if (isGettingWishlist) {
+  if (isGettingWishlist || isFetchingDetails) {
     return (
       <div className="pt-16">
         <div className="flex justify-center items-center min-h-screen">
@@ -196,14 +196,15 @@ const WishlistPage = () => {
                     key={item._id} // Use the unique ID of the wishlist entry for the key
                     className="flex items-center border-b border-base-200 pb-4 last:border-b-0"
                   >
+                    <div className="w-35 h-24 m-2">
                     <img
                       src={
                         item.imageUrl ||
                         'https://placehold.co/100x100/E0E0E0/333333?text=N/A'
                       }
                       alt={item.name}
-                      className="w-35 h-24 object-cover rounded-lg mr-4"
-                    />
+                      className="w-full h-full object-cover rounded-lg mr-4"
+                    /></div>
                     <div className="w-full">
                       <div className="flex-1">
                         <h3 className="text-lg font-semibold font-[poppins]">
