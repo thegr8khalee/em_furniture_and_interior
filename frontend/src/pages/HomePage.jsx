@@ -279,154 +279,167 @@ const HomePage = () => {
           ))}
         </div>
       </section>
-      <section className="pl-4 sm:pl-8 lg:pl-16">
-        <h2 className="text-2xl font-bold mb-4 font-[poppins]">Promotions</h2>
-        <div
-          className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400 scrollbar-track-gray-100"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {promotionProducts.map((product) => (
-            <div
-              key={product.id}
-              className="flex-shrink-0 w-75 md:w-90 lg:w-100 rounded-lg overflow-hidden"
-            >
-              <div className="relative">
-                <button
-                  className="w-full h-full"
-                  onClick={() => handleProductClick(product._id)}
-                >
-                  <img
-                    src={product?.images[0].url}
-                    alt={product.name}
-                    className="w-full h-50 md:h-60 lg:h-70 rounded-lg object-cover rounded-t-lg"
-                  />
-                </button>
-                {/* Discount Badge */}
-                <div className="absolute top-4 left-4 bg-red-500 text-white font-bold text-sm px-3 py-1.5 rounded-full shadow-md">
-                  {product.price && product.discountedPrice
-                    ? `${Math.round(
-                        ((product.price - product.discountedPrice) /
-                          product.price) *
-                          100
-                      )}% OFF`
-                    : ''}
+      {promotionProducts.length !== 0 ? (
+        <section className="pl-4 sm:pl-8 lg:pl-16">
+          <h2 className="text-2xl font-bold mb-4 font-[poppins]">Promotions</h2>
+          <div
+            className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400 scrollbar-track-gray-100"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {promotionProducts.map((product) => (
+              <div
+                key={product.id}
+                className="flex-shrink-0 w-75 md:w-90 lg:w-100 rounded-lg overflow-hidden"
+              >
+                <div className="relative">
+                  <button
+                    className="w-full h-full"
+                    onClick={() => handleProductClick(product._id)}
+                  >
+                    <img
+                      src={product?.images[0].url}
+                      alt={product.name}
+                      className="w-full h-50 md:h-60 lg:h-70 rounded-lg object-cover rounded-t-lg"
+                    />
+                  </button>
+                  {/* Discount Badge */}
+                  <div className="absolute top-4 left-4 bg-red-500 text-white font-bold text-sm px-3 py-1.5 rounded-full shadow-md">
+                    {product.price && product.discountedPrice
+                      ? `${Math.round(
+                          ((product.price - product.discountedPrice) /
+                            product.price) *
+                            100
+                        )}% OFF`
+                      : ''}
+                  </div>
+                </div>
+                <div className="mt-1">
+                  <h3 className="text-lg font-medium truncate font-[poppins]">
+                    {product.name}
+                  </h3>
+                  <div className="flex items-baseline space-x-2">
+                    <span className="text-red-600 font-bold text-lg">
+                      ₦{product.discountedPrice.toLocaleString()}
+                    </span>
+                    <span className="text-gray-500 line-through text-sm">
+                      ₦{product.price.toLocaleString()}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="mt-1">
-                <h3 className="text-lg font-medium truncate font-[poppins]">
-                  {product.name}
-                </h3>
-                <div className="flex items-baseline space-x-2">
-                  <span className="text-red-600 font-bold text-lg">
-                    ₦{product.discountedPrice.toLocaleString()}
-                  </span>
-                  <span className="text-gray-500 line-through text-sm">
-                    ₦{product.price.toLocaleString()}
-                  </span>
-                </div>
-              </div>
+            ))}
+            <div className="w-full h-full py-20 lg:py-30">
+              <button
+                onClick={() => handleShopNow()}
+                className="btn bg-primary rounded-xl mx-4 w-30 font-semibold"
+              >
+                Shop Now
+              </button>
             </div>
-          ))}
-          <div className="w-full h-full py-20 lg:py-30">
-            <button
-              onClick={() => handleShopNow()}
-              className="btn bg-primary rounded-xl mx-4 w-30 font-semibold"
-            >
-              Shop Now
-            </button>
           </div>
-        </div>
-      </section>
-      <section className="pl-4 sm:pl-8 lg:pl-16">
-        <h2 className="text-2xl font-bold mb-4 font-[poppins]">Best Sellers</h2>
-        <div
-          className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400 scrollbar-track-gray-100"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {BestSeller.map((product) => (
-            <div
-              key={product.id}
-              className="flex-shrink-0 w-75 md:w-90 lg:w-100 rounded-lg overflow-hidden"
-            >
-              <div className="relative">
-                <button
-                  className="w-full h-full"
-                  onClick={() => handleProductClick(product._id)}
-                >
-                  <img
-                    src={product.images[0].url}
-                    alt={product.name}
-                    className="w-full h-50 md:h-60 lg:h-70 rounded-lg object-cover rounded-t-lg"
-                  />
-                </button>
-              </div>
-              <div className="mt-1">
-                <h3 className="text-lg font-medium truncate font-[poppins]">
-                  {product.name}
-                </h3>
-                <div className="flex items-baseline space-x-2">
-                  <span className=" text-gray-500">
-                    ₦{product.price.toLocaleString()}
-                  </span>
+        </section>
+      ) : null}
+
+      {BestSeller.length !== 0 ? (
+        <section className="pl-4 sm:pl-8 lg:pl-16">
+          <h2 className="text-2xl font-bold mb-4 font-[poppins]">
+            Best Sellers
+          </h2>
+          <div
+            className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400 scrollbar-track-gray-100"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {BestSeller.map((product) => (
+              <div
+                key={product.id}
+                className="flex-shrink-0 w-75 md:w-90 lg:w-100 rounded-lg overflow-hidden"
+              >
+                <div className="relative">
+                  <button
+                    className="w-full h-full"
+                    onClick={() => handleProductClick(product._id)}
+                  >
+                    <img
+                      src={product.images[0].url}
+                      alt={product.name}
+                      className="w-full h-50 md:h-60 lg:h-70 rounded-lg object-cover rounded-t-lg"
+                    />
+                  </button>
+                </div>
+                <div className="mt-1">
+                  <h3 className="text-lg font-medium truncate font-[poppins]">
+                    {product.name}
+                  </h3>
+                  <div className="flex items-baseline space-x-2">
+                    <span className=" text-gray-500">
+                      ₦{product.price.toLocaleString()}
+                    </span>
+                  </div>
                 </div>
               </div>
+            ))}
+            <div className="w-full h-full py-20 lg:py-30">
+              <button
+                onClick={() => handleShopNow()}
+                className="btn bg-primary rounded-xl mx-4 w-30 font-semibold"
+              >
+                Shop Now
+              </button>
             </div>
-          ))}
-          <div className="w-full h-full py-20 lg:py-30">
-            <button
-              onClick={() => handleShopNow()}
-              className="btn bg-primary rounded-xl mx-4 w-30 font-semibold"
-            >
-              Shop Now
-            </button>
           </div>
-        </div>
-      </section>
-      <section className="pl-4 sm:pl-8 lg:pl-16">
-        <h2 className="text-2xl font-bold mb-4 font-[poppins]">Collections</h2>
-        <div
-          className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400 scrollbar-track-gray-100"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {collections.map((product) => (
-            <div
-              key={product.id}
-              className="flex-shrink-0 w-75 md:w-90 lg:w-100 rounded-lg overflow-hidden"
-            >
-              <div className="relative">
-                <button
-                  className="w-full h-full"
-                  onClick={() => handleCollectionClick(product._id)}
-                >
-                  <img
-                    src={product.coverImage.url}
-                    alt={product.name}
-                    className="w-full h-50 md:h-60 lg:h-70 rounded-lg object-cover rounded-t-lg"
-                  />
-                </button>
-              </div>
-              <div className="mt-1">
-                <h3 className="text-lg font-medium truncate font-[poppins]">
-                  {product.name}
-                </h3>
-                <div className="flex items-baseline space-x-2">
-                  <span className=" text-gray-500">
-                    ₦{product.price.toLocaleString()}
-                  </span>
+        </section>
+      ) : null}
+
+      {collections.length !== 0 ? (
+        <section className="pl-4 sm:pl-8 lg:pl-16">
+          <h2 className="text-2xl font-bold mb-4 font-[poppins]">
+            Collections
+          </h2>
+          <div
+            className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400 scrollbar-track-gray-100"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {collections.map((product) => (
+              <div
+                key={product.id}
+                className="flex-shrink-0 w-75 md:w-90 lg:w-100 rounded-lg overflow-hidden"
+              >
+                <div className="relative">
+                  <button
+                    className="w-full h-full"
+                    onClick={() => handleCollectionClick(product._id)}
+                  >
+                    <img
+                      src={product.coverImage.url}
+                      alt={product.name}
+                      className="w-full h-50 md:h-60 lg:h-70 rounded-lg object-cover rounded-t-lg"
+                    />
+                  </button>
+                </div>
+                <div className="mt-1">
+                  <h3 className="text-lg font-medium truncate font-[poppins]">
+                    {product.name}
+                  </h3>
+                  <div className="flex items-baseline space-x-2">
+                    <span className=" text-gray-500">
+                      ₦{product.price.toLocaleString()}
+                    </span>
+                  </div>
                 </div>
               </div>
+            ))}
+            <div className="w-full h-full py-20 lg:py-30">
+              <button
+                onClick={() => handleShopNow()}
+                className="btn bg-primary rounded-xl mx-4 w-30 font-semibold"
+              >
+                Shop Now
+              </button>
             </div>
-          ))}
-          <div className="w-full h-full py-20 lg:py-30">
-            <button
-              onClick={() => handleShopNow()}
-              className="btn bg-primary rounded-xl mx-4 w-30 font-semibold"
-            >
-              Shop Now
-            </button>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
+
       <section className="my-10 pl-4 sm:pl-8 lg:pl-16">
         <div
           className="flex space-x-4 overflow-x-auto pb-4"
