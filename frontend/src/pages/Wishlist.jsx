@@ -30,7 +30,8 @@ const WishlistPage = () => {
   const [detailedWishlistItems, setDetailedWishlistItems] = useState([]);
   const [isFetchingDetails, setIsFetchingDetails] = useState(false);
 
-  const [hasInitialWishlistLoaded, setHasInitialWishlistLoaded] = useState(false); // New state to track initial wishlist data load
+  const [hasInitialWishlistLoaded, setHasInitialWishlistLoaded] =
+    useState(false); // New state to track initial wishlist data load
 
   // Ref to store the previous wishlist items to detect additions/removals
   const prevWishlistRef = useRef([]);
@@ -45,7 +46,7 @@ const WishlistPage = () => {
   }, [getwishlist, isAuthReady]);
 
   // Effect to fetch detailed product/collection info for each item in the wishlist
- useEffect(() => {
+  useEffect(() => {
     const fetchItemDetails = async () => {
       // IMPORTANT: Only clear detailed items if wishlist is empty AND we are NOT currently fetching it.
       if (!hasInitialWishlistLoaded) {
@@ -99,7 +100,9 @@ const WishlistPage = () => {
 
         // Create maps for quick lookup of details by ID
         const productMap = new Map(products.map((p) => [p._id.toString(), p]));
-        const collectionMap = new Map(collections.map((c) => [c._id.toString(), c]));
+        const collectionMap = new Map(
+          collections.map((c) => [c._id.toString(), c])
+        );
 
         // Map the original wishlist items to their detailed versions
         const fetchedDetails = wishlist.map((wishlistItem) => {
@@ -123,7 +126,8 @@ const WishlistPage = () => {
                 wishlistItem.itemType === 'Collection'
                   ? detail.coverImage?.url
                   : detail.images?.[0]?.url,
-              displayPrice: // Assuming wishlist might also show a price (promo or regular)
+              // Assuming wishlist might also show a price (promo or regular)
+              displayPrice:
                 detail.isPromo && detail.discountedPrice !== undefined
                   ? detail.discountedPrice
                   : detail.price,
@@ -134,7 +138,9 @@ const WishlistPage = () => {
               _id: wishlistItem._id,
               item: wishlistItem.item,
               itemType: wishlistItem.itemType,
-              name: `Unknown ${wishlistItem.itemType} (ID: ${wishlistItem.item.toString().substring(0, 6)}...)`,
+              name: `Unknown ${wishlistItem.itemType} (ID: ${wishlistItem.item
+                .toString()
+                .substring(0, 6)}...)`,
               imageUrl: 'https://placehold.co/100x100/E0E0E0/333333?text=N/A',
               displayPrice: 0,
               error: true, // Mark this item as having an error
@@ -150,7 +156,9 @@ const WishlistPage = () => {
             _id: wishlistItem._id,
             item: wishlistItem.item,
             itemType: wishlistItem.itemType,
-            name: `Error loading ${wishlistItem.itemType} (ID: ${wishlistItem.item.toString().substring(0, 6)}...)`,
+            name: `Error loading ${
+              wishlistItem.itemType
+            } (ID: ${wishlistItem.item.toString().substring(0, 6)}...)`,
             imageUrl: 'https://placehold.co/100x100/E0E0E0/333333?text=Error',
             displayPrice: 0,
             error: true,
@@ -164,7 +172,7 @@ const WishlistPage = () => {
 
     fetchItemDetails();
     prevWishlistRef.current = wishlist; // Update ref with current wishlist after processing
-  }, [wishlist, hasInitialWishlistLoaded]);// Depend on the raw wishlist state
+  }, [wishlist, hasInitialWishlistLoaded]); // Depend on the raw wishlist state
 
   // Handler for removing an item from the wishlist
   const handleRemoveItem = async (itemId, itemType) => {
@@ -225,21 +233,21 @@ const WishlistPage = () => {
   }
 
   // Check if wishlist is empty after loading and fetching details
-  if (!wishlist || wishlist.length === 0) {
-    return (
-      <div className="py-16 overflow-x-hidden">
-        <div className="text-center text-xl text-gray-600 mt-16">
-          Your wishlist is empty.{' '}
-          <button
-            className="btn bg-primary rounded-xl"
-            onClick={() => handleShopClick()}
-          >
-            Start shopping!
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // if (!wishlist || wishlist.length === 0) {
+  //   return (
+  //     <div className="py-16 overflow-x-hidden">
+  //       <div className="text-center text-xl text-gray-600 mt-16">
+  //         Your wishlist is empty.{' '}
+  //         <button
+  //           className="btn bg-primary rounded-xl"
+  //           onClick={() => handleShopClick()}
+  //         >
+  //           Start shopping!
+  //         </button>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="pt-16">
@@ -268,14 +276,15 @@ const WishlistPage = () => {
                     className="flex items-center border-b border-base-200 pb-4 last:border-b-0"
                   >
                     <div className="w-35 h-24 m-2">
-                    <img
-                      src={
-                        item.imageUrl ||
-                        'https://placehold.co/100x100/E0E0E0/333333?text=N/A'
-                      }
-                      alt={item.name}
-                      className="w-full h-full object-cover rounded-lg mr-4"
-                    /></div>
+                      <img
+                        src={
+                          item.imageUrl ||
+                          'https://placehold.co/100x100/E0E0E0/333333?text=N/A'
+                        }
+                        alt={item.name}
+                        className="w-full h-full object-cover rounded-lg mr-4"
+                      />
+                    </div>
                     <div className="w-full">
                       <div className="flex-1">
                         <h3 className="text-lg font-semibold font-[poppins]">
@@ -313,9 +322,7 @@ const WishlistPage = () => {
                             className="btn btn-sm bg-primary rounded-xl"
                             // disabled={isAddingToCart}
                           >
-                            
-                              <ShoppingCart size={16} />
-                            
+                            <ShoppingCart size={16} />
                           </button>
                           <button
                             onClick={() =>
@@ -324,10 +331,7 @@ const WishlistPage = () => {
                             className="btn btn-sm btn-error btn-outline rounded-xl ml-2"
                             // disabled={isRemovingFromWishlist}
                           >
-                           
-                              
-                              <Trash2 size={16} />
-                        
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </div>
@@ -336,14 +340,26 @@ const WishlistPage = () => {
                 )
               )}
             </div>
+            {!detailedWishlistItems || detailedWishlistItems.length === 0 ? (
+              <div className="text-center text-xl text-gray-600 mt-16">
+                Your wishlist is empty.{' '}
+                <button
+                  className="btn bg-primary rounded-xl"
+                  onClick={() => handleShopClick()}
+                >
+                  Start shopping!
+                </button>
+              </div>
+            ) : null}
             <div className="mt-6 flex justify-end">
               <button
                 onClick={handleClearWishlist}
                 className="btn btn-error rounded-xl"
-                // disabled={isRemovingFromWishlist}
+                disabled={
+                  !detailedWishlistItems || detailedWishlistItems.length === 0
+                }
               >
-                
-                  <Trash2 size={20} className="mr-2" />
+                <Trash2 size={20} className="mr-2" />
                 {/* )} */}
                 Clear Wishlist
               </button>

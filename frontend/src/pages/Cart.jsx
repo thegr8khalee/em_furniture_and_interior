@@ -312,21 +312,21 @@ const CartPage = () => {
 
   // Check if cart is empty after loading and fetching details
   // cart is now an array, so check cart.length
-  if (!cart || cart.length === 0) {
-    return (
-      <div className="py-16 overflow-x-hidden">
-        <div className="text-center text-xl text-gray-600 mt-16">
-          Your cart is empty.{' '}
-          <button
-            className="btn bg-primary rounded-xl"
-            onClick={() => handleShopClick()}
-          >
-            Start shopping!
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // if (!cart || cart.length === 0) {
+  //   return (
+  //     <div className="py-16 overflow-x-hidden">
+  //       <div className="text-center text-xl text-gray-600 mt-16">
+  //         Your cart is empty.{' '}
+  //         <button
+  //           className="btn bg-primary rounded-xl"
+  //           onClick={() => handleShopClick()}
+  //         >
+  //           Start shopping!
+  //         </button>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="pt-12 w-screen">
@@ -444,12 +444,23 @@ const CartPage = () => {
                 )
               )}
             </div>
+            {!cart || cart.length === 0 ? (
+              <div className="text-center text-xl text-gray-600 mt-16">
+                Your cart is empty.{' '}
+                <button
+                  className="btn bg-primary rounded-xl"
+                  onClick={() => handleShopClick()}
+                >
+                  Start shopping!
+                </button>
+              </div>
+            ) : null}
             <div className="mt-6 flex justify-end">
               <button
                 type="button"
                 onClick={handleClearCart}
                 className="btn btn-error rounded-xl"
-                disabled={isRemovingFromCart}
+                disabled={isRemovingFromCart || !cart || cart.length === 0}
               >
                 {isRemovingFromCart ? (
                   <Loader2 className="animate-spin mr-2" />
@@ -490,6 +501,7 @@ const CartPage = () => {
             <a
               className="btn bg-green-500 text-white border-0 shadow-none w-full mt-8 rounded-xl"
               href={whatsappCartHref(detailedCartItems)}
+              disabled={isRemovingFromCart || !cart || cart.length === 0}
             >
               <img src={whatsapp} alt="" className="size-8" /> Order On WhatsApp
             </a>
