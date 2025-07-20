@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 // src/pages/CartPage.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useCartStore } from '../store/useCartStore';
 import { Loader2, Trash2, Minus, Plus, ShoppingCart, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -30,89 +30,145 @@ const CartPage = () => {
 
   useEffect(() => {
     if (isAuthReady) {
-      getCart();
+      getCart().then(() => {
+        // Once getCart completes (successfully or with error), mark initial load as true
+        setHasInitialCartLoaded(true);
+      });
     }
   }, [getCart, isAuthReady]);
+
+  const [hasInitialCartLoaded, setHasInitialCartLoaded] = useState(false); // State to track initial cart data load
+
+  // Ref to store the previous cart items to detect additions/removals
+  const prevCartRef = useRef([]);
 
   // Effect to fetch detailed product/collection info for each item in the cart
   useEffect(() => {
     const fetchItemDetails = async () => {
-      // Only proceed if cart data is available and has items
-      // cart is now an array, so check cart.length
-      if (cart && cart.length > 0) {
-        setIsFetchingDetails(true);
-        const fetchedDetails = [];
+      // IMPORTANT: Only clear detailed items if cart is empty AND we are NOT currently fetching it.
+      // This prevents momentary clearing while data is still loading.
+      if (!hasInitialCartLoaded) {
+        console.log(
+          'Initial cart data not loaded yet, deferring detailed items fetch.'
+        );
+        return;
+      }
 
-        for (const cartItem of cart) {
-          // Iterate directly over cart array
-          const itemId = cartItem.item; // This is the actual Product/Collection ID
-          const itemType = cartItem.itemType; // 'Product' or 'Collection'
-          const quantity = cartItem.quantity;
-          const cartEntryId = cartItem._id; // The unique ID of this cart entry
+      // If cart is empty (and we've confirmed the initial load completed), clear detailed items.
+      // This is the desired behavior for an actually empty cart.
+      if (!cart || cart.length === 0) {
+        setDetailedCartItems([]);
+        setIsFetchingDetails(false);
+        console.log(
+          'Cart is empty after initial load, clearing detailedCartItems.'
+        );
+        return;
+      }
 
-          try {
-            let endpoint = '';
-            if (itemType === 'Product') {
-              endpoint = `/products/${itemId}`;
-            } else if (itemType === 'Collection') {
-              endpoint = `/collections/${itemId}`;
-            }
+      // Extract all unique product and collection IDs from the cart
+      const productIds = [];
+      const collectionIds = [];
 
-            if (endpoint) {
-              const res = await axiosInstance.get(endpoint);
-              const detail = res.data; // This is the full product/collection object
+      cart.forEach((cartItem) => {
+        if (cartItem.itemType === 'Product') {
+          productIds.push(cartItem.item);
+        } else if (cartItem.itemType === 'Collection') {
+          collectionIds.push(cartItem.item);
+        }
+      });
 
-              fetchedDetails.push({
-                // Include original cart item properties (like _id for key, quantity)
-                _id: cartEntryId, // Use the cart entry's unique ID as key
-                item: itemId, // The original product/collection ID
-                itemType: itemType, // The original type
-                quantity: quantity,
+      // If there are no items, clear details and return
+      if (productIds.length === 0 && collectionIds.length === 0) {
+        setDetailedCartItems([]);
+        setIsFetchingDetails(false);
+        return;
+      }
 
-                // Spread the fetched details (name, price, images etc.)
-                ...detail,
+      setIsFetchingDetails(true); // Indicate that details are being fetched
+      try {
+        // --- BATCHED API CALL ---
+        // This assumes you have a backend endpoint like /api/items/details-by-ids
+        // that accepts an array of productIds and collectionIds and returns
+        // an object like { products: [...], collections: [...] }
+        const res = await axiosInstance.post('/cart/details-by-ids', {
+          productIds,
+          collectionIds,
+        });
 
-                // Standardize image URL and display price for easier rendering
-                imageUrl:
-                  itemType === 'Collection'
-                    ? detail.coverImage?.url
-                    : detail.images?.[0]?.url,
-                displayPrice:
-                  detail.isPromo && detail.discountedPrice !== undefined
-                    ? detail.discountedPrice
-                    : detail.price,
-              });
-            }
-          } catch (error) {
-            console.error(
-              `Failed to fetch details for item ${itemId} (${itemType}):`,
-              error
-            );
-            // Add a placeholder or error item if fetching fails
-            fetchedDetails.push({
-              _id: cartEntryId,
-              item: itemId,
-              itemType: itemType,
-              quantity: quantity,
-              name: `Unknown ${itemType} (ID: ${itemId.substring(0, 6)}...)`,
+        const { products, collections } = res.data;
+
+        // Create maps for quick lookup of details by ID
+        const productMap = new Map(products.map((p) => [p._id, p]));
+        const collectionMap = new Map(collections.map((c) => [c._id, c]));
+
+        // Map the original cart items to their detailed versions
+        const fetchedDetails = cart.map((cartItem) => {
+          let detail = null;
+          if (cartItem.itemType === 'Product') {
+            detail = productMap.get(cartItem.item);
+          } else if (cartItem.itemType === 'Collection') {
+            detail = collectionMap.get(cartItem.item);
+          }
+
+          if (detail) {
+            return {
+              _id: cartItem._id, // Use the cart entry's unique ID as key for React list rendering
+              item: cartItem.item, // The original product/collection ID
+              itemType: cartItem.itemType, // The original type
+              quantity: cartItem.quantity,
+              ...detail, // Spread the fetched details (name, price, images etc.)
+              imageUrl:
+                cartItem.itemType === 'Collection'
+                  ? detail.coverImage?.url
+                  : detail.images?.[0]?.url,
+              displayPrice:
+                detail.isPromo && detail.discountedPrice !== undefined
+                  ? detail.discountedPrice
+                  : detail.price,
+            };
+          } else {
+            // Handle case where item details could not be found (e.g., item deleted from DB)
+            return {
+              _id: cartItem._id,
+              item: cartItem.item,
+              itemType: cartItem.itemType,
+              quantity: cartItem.quantity,
+              name: `Unknown ${
+                cartItem.itemType
+              } (ID: ${cartItem.item.substring(0, 6)}...)`,
               imageUrl: 'https://placehold.co/100x100/E0E0E0/333333?text=N/A',
               displayPrice: 0,
-              error: true,
-            });
+              error: true, // Mark this item as having an error
+            };
           }
-        }
+        });
         setDetailedCartItems(fetchedDetails);
-        setIsFetchingDetails(false);
-      } else {
-        setDetailedCartItems([]); // Clear detailed items if cart is empty or not yet loaded
-        setIsFetchingDetails(false);
+      } catch (error) {
+        console.error('Error fetching batched item details:', error);
+        // Fallback to showing placeholders or an error message for all items if batch fetch fails
+        setDetailedCartItems(
+          cart.map((cartItem) => ({
+            _id: cartItem._id,
+            item: cartItem.item,
+            itemType: cartItem.itemType,
+            quantity: cartItem.quantity,
+            name: `Error loading ${
+              cartItem.itemType
+            } (ID: ${cartItem.item.substring(0, 6)}...)`,
+            imageUrl: 'https://placehold.co/100x100/E0E0E0/333333?text=Error',
+            displayPrice: 0,
+            error: true,
+          }))
+        );
+        // toast.error('Failed to load some cart item details. Please refresh.');
+      } finally {
+        setIsFetchingDetails(false); // End fetching details
       }
     };
 
-    // Only run this effect if cart is not null and its items array is different
-    // from the last time, or if the identification status changes.
     fetchItemDetails();
-  }, [cart, _isUserOrGuestIdentified]); // Depend on cart and identification status
+    prevCartRef.current = cart; // Update ref with current cart after processing
+  }, [cart, hasInitialCartLoaded]); // Depend on cart and identification status
 
   // Handler for removing an item from the cart
   const handleRemoveItem = async (itemId, itemType) => {
@@ -323,9 +379,7 @@ const CartPage = () => {
                             handleRemoveItem(item._id, item.itemType)
                           }
                         >
-                          
-                            <X className="size-4" />
-                          
+                          <X className="size-4" />
                         </button>
                       </div>
                       {/* <div className="items-center  font-[montserrat]">
@@ -363,9 +417,7 @@ const CartPage = () => {
                           className="btn btn-circle btn-sm  btn-outline btn-primary"
                           disabled={item.quantity <= 1}
                         >
-                          
-                            <Minus size={16} />
-                          
+                          <Minus size={16} />
                         </button>
 
                         <span className="font-semibold text-lg w-8 text-center">
@@ -384,9 +436,7 @@ const CartPage = () => {
                           className="btn btn-circle btn-sm btn-outline btn-primary"
                           // disabled={isUpdatingCartItem}
                         >
-                          
-                            <Plus size={16} />
-                         
+                          <Plus size={16} />
                         </button>
                       </div>
                     </div>

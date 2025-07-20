@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 // src/pages/WishlistPage.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useWishlistStore } from '../store/useWishlistStore';
 import { useCartStore } from '../store/useCartStore'; // Import cart store for "Add to Cart"
 import { Loader2, Trash2, ShoppingCart, Heart } from 'lucide-react';
@@ -30,86 +30,141 @@ const WishlistPage = () => {
   const [detailedWishlistItems, setDetailedWishlistItems] = useState([]);
   const [isFetchingDetails, setIsFetchingDetails] = useState(false);
 
+  const [hasInitialWishlistLoaded, setHasInitialWishlistLoaded] = useState(false); // New state to track initial wishlist data load
+
+  // Ref to store the previous wishlist items to detect additions/removals
+  const prevWishlistRef = useRef([]);
+
   useEffect(() => {
     if (isAuthReady) {
-      getwishlist();
+      getwishlist().then(() => {
+        // Once getwishlist completes (successfully or with error), mark initial load as true
+        setHasInitialWishlistLoaded(true);
+      });
     }
   }, [getwishlist, isAuthReady]);
 
   // Effect to fetch detailed product/collection info for each item in the wishlist
-  useEffect(() => {
+ useEffect(() => {
     const fetchItemDetails = async () => {
-      // Only proceed if wishlist data is available and has items
-      if (wishlist && wishlist.length > 0) {
-        setIsFetchingDetails(true);
-        const fetchedDetails = [];
+      // IMPORTANT: Only clear detailed items if wishlist is empty AND we are NOT currently fetching it.
+      if (!hasInitialWishlistLoaded) {
+        console.log(
+          'Initial wishlist data not loaded yet, deferring detailed items fetch.'
+        );
+        return;
+      }
 
-        for (const wishlistItem of wishlist) {
-          // Iterate directly over wishlist array
-          const itemId = wishlistItem.item; // This is the actual Product/Collection ID
-          const itemType = wishlistItem.itemType; // 'Product' or 'Collection'
-          const wishlistEntryId = wishlistItem._id; // The unique ID of this wishlist entry
+      // If wishlist is empty (and we've confirmed the initial load completed), clear detailed items.
+      if (!wishlist || wishlist.length === 0) {
+        setDetailedWishlistItems([]);
+        setIsFetchingDetails(false);
+        console.log(
+          'Wishlist is empty after initial load, clearing detailedWishlistItems.'
+        );
+        return;
+      }
 
-          try {
-            let endpoint = '';
-            if (itemType === 'Product') {
-              endpoint = `/products/${itemId}`;
-            } else if (itemType === 'Collection') {
-              endpoint = `/collections/${itemId}`;
-            }
+      // Extract all unique product and collection IDs from the wishlist
+      const productIds = [];
+      const collectionIds = [];
 
-            if (endpoint) {
-              const res = await axiosInstance.get(endpoint);
-              const detail = res.data; // This is the full product/collection object
+      wishlist.forEach((wishlistItem) => {
+        if (wishlistItem.itemType === 'Product') {
+          productIds.push(wishlistItem.item);
+        } else if (wishlistItem.itemType === 'Collection') {
+          collectionIds.push(wishlistItem.item);
+        }
+      });
 
-              fetchedDetails.push({
-                // Include original wishlist item properties (like _id for key, item, itemType)
-                _id: wishlistEntryId, // Use the wishlist entry's unique ID as key
-                item: itemId, // The original product/collection ID
-                itemType: itemType, // The original type
+      // If there are no items, clear details and return
+      if (productIds.length === 0 && collectionIds.length === 0) {
+        setDetailedWishlistItems([]);
+        setIsFetchingDetails(false);
+        return;
+      }
 
-                // Spread the fetched details (name, price, images etc.)
-                ...detail,
+      setIsFetchingDetails(true); // Indicate that details are being fetched
+      try {
+        // --- BATCHED API CALL ---
+        // This assumes you have a backend endpoint like /api/items/details-by-ids
+        // that accepts an array of productIds and collectionIds and returns
+        // an object like { products: [...], collections: [...] }
+        const res = await axiosInstance.post('/cart/details-by-ids', {
+          productIds,
+          collectionIds,
+        });
 
-                // Standardize image URL and display price for easier rendering
-                imageUrl:
-                  itemType === 'Collection'
-                    ? detail.coverImage?.url
-                    : detail.images?.[0]?.url,
-                displayPrice:
-                  detail.isPromo && detail.discountedPrice !== undefined
-                    ? detail.discountedPrice
-                    : detail.price,
-              });
-            }
-          } catch (error) {
-            console.error(
-              `Failed to fetch details for item ${itemId} (${itemType}):`,
-              error
-            );
-            // Add a placeholder or error item if fetching fails
-            fetchedDetails.push({
-              _id: wishlistEntryId,
-              item: itemId,
-              itemType: itemType,
-              name: `Unknown ${itemType} (ID: ${itemId.substring(0, 6)}...)`,
+        const { products, collections } = res.data;
+
+        // Create maps for quick lookup of details by ID
+        const productMap = new Map(products.map((p) => [p._id.toString(), p]));
+        const collectionMap = new Map(collections.map((c) => [c._id.toString(), c]));
+
+        // Map the original wishlist items to their detailed versions
+        const fetchedDetails = wishlist.map((wishlistItem) => {
+          let detail = null;
+          const wishlistItemIdString = wishlistItem.item.toString(); // Ensure ID is string for map lookup
+
+          if (wishlistItem.itemType === 'Product') {
+            detail = productMap.get(wishlistItemIdString);
+          } else if (wishlistItem.itemType === 'Collection') {
+            detail = collectionMap.get(wishlistItemIdString);
+          }
+
+          if (detail) {
+            return {
+              _id: wishlistItem._id, // Use the wishlist entry's unique ID as key
+              item: wishlistItem.item, // The original product/collection ID
+              itemType: wishlistItem.itemType, // The original type
+              // Spread the fetched details (name, price, images etc.)
+              ...detail,
+              imageUrl:
+                wishlistItem.itemType === 'Collection'
+                  ? detail.coverImage?.url
+                  : detail.images?.[0]?.url,
+              displayPrice: // Assuming wishlist might also show a price (promo or regular)
+                detail.isPromo && detail.discountedPrice !== undefined
+                  ? detail.discountedPrice
+                  : detail.price,
+            };
+          } else {
+            // Handle case where item details could not be found (e.g., item deleted from DB)
+            return {
+              _id: wishlistItem._id,
+              item: wishlistItem.item,
+              itemType: wishlistItem.itemType,
+              name: `Unknown ${wishlistItem.itemType} (ID: ${wishlistItem.item.toString().substring(0, 6)}...)`,
               imageUrl: 'https://placehold.co/100x100/E0E0E0/333333?text=N/A',
               displayPrice: 0,
-              error: true,
-            });
+              error: true, // Mark this item as having an error
+            };
           }
-        }
+        });
         setDetailedWishlistItems(fetchedDetails);
-        setIsFetchingDetails(false);
-      } else {
-        setDetailedWishlistItems([]); // Clear detailed items if wishlist is empty or not yet loaded
-        setIsFetchingDetails(false);
+      } catch (error) {
+        console.error('Error fetching batched wishlist item details:', error);
+        // Fallback to showing placeholders or an error message for all items if batch fetch fails
+        setDetailedWishlistItems(
+          wishlist.map((wishlistItem) => ({
+            _id: wishlistItem._id,
+            item: wishlistItem.item,
+            itemType: wishlistItem.itemType,
+            name: `Error loading ${wishlistItem.itemType} (ID: ${wishlistItem.item.toString().substring(0, 6)}...)`,
+            imageUrl: 'https://placehold.co/100x100/E0E0E0/333333?text=Error',
+            displayPrice: 0,
+            error: true,
+          }))
+        );
+        // toast.error('Failed to load some wishlist item details. Please refresh.');
+      } finally {
+        setIsFetchingDetails(false); // End fetching details
       }
     };
 
-    // Re-run this effect when the raw wishlist state changes
     fetchItemDetails();
-  }, [wishlist]); // Depend on the raw wishlist state
+    prevWishlistRef.current = wishlist; // Update ref with current wishlist after processing
+  }, [wishlist, hasInitialWishlistLoaded]);// Depend on the raw wishlist state
 
   // Handler for removing an item from the wishlist
   const handleRemoveItem = async (itemId, itemType) => {
