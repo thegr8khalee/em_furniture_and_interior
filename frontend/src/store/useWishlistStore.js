@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/store/useWishlistStore.js
 import { create } from 'zustand';
 import { axiosInstance } from '../lib/axios.js';
@@ -72,6 +73,19 @@ const saveLocalWishlist = (wishlist) => {
   }
 };
 
+// Helper function to fetch wishlist from backend
+const fetchBackendWishlist = async () => {
+  try {
+    const res = await axiosInstance.get('/wishlist');
+    return res.data.wishlist || [];
+  } catch (error) {
+    console.error('Error loading wishlist from backend:', error);
+    // Do NOT toast here, let the calling function handle it for initial load
+    throw error; // Re-throw to allow calling function to catch and handle
+  }
+};
+
+
 export const useWishlistStore = create((set, get) => ({
   wishlist: null, // Initial wishlist state
   isGettingWishlist: false,
@@ -86,7 +100,7 @@ export const useWishlistStore = create((set, get) => ({
       // Access isAuthReady from useAuthStore's state
       const { authUser, isAuthReady } = useAuthStore.getState();
       const anonymousId = Cookies.get('anonymousId');
-  
+
       // Only consider identified if auth check is complete AND (user or anonymousId exists)
       return isAuthReady && (!!authUser || !!anonymousId);
     },
@@ -102,6 +116,7 @@ export const useWishlistStore = create((set, get) => ({
 
     rawLocalWishlist.forEach((item) => {
       // Ensure item.item is a string for map keys and $in query
+      // Assuming `item` in rawLocalWishlist is an object like `{ item: 'id', itemType: 'Product' }`
       if (item.item && typeof item.item.toString === 'function') {
         if (item.itemType === 'Product') {
           productIds.push(item.item);
@@ -112,8 +127,8 @@ export const useWishlistStore = create((set, get) => ({
     });
 
     try {
-      // Use the backend endpoint created for checking item existence
-      const res = await axiosInstance.post('/cart/check-existence', {
+      // Use the backend endpoint created for checking item existence (from cart store)
+      const res = await axiosInstance.post('/cart/check-existence', { // Reusing cart's existence check
         productIds,
         collectionIds,
       });
@@ -155,7 +170,7 @@ export const useWishlistStore = create((set, get) => ({
   getwishlist: async () => {
     set({ isGettingWishlist: true });
 
-     const { isAuthReady } = useAuthStore.getState();
+      const { isAuthReady } = useAuthStore.getState();
 
     // Only proceed if auth status has been determined
     if (!isAuthReady) {
@@ -164,140 +179,163 @@ export const useWishlistStore = create((set, get) => ({
       return;
     }
 
-    if (get()._isUserOrGuestIdentified()) {
-      // Use backend if user is authenticated or has a guest session
-      try {
-        const res = await axiosInstance.get('/wishlist');
-        // The backend's /wishlist endpoint now returns the already cleaned wishlist
-        set({ wishlist: res.data.wishlist || [] }); // Ensure it defaults to an empty array
-      } catch (error) {
-        console.error('Error loading wishlist from backend:', error);
-        toast.error(
-          error.response?.data?.message || 'Failed to load wishlist.'
-        );
-      } finally {
-        set({ isGettingWishlist: false });
-      }
-    } else {
-      // Use local storage and clean it before setting
-      try {
+    try {
+      if (get()._isUserOrGuestIdentified()) {
+        const wishlist = await fetchBackendWishlist();
+        set({ wishlist });
+        // Synchronize local storage after fetching from backend
+        saveLocalWishlist(wishlist);
+      } else {
         const cleanedLocalWishlist = await get().cleanAndGetLocalWishlist(); // Await the cleanup
         set({ wishlist: cleanedLocalWishlist });
-      } catch (error) {
-        console.log(error.message);
-        // Error already logged/toasted by cleanAndGetLocalWishlist
-        set({ wishlist: getLocalWishlist() }); // Fallback to raw local wishlist
-      } finally {
-        set({ isGettingWishlist: false });
       }
+    } catch (error) {
+      console.error('Error in getWishlist:', error);
+      // If backend fetch fails for an identified user, fallback to local wishlist
+      if (get()._isUserOrGuestIdentified()) {
+        const fallbackWishlist = getLocalWishlist(); // Try to load from local storage as a fallback
+        set({ wishlist: fallbackWishlist });
+        toast.error('Failed to load wishlist from server. Showing local version.');
+      } else {
+        // For non-identified, cleanAndGetLocalWishlist already handles fallbacks
+        set({ wishlist: getLocalWishlist() });
+      }
+    } finally {
+      set({ isGettingWishlist: false });
     }
   },
 
   /**
    * Adds a product/collection to the wishlist.
    * @param {string} itemId - The ID of the item (product or collection) to add.
-   * @param {string} [itemType] - Optional: 'Product' or 'Collection'. Only used for backend calls.
-   * Not stored in local storage for simplicity as per request.
+   * @param {string} itemType - 'Product' or 'Collection'. Required for backend.
    */
   addToWishlist: async (itemId, itemType) => {
-    // itemType is now optional for local storage path
     set({ isAddingToWishlist: true });
     if (!itemType) {
       toast.error(
         'Item type (Product/Collection) is required to add to wishlist.'
       );
-      set({ isAddingToCart: false });
+      set({ isAddingToWishlist: false }); // Corrected state name
       return;
     }
 
-    if (get()._isUserOrGuestIdentified()) {
-      // Use backend if user is authenticated or has a guest session
-      try {
-        // Backend still expects itemType to differentiate between product/collection if needed
+    try {
+      if (get()._isUserOrGuestIdentified()) {
+        const currentWishlist = get().wishlist || []; // Ensure it's an array for optimistic update
+        const isAlreadyInWishlist = currentWishlist.some(
+          (item) => item.item === itemId && item.itemType === itemType
+        );
+
+        if (isAlreadyInWishlist) {
+          toast('Item already in wishlist.', { icon: 'ℹ️' });
+          set({ isAddingToWishlist: false });
+          return;
+        }
+
+        const optimisticWishlist = [
+          ...currentWishlist,
+          { item: itemId, itemType, _id: itemId + '-' + Date.now() }, // Add temp _id for consistency
+        ];
+
+        set({ wishlist: optimisticWishlist }); // Optimistic UI update
+        saveLocalWishlist(optimisticWishlist); // Update local storage optimistically
+
         const res = await axiosInstance.put('/wishlist/add', {
           itemId,
           itemType,
         });
-        set({ wishlist: res.data.wishlist });
         toast.success('Item added to wishlist!');
-      } catch (error) {
-        console.error('Error adding to wishlist (backend):', error);
-        toast.error(
-          error.response?.data?.message || 'Failed to add item to wishlist.'
-        );
-      } finally {
-        set({ isAddingToWishlist: false });
-      }
-    } else {
-      // Use local storage if no user or guest session
-      const currentLocalWishlist = getLocalWishlist();
-
-      // Check if item already exists in local storage (just by ID)
-      if (!currentLocalWishlist.includes(itemId)) {
-        currentLocalWishlist.push({ item: itemId, itemType, _id: itemId }); // Store just the ID
-        saveLocalWishlist(currentLocalWishlist);
-        set({ wishlist: currentLocalWishlist, isAddingToWishlist: false });
-        toast.success('Item added to local wishlist!');
+        // Backend returns the actual updated wishlist, so we set it as the source of truth
+        set({ wishlist: res.data.wishlist || [] });
       } else {
-        toast('Item already in local wishlist.', { icon: 'ℹ️' });
-        set({ isAddingToWishlist: false });
+        // Use local storage if no user or guest session
+        const currentLocalWishlist = getLocalWishlist();
+
+        // Check if item already exists in local storage (by item ID and type)
+        const isAlreadyInLocalWishlist = currentLocalWishlist.some(
+          (item) => item.item === itemId && item.itemType === itemType
+        );
+
+        if (!isAlreadyInLocalWishlist) {
+          currentLocalWishlist.push({ item: itemId, itemType, _id: itemId + '-' + Date.now() }); // Store object with ID and type
+          saveLocalWishlist(currentLocalWishlist);
+          set({ wishlist: currentLocalWishlist }); // Directly update state
+          toast.success('Item added to local wishlist!');
+        } else {
+          toast('Item already in local wishlist.', { icon: 'ℹ️' });
+        }
       }
+    } catch (error) {
+      console.error('Error adding to wishlist:', error);
+      const errorMessage =
+        error.response?.data?.message || 'Failed to add item to wishlist.';
+      set({ wishlist: getLocalWishlist(), isAddingToWishlist: false }); // Rollback and show error
+      toast.error(errorMessage);
+    } finally {
+      set({ isAddingToWishlist: false });
     }
   },
 
   /**
    * Removes a product/collection from the wishlist.
    * @param {string} itemId - The ID of the item (product or collection) to remove.
-   * @param {string} [itemType] - Optional: 'Product' or 'Collection'. Only used for backend calls.
-   * Not used for local storage removal.
+   * @param {string} itemType - 'Product' or 'Collection'. Required for backend.
    */
   removeFromwishlist: async (itemId, itemType) => {
-    // itemType is now optional for local storage path
     set({ isRemovingFromWishlist: true });
     if (!itemType) {
       toast.error(
         'Item type (Product/Collection) is required to remove from wishlist.'
       );
-      set({ isAddingToCart: false });
+      set({ isRemovingFromWishlist: false });
       return;
     }
 
-    if (get()._isUserOrGuestIdentified()) {
-      // Use backend if user is authenticated or has a guest session
-      try {
-        // Backend still expects itemType to differentiate between product/collection if needed
+    try {
+      if (get()._isUserOrGuestIdentified()) {
+        const currentWishlist = get().wishlist || []; // Ensure it's an array for optimistic update
+        const optimisticWishlist = currentWishlist.filter(
+          (item) => !(item.item === itemId && item.itemType === itemType)
+        );
+
+        set({ wishlist: optimisticWishlist }); // Optimistic UI update
+        saveLocalWishlist(optimisticWishlist); // Update local storage optimistically
+
         const res = await axiosInstance.put('/wishlist/remove', {
           itemId,
           itemType,
         });
-        set({ wishlist: res.data.wishlist });
         toast.success('Item removed from wishlist!');
-      } catch (error) {
-        console.error('Error removing from wishlist (backend):', error);
-        toast.error(
-          error.response?.data?.message ||
-            'Failed to remove item from wishlist.'
-        );
-      } finally {
-        set({ isRemovingFromWishlist: false });
-      }
-    } else {
-      // Use local storage if no user or guest session
-      const currentLocalWishlist = getLocalWishlist();
-      const initialLength = currentLocalWishlist.length;
-
-      // Filter based only on itemId (since itemType is not stored locally)
-      const updatedLocalWishlist = currentLocalWishlist.filter(
-        (id) => id.item !== itemId
-      );
-
-      if (updatedLocalWishlist.length === initialLength) {
-        toast.error('Item not found in local wishlist.');
+        // Backend returns the actual updated wishlist, so we set it as the source of truth
+        set({ wishlist: res.data.wishlist || [] });
       } else {
-        saveLocalWishlist(updatedLocalWishlist);
-        set({ wishlist: updatedLocalWishlist, isRemovingFromWishlist: false });
-        toast.success('Item removed from local wishlist!');
+        // Use local storage if no user or guest session
+        const currentLocalWishlist = getLocalWishlist();
+        const initialLength = currentLocalWishlist.length;
+
+        // Filter based on both itemId and itemType for accurate local removal
+        const updatedLocalWishlist = currentLocalWishlist.filter(
+          (item) => !(item.item === itemId && item.itemType === itemType)
+        );
+
+        if (updatedLocalWishlist.length === initialLength) {
+          toast.error('Item not found in local wishlist.');
+        } else {
+          saveLocalWishlist(updatedLocalWishlist);
+          set({ wishlist: updatedLocalWishlist }); // Directly update state
+          toast.success('Item removed from local wishlist!');
+        }
       }
+    } catch (error) {
+      console.error('Error removing from wishlist:', error);
+      const errorMessage =
+        error.response?.data?.message ||
+        'Failed to remove item from wishlist.';
+      set({ wishlist: getLocalWishlist(), isRemovingFromWishlist: false }); // Rollback and show error
+      toast.error(errorMessage);
+    } finally {
+      set({ isRemovingFromWishlist: false });
     }
   },
 
@@ -305,26 +343,31 @@ export const useWishlistStore = create((set, get) => ({
    * Clears the entire wishlist.
    */
   clearWishlist: async () => {
-    set({ isRemovingFromWishlist: true });
-    if (get()._isUserOrGuestIdentified()) {
-      // Use backend if user is authenticated or has a guest session
-      try {
+    set({ isRemovingFromWishlist: true }); // Reusing for clear operation
+    try {
+      if (get()._isUserOrGuestIdentified()) {
+        const currentWishlist = get().wishlist || []; // Get current state for potential rollback
+        set({ wishlist: [] }); // Optimistic UI update to empty
+        saveLocalWishlist([]); // Clear local storage optimistically
+
         const res = await axiosInstance.delete('/wishlist/clear');
-        set({ wishlist: res.data.wishlist || [] });
         toast.success('Wishlist cleared!');
-      } catch (error) {
-        console.error('Error clearing wishlist (backend):', error);
-        toast.error(
-          error.response?.data?.message || 'Failed to clear wishlist.'
-        );
-      } finally {
-        set({ isRemovingFromWishlist: false });
+        // Backend returns the actual updated wishlist, so we set it as the source of truth
+        set({ wishlist: res.data.wishlist || [] });
+      } else {
+        // Use local storage if no user or guest session
+        saveLocalWishlist([]); // Save an empty array
+        set({ wishlist: [] }); // Directly update state
+        toast.success('Local wishlist cleared!');
       }
-    } else {
-      // Use local storage if no user or guest session
-      saveLocalWishlist([]); // Save an empty array
-      set({ wishlist: [], isRemovingFromWishlist: false });
-      toast.success('Local wishlist cleared!');
+    } catch (error) {
+      console.error('Error clearing wishlist:', error);
+      const errorMessage =
+        error.response?.data?.message || 'Failed to clear wishlist.';
+      set({ wishlist: getLocalWishlist(), isRemovingFromWishlist: false }); // Rollback and show error
+      toast.error(errorMessage);
+    } finally {
+      set({ isRemovingFromWishlist: false });
     }
   },
 }));

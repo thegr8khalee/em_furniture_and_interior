@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/pages/WishlistPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useWishlistStore } from '../store/useWishlistStore';
@@ -13,7 +14,7 @@ const WishlistPage = () => {
     wishlist, // This is now an array of wishlist items: [{item: ID, itemType: Type, _id: WISHLIST_ENTRY_ID}, ...]
     isGettingWishlist,
     // isAddingToWishlist, // Used for general wishlist operations loading
-    isRemovingFromWishlist, // Specific for remove/clear
+    // isRemovingFromWishlist, // Specific for remove/clear
     getwishlist,
     removeFromwishlist,
     clearWishlist,
@@ -254,26 +255,23 @@ const WishlistPage = () => {
                               )
                             } // Add to cart with quantity 1
                             className="btn btn-sm bg-primary rounded-xl"
-                            disabled={isAddingToCart}
+                            // disabled={isAddingToCart}
                           >
-                            {isAddingToCart ? (
-                              <Loader2 className="animate-spin" />
-                            ) : (
+                            
                               <ShoppingCart size={16} />
-                            )}
+                            
                           </button>
                           <button
                             onClick={() =>
                               handleRemoveItem(item.item, item.itemType)
                             }
                             className="btn btn-sm btn-error btn-outline rounded-xl ml-2"
-                            disabled={isRemovingFromWishlist}
+                            // disabled={isRemovingFromWishlist}
                           >
-                            {isRemovingFromWishlist ? (
-                              <Loader2 className="animate-spin" />
-                            ) : (
+                           
+                              
                               <Trash2 size={16} />
-                            )}
+                        
                           </button>
                         </div>
                       </div>
@@ -286,13 +284,11 @@ const WishlistPage = () => {
               <button
                 onClick={handleClearWishlist}
                 className="btn btn-error rounded-xl"
-                disabled={isRemovingFromWishlist}
+                // disabled={isRemovingFromWishlist}
               >
-                {isRemovingFromWishlist ? (
-                  <Loader2 className="animate-spin mr-2" />
-                ) : (
+                
                   <Trash2 size={20} className="mr-2" />
-                )}
+                {/* )} */}
                 Clear Wishlist
               </button>
             </div>

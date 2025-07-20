@@ -36,10 +36,12 @@ const Shop = () => {
     isGettingCollections,
     hasMoreCollections,
   } = useCollectionStore();
-  const { addToCart, isAddingToCart } = useCartStore();
+  const { addToCart, 
+    // isAddingToCart,
+   } = useCartStore();
   const {
     addToWishlist,
-    isAddingToWishlist,
+    // isAddingToWishlist,
     wishlist,
     getwishlist,
     removeFromwishlist,
@@ -598,11 +600,9 @@ const Shop = () => {
                               handleAddToWishlist(product._id, 'Product')
                             }
                           >
-                            {isAddingToWishlist ? (
-                              <Loader2 className="animate-spin" />
-                            ) : (
+                            
                               <Heart className="text-primary size-7" />
-                            )}
+                            
                           </button>
                         )
                       ) : null}
@@ -684,13 +684,11 @@ const Shop = () => {
                                     onClick={() =>
                                       handleAddToCart(product._id, 1, 'Product')
                                     }
-                                    disabled={isAddingToCart}
+                                    // disabled={isAddingToCart}
                                   >
-                                    {isAddingToCart ? (
-                                      <Loader2 className="animate-spin" />
-                                    ) : (
+                                    
                                       <ShoppingCart className="" />
-                                    )}
+                                    
                                   </button>
                                 </div>
                               ) : null}
@@ -846,11 +844,9 @@ const Shop = () => {
                               handleAddToWishlist(collection._id, 'Collection')
                             }
                           >
-                            {isAddingToWishlist ? (
-                              <Loader2 className="animate-spin" />
-                            ) : (
+                            
                               <Heart className="text-primary size-7" />
-                            )}
+                            
                           </button>
                         )
                       ) : null}
@@ -925,13 +921,11 @@ const Shop = () => {
                                     onClick={() =>
                                       handleAddToCart(collection._id, 1, 'Collection')
                                     }
-                                    disabled={isAddingToCart}
+                                    // disabled={isAddingToCart}
                                   >
-                                    {isAddingToCart ? (
-                                      <Loader2 className="animate-spin" />
-                                    ) : (
+                                    
                                       <ShoppingCart className="" />
-                                    )}
+                                    
                                   </button>
                                 </div>
                               ) : null}

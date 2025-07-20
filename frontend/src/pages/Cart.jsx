@@ -323,11 +323,9 @@ const CartPage = () => {
                             handleRemoveItem(item._id, item.itemType)
                           }
                         >
-                          {!isRemovingFromCart ? (
+                          
                             <X className="size-4" />
-                          ) : (
-                            <Loader2 className="animate-spin" />
-                          )}
+                          
                         </button>
                       </div>
                       {/* <div className="items-center  font-[montserrat]">
@@ -363,13 +361,11 @@ const CartPage = () => {
                             )
                           } // Pass item.item (original ID)
                           className="btn btn-circle btn-sm  btn-outline btn-primary"
-                          disabled={isUpdatingCartItem || item.quantity <= 1}
+                          disabled={item.quantity <= 1}
                         >
-                          {!isUpdatingCartItem ? (
+                          
                             <Minus size={16} />
-                          ) : (
-                            <Loader2 className="animate-spin" />
-                          )}
+                          
                         </button>
 
                         <span className="font-semibold text-lg w-8 text-center">
@@ -386,13 +382,11 @@ const CartPage = () => {
                             )
                           } // Pass item.item (original ID)
                           className="btn btn-circle btn-sm btn-outline btn-primary"
-                          disabled={isUpdatingCartItem}
+                          // disabled={isUpdatingCartItem}
                         >
-                          {!isUpdatingCartItem ? (
+                          
                             <Plus size={16} />
-                          ) : (
-                            <Loader2 className="animate-spin" />
-                          )}
+                         
                         </button>
                       </div>
                     </div>
