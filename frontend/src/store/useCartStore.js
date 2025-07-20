@@ -10,44 +10,41 @@ import { useAuthStore } from './useAuthStore.js';
 const LOCAL_STORAGE_CART_KEY = 'localCart';
 const SESSION_STORAGE_CART_KEY = 'sessionCart';
 
-// Helper to get cart from local storage or session storage based on consent
+// Helper to get explicit cookie consent status
+const getConsentStatus = () => {
+  const consentValue = localStorage.getItem('cookie_consent_accepted');
+  return {
+    hasResponded: consentValue !== null, // User has made a choice
+    isAccepted: consentValue === 'true'  // User explicitly accepted
+  };
+};
+
+// Helper to get cart from appropriate storage
 const getLocalCart = () => {
   try {
-    const consentAccepted =
-      localStorage.getItem('cookie_consent_accepted') === 'true';
-
-    if (consentAccepted) {
+    const { isAccepted } = getConsentStatus();
+    
+    if (isAccepted) {
       const storedCart = localStorage.getItem(LOCAL_STORAGE_CART_KEY);
       if (storedCart) return JSON.parse(storedCart);
     }
 
+    // Default to session storage for all other cases
     const sessionCart = sessionStorage.getItem(SESSION_STORAGE_CART_KEY);
     return sessionCart ? JSON.parse(sessionCart) : [];
   } catch (error) {
-    console.error('Error parsing local/session storage cart:', error);
-    try {
-      const storedCart = localStorage.getItem(LOCAL_STORAGE_CART_KEY);
-      if (storedCart) return JSON.parse(storedCart);
-    } catch (e) {
-      console.error('Fallback to localStorage also failed:', e);
-    }
-    try {
-      const sessionCart = sessionStorage.getItem(SESSION_STORAGE_CART_KEY);
-      if (sessionCart) return JSON.parse(sessionCart);
-    } catch (e) {
-      console.error('Fallback to sessionStorage also failed:', e);
-    }
+    console.error('Error parsing cart from storage:', error);
+    // Fallback to empty array if all attempts fail
     return [];
   }
 };
 
-// Helper to save cart to local storage or session storage based on consent
+// Helper to save cart to appropriate storage
 const saveLocalCart = (cart) => {
   try {
-    const consentAccepted =
-      localStorage.getItem('cookie_consent_accepted') === 'true';
+    const { isAccepted } = getConsentStatus();
 
-    if (consentAccepted) {
+    if (isAccepted) {
       localStorage.setItem(LOCAL_STORAGE_CART_KEY, JSON.stringify(cart));
       sessionStorage.removeItem(SESSION_STORAGE_CART_KEY);
     } else {
@@ -55,7 +52,7 @@ const saveLocalCart = (cart) => {
       localStorage.removeItem(LOCAL_STORAGE_CART_KEY);
     }
   } catch (error) {
-    console.error('Error saving local/session storage cart:', error);
+    console.error('Error saving cart to storage:', error);
   }
 };
 
@@ -66,10 +63,29 @@ const fetchBackendCart = async () => {
     return res.data.cart || [];
   } catch (error) {
     console.error('Error loading cart from backend:', error);
-    // Do NOT toast here, let the calling function handle it for initial load
-    throw error; // Re-throw to allow calling function to catch and handle
+    throw error;
   }
 };
+
+// Migration function to ensure proper storage location
+const migrateCartStorage = () => {
+  const { isAccepted } = getConsentStatus();
+  const hasLocalCart = localStorage.getItem(LOCAL_STORAGE_CART_KEY) !== null;
+  
+  if (!isAccepted && hasLocalCart) {
+    try {
+      const cartData = localStorage.getItem(LOCAL_STORAGE_CART_KEY);
+      sessionStorage.setItem(SESSION_STORAGE_CART_KEY, cartData);
+      localStorage.removeItem(LOCAL_STORAGE_CART_KEY);
+      console.log('Migrated cart from localStorage to sessionStorage');
+    } catch (error) {
+      console.error('Error migrating cart storage:', error);
+    }
+  }
+};
+
+// Run migration on store initialization
+migrateCartStorage();
 
 export const useCartStore = create((set, get) => ({
   cart: [],
@@ -103,14 +119,11 @@ export const useCartStore = create((set, get) => ({
       });
       const { existingProductIds, existingCollectionIds } = res.data;
 
-      const existingProductsSet = new Set(existingProductIds);
-      const existingCollectionsSet = new Set(existingCollectionIds);
-
       const cleanedCart = rawLocalCart.filter((item) => {
         if (item.itemType === 'Product') {
-          return existingProductsSet.has(item.item);
+          return existingProductIds.includes(item.item);
         } else if (item.itemType === 'Collection') {
-          return existingCollectionsSet.has(item.item);
+          return existingCollectionIds.includes(item.item);
         }
         return false;
       });
@@ -150,8 +163,6 @@ export const useCartStore = create((set, get) => ({
       if (get()._isUserOrGuestIdentified()) {
         const cart = await fetchBackendCart();
         set({ cart });
-        // After fetching from backend, ensure local storage is synchronized
-        // This handles cases where user logs in or switches devices
         saveLocalCart(cart);
       } else {
         const cleanedLocalCart = await get().cleanAndGetLocalCart();
@@ -159,13 +170,11 @@ export const useCartStore = create((set, get) => ({
       }
     } catch (error) {
       console.error('Error in getCart:', error);
-      // If backend fetch fails for an identified user, fallback to local cart
       if (get()._isUserOrGuestIdentified()) {
-        const fallbackCart = getLocalCart(); // Try to load from local storage as a fallback
+        const fallbackCart = getLocalCart();
         set({ cart: fallbackCart });
         toast.error('Failed to load cart from server. Showing local version.');
       } else {
-        // For non-identified, cleanAndGetLocalCart already handles fallbacks
         set({ cart: getLocalCart() });
       }
     } finally {
@@ -182,63 +191,46 @@ export const useCartStore = create((set, get) => ({
     }
 
     try {
+      const currentCart = get().cart;
+      const existingItemIndex = currentCart.findIndex(
+        (item) => item.item === itemId && item.itemType === itemType
+      );
+
+      // Optimistic update
+      let optimisticCart;
+      if (existingItemIndex > -1) {
+        optimisticCart = [...currentCart];
+        optimisticCart[existingItemIndex] = {
+          ...optimisticCart[existingItemIndex],
+          quantity: optimisticCart[existingItemIndex].quantity + quantity,
+        };
+      } else {
+        optimisticCart = [
+          ...currentCart,
+          {
+            item: itemId,
+            itemType,
+            quantity,
+            _id: `${itemId}-${Date.now()}`,
+          },
+        ];
+      }
+
+      set({ cart: optimisticCart });
+      saveLocalCart(optimisticCart);
+
       if (get()._isUserOrGuestIdentified()) {
-        const currentCart = get().cart; // Get current state for potential rollback
-        const existingItemIndex = currentCart.findIndex(
-          (item) => item.item === itemId && item.itemType === itemType
-        );
-
-        let optimisticCart;
-        if (existingItemIndex > -1) {
-          optimisticCart = [...currentCart];
-          optimisticCart[existingItemIndex] = {
-            ...optimisticCart[existingItemIndex],
-            quantity: optimisticCart[existingItemIndex].quantity + quantity,
-          };
-        } else {
-          optimisticCart = [
-            ...currentCart,
-            {
-              item: itemId,
-              itemType,
-              quantity,
-              _id: itemId + '-' + Date.now(), // Temp ID for optimistic update
-            },
-          ];
-        }
-
-        set({ cart: optimisticCart }); // Optimistic UI update
-        saveLocalCart(optimisticCart); // Update local storage optimistically
-
-        const res = await axiosInstance.put('/cart/add', {
+        await axiosInstance.put('/cart/add', {
           itemId,
           quantity,
           itemType,
         });
-        toast.success('Item added to cart!');
-        // Backend returns the actual updated cart, so we set it as the source of truth
-        set({ cart: res.data.cart || [] });
-      } else {
-        // Local storage logic (already optimized)
-        const currentLocalCart = getLocalCart();
-        const existingItemIndex = currentLocalCart.findIndex(
-          (item) => item.item === itemId && item.itemType === itemType
-        );
-
-        if (existingItemIndex > -1) {
-          currentLocalCart[existingItemIndex].quantity += quantity;
-        } else {
-          currentLocalCart.push({
-            item: itemId,
-            itemType,
-            quantity,
-            _id: itemId + '-' + Date.now(),
-          });
-        }
-        saveLocalCart(currentLocalCart);
-        toast.success('Item added to local cart!');
-        set({ cart: currentLocalCart });
+        const serverCart = await fetchBackendCart();
+        set({ cart: serverCart });
+        saveLocalCart(serverCart);
       }
+
+      toast.success('Item added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
       const errorMessage =
@@ -246,12 +238,9 @@ export const useCartStore = create((set, get) => ({
       set({ cartError: errorMessage });
       toast.error(errorMessage);
 
-      // Rollback for identified users if backend call fails
-      if (get()._isUserOrGuestIdentified()) {
-        const originalCart = getLocalCart(); // Fetch original from local storage
-        set({ cart: originalCart });
-        toast.error('Failed to add item to cart. Reverting changes.');
-      }
+      // Rollback
+      const originalCart = getLocalCart();
+      set({ cart: originalCart });
     } finally {
       set({ isAddingToCart: false });
     }
@@ -268,38 +257,25 @@ export const useCartStore = create((set, get) => ({
     }
 
     try {
+      const currentCart = get().cart;
+      const optimisticCart = currentCart.filter(
+        (item) => !(item.item === itemId && item.itemType === itemType)
+      );
+
+      set({ cart: optimisticCart });
+      saveLocalCart(optimisticCart);
+
       if (get()._isUserOrGuestIdentified()) {
-        const currentCart = get().cart; // Get current state for potential rollback
-        const optimisticCart = currentCart.filter(
-          (item) => !(item.item === itemId && item.itemType === itemType)
-        );
-
-        set({ cart: optimisticCart }); // Optimistic UI update
-        saveLocalCart(optimisticCart); // Update local storage optimistically
-
-        const res = await axiosInstance.put('/cart/remove', {
+        await axiosInstance.put('/cart/remove', {
           itemId,
           itemType,
         });
-        toast.success('Item removed from cart!');
-        // Backend returns the actual updated cart, so we set it as the source of truth
-        set({ cart: res.data.cart || [] });
-      } else {
-        // Local storage logic (already optimized)
-        const currentLocalCart = getLocalCart();
-        const initialLength = currentLocalCart.length;
-        const updatedLocalCart = currentLocalCart.filter(
-          (item) => !(item.item === itemId && item.itemType === itemType)
-        );
-
-        if (updatedLocalCart.length === initialLength) {
-          toast.error('Item not found in local cart.');
-        } else {
-          saveLocalCart(updatedLocalCart);
-          toast.success('Item removed from local cart!');
-          set({ cart: updatedLocalCart });
-        }
+        const serverCart = await fetchBackendCart();
+        set({ cart: serverCart });
+        saveLocalCart(serverCart);
       }
+
+      toast.success('Item removed from cart!');
     } catch (error) {
       console.error('Error removing from cart:', error);
       const errorMessage =
@@ -307,12 +283,9 @@ export const useCartStore = create((set, get) => ({
       set({ cartError: errorMessage });
       toast.error(errorMessage);
 
-      // Rollback for identified users if backend call fails
-      if (get()._isUserOrGuestIdentified()) {
-        const originalCart = getLocalCart(); // Fetch original from local storage
-        set({ cart: originalCart });
-        toast.error('Failed to remove item. Reverting changes.');
-      }
+      // Rollback
+      const originalCart = getLocalCart();
+      set({ cart: originalCart });
     } finally {
       set({ isRemovingFromCart: false });
     }
@@ -321,21 +294,17 @@ export const useCartStore = create((set, get) => ({
   clearCart: async () => {
     set({ isRemovingFromCart: true, cartError: null });
     try {
-      if (get()._isUserOrGuestIdentified()) {
-        const currentCart = get().cart; // Get current state for potential rollback
-        set({ cart: [] }); // Optimistic UI update to empty
-        saveLocalCart([]); // Clear local storage optimistically
+      set({ cart: [] });
+      saveLocalCart([]);
 
-        const res = await axiosInstance.delete('/cart/clear');
-        toast.success('Cart cleared!');
-        // Backend returns the actual updated cart, so we set it as the source of truth
-        set({ cart: res.data.cart || [] });
-      } else {
-        // Local storage logic (already optimized)
-        saveLocalCart([]);
-        toast.success('Local cart cleared!');
-        set({ cart: [] });
+      if (get()._isUserOrGuestIdentified()) {
+        await axiosInstance.delete('/cart/clear');
+        const serverCart = await fetchBackendCart();
+        set({ cart: serverCart });
+        saveLocalCart(serverCart);
       }
+
+      toast.success('Cart cleared!');
     } catch (error) {
       console.error('Error clearing cart:', error);
       const errorMessage =
@@ -343,12 +312,9 @@ export const useCartStore = create((set, get) => ({
       set({ cartError: errorMessage });
       toast.error(errorMessage);
 
-      // Rollback for identified users if backend call fails
-      if (get()._isUserOrGuestIdentified()) {
-        const originalCart = getLocalCart(); // Fetch original from local storage
-        set({ cart: originalCart });
-        toast.error('Failed to clear cart. Reverting changes.');
-      }
+      // Rollback
+      const originalCart = getLocalCart();
+      set({ cart: originalCart });
     } finally {
       set({ isRemovingFromCart: false });
     }
@@ -358,71 +324,43 @@ export const useCartStore = create((set, get) => ({
     set({ isUpdatingCartItem: true, cartError: null });
 
     if (newQuantity < 1) {
-      // If quantity drops to 0 or less, remove the item instead
       await get().removeFromCart(itemId, itemType);
       set({ isUpdatingCartItem: false });
       return;
     }
 
     try {
+      const currentCart = get().cart;
+      const existingItemIndex = currentCart.findIndex(
+        (item) => item.item === itemId && item.itemType === itemType
+      );
+
+      let optimisticCart = [...currentCart];
+      if (existingItemIndex > -1) {
+        optimisticCart[existingItemIndex] = {
+          ...optimisticCart[existingItemIndex],
+          quantity: newQuantity,
+        };
+      }
+
+      set({ cart: optimisticCart });
+      saveLocalCart(optimisticCart);
+
       if (get()._isUserOrGuestIdentified()) {
-        const currentCart = get().cart; // Get current state for potential rollback
-        const existingItemIndex = currentCart.findIndex(
-          (item) => item.item === itemId && item.itemType === itemType
-        );
-
-        let optimisticCart = [...currentCart];
-        if (existingItemIndex > -1) {
-          optimisticCart[existingItemIndex] = {
-            ...optimisticCart[existingItemIndex],
-            quantity: newQuantity,
-          };
-        } else {
-          // This case should ideally not happen for quantity updates, but handle defensively
-          optimisticCart.push({
-            item: itemId,
-            itemType,
-            quantity: newQuantity,
-            _id: itemId + '-' + Date.now(),
-          });
-        }
-
-        set({ cart: optimisticCart }); // Optimistic UI update
-        saveLocalCart(optimisticCart); // Update local storage optimistically
-
-        const res = await axiosInstance.put('/cart/updatequantity', {
+        await axiosInstance.put('/cart/updatequantity', {
           itemId,
           itemType,
           quantity: newQuantity,
         });
-        // toast.success('Cart item quantity updated!'); // Commented out to avoid excessive toasts
-        // Backend returns the actual updated cart, so we set it as the source of truth
-        set({ cart: res.data.cart || [] });
-      } else {
-        // Local storage logic (already optimized)
-        const currentLocalCart = getLocalCart();
-        const itemIndex = currentLocalCart.findIndex(
-          (item) => item.item === itemId && item.itemType === itemType
-        );
-
-        if (itemIndex > -1) {
-          currentLocalCart[itemIndex].quantity = newQuantity;
-          saveLocalCart(currentLocalCart);
-          // toast.success('Local cart item quantity updated!'); // Commented out
-          set({ cart: currentLocalCart });
-        } else {
-          // toast.error('Item not found in local cart to update.'); // Commented out
-        }
+        const serverCart = await fetchBackendCart();
+        set({ cart: serverCart });
+        saveLocalCart(serverCart);
       }
     } catch (error) {
-      console.error('Error updating cart item quantity:', error);
-      // toast.error(error.message); // Commented out
-      // Rollback for identified users if backend call fails
-      if (get()._isUserOrGuestIdentified()) {
-        const originalCart = getLocalCart(); // Fetch original from local storage
-        set({ cart: originalCart });
-        toast.error('Failed to update quantity. Reverting changes.');
-      }
+      console.error('Error updating quantity:', error);
+      // Rollback
+      const originalCart = getLocalCart();
+      set({ cart: originalCart });
     } finally {
       set({ isUpdatingCartItem: false });
     }

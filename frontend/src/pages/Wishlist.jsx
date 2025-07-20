@@ -183,6 +183,7 @@ const WishlistPage = () => {
     itemType
   ) => {
     await addToCart(itemId, quantity, itemType);
+    await removeFromwishlist(itemId, itemType);
   };
 
   const navigate = useNavigate();
