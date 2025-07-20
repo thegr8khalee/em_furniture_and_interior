@@ -41,7 +41,7 @@ const Styles = () => {
     isAddingToWishlist,
     wishlist,
     getwishlist,
-    removeFromWishlist,
+    removeFromwishlist,
     isRemovingFromWishlist,
   } = useWishlistStore();
   const { isAdmin, checkAuth, isAuthReady } = useAuthStore();
@@ -349,7 +349,7 @@ const Styles = () => {
   };
 
   const handleRemovefromWishlist = (id, type) => {
-    removeFromWishlist(id, type);
+    removeFromwishlist(id, type);
   };
 
   // Helper for WhatsApp link

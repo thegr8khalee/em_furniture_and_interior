@@ -12,7 +12,7 @@ import {
   Plus,
   Minus,
 } from 'lucide-react'; // Example icons
-import { Link, useLocation } from 'react-router-dom'; // Use Link for navigation, useLocation for active state
+import { Link, useLocation, useNavigate } from 'react-router-dom'; // Use Link for navigation, useLocation for active state
 import { useAuthStore } from '../store/useAuthStore';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
@@ -50,7 +50,14 @@ const BottomNavbar = () => {
   ];
 
   console.log(wishlist);
-  
+
+  const navigate = useNavigate();
+  const handleClick = (link) => {
+    navigate(link);
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+  };
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 w-full bg-base-100 shadow-lg p-2 z-50 lg:hidden">
@@ -61,9 +68,9 @@ const BottomNavbar = () => {
           const IconComponent = item.icon; // Get the Lucide icon component
 
           return (
-            <Link
+            <button
               key={item.name}
-              to={item.path}
+              onClick={() => handleClick(item.path)}
               className={`relative flex flex-col items-center justify-center p-1 rounded-lg transition-colors duration-200
                                 ${
                                   isActive
@@ -81,14 +88,16 @@ const BottomNavbar = () => {
 
               {/* console.log(wishlist) */}
 
-              {item.name === 'Wishlist' && wishlist?.length !== 0 && wishlist !== null ? (
+              {item.name === 'Wishlist' &&
+              wishlist?.length !== 0 &&
+              wishlist !== null ? (
                 <div className="absolute right-0 top-0 bg-red-500 text-xs w-4 h-4 rounded-full flex justify-center items-center">
                   {wishlist?.length}
                 </div>
               ) : null}
 
               <span className="text-xs font-medium">{item.name}</span>
-            </Link>
+            </button>
           );
         })}
       </div>

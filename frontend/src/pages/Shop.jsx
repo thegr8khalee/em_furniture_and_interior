@@ -42,7 +42,7 @@ const Shop = () => {
     isAddingToWishlist,
     wishlist,
     getwishlist,
-    removeFromWishlist,
+    removeFromwishlist,
     isRemovingFromWishlist,
   } = useWishlistStore();
   const { isAdmin, checkAuth, isAuthReady } = useAuthStore();
@@ -352,7 +352,7 @@ const Shop = () => {
   };
 
   const handleRemovefromWishlist = (id, type) => {
-    removeFromWishlist(id, type);
+    removeFromwishlist(id, type);
   };
 
   // Helper for WhatsApp link
