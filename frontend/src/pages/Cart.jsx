@@ -229,7 +229,7 @@ const CartPage = () => {
 
   // console.log(detailedCartItems);
 
-  if (isGettingCart || isFetchingDetails) {
+  if (isGettingCart) {
     return (
       <div className="pt-16">
         <div className="container mx-auto p-6">

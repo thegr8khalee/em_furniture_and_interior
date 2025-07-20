@@ -142,7 +142,7 @@ const WishlistPage = () => {
   // const isLoadingPage =
   //   isGettingWishlist || isFetchingDetails || isAddingToWishlist;
 
-  if (isGettingWishlist || isFetchingDetails) {
+  if (isGettingWishlist) {
     return (
       <div className="pt-16">
         <div className="container mx-auto p-6">
