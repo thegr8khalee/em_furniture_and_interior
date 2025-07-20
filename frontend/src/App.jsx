@@ -36,6 +36,7 @@ import Contact from './pages/Contact';
 import ECatalog from './pages/ECatalog';
 import Showroom from './pages/Showroom';
 import CookieConsentBanner from './components/CookieConsentBanner';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 function App() {
   const { checkAuth, authUser, isAdmin, isAuthReady } = useAuthStore();
@@ -103,6 +104,10 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/e-catalog" element={<ECatalog />} />
           <Route path="/showroom" element={<Showroom />} />
+          <Route
+            path="/reset-password/:token"
+            element={<ResetPasswordPage />}
+          />
 
           <Route element={<AdminLoginProtectedRoute />}>
             <Route path="/admin/login" element={<AdminLoginPage />} />
@@ -143,9 +148,7 @@ function App() {
           className="w-full h-full object-contain"
         />
       </a>
-      {!authUser && isAuthReady &&
-        <CookieConsentBanner/>
-      }
+      {!authUser && isAuthReady && <CookieConsentBanner />}
       <Toaster />
       {/* ... other layout components */}
     </div>

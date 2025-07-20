@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 // import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore'; // Import your Zustand auth store
-import { Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const SignupPage = () => {
@@ -13,6 +13,7 @@ const SignupPage = () => {
     password: '',
     anonymousId: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   // React Router hook for navigation
   //   const navigate = useNavigate();
@@ -169,9 +170,9 @@ const SignupPage = () => {
                   </g>
                 </svg>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
-                  placeholder="Password"
+                  placeholder="••••••••"
                   minlength="8"
                   pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
                   value={formData.password}
@@ -180,6 +181,17 @@ const SignupPage = () => {
                   }
                   title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
                 />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-5 text-base-content/40" />
+                  ) : (
+                    <Eye className="size-5 text-base-content/40" />
+                  )}
+                </button>
               </label>
               <p className="validator-hint hidden">
                 Must be more than 8 characters, including
@@ -194,7 +206,7 @@ const SignupPage = () => {
               <div className="flex mb-1">
                 <p className="">
                   By clicking on sign Up, you agree to our
-                  <span className='pl-2'>
+                  <span className="pl-2">
                     <a href="/privacy" className="text-info">
                       Privacy Policy
                     </a>

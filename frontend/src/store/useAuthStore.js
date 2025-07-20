@@ -7,6 +7,9 @@ export const useAuthStore = create((set, get) => ({
   isLoading: true,
   isAdmin: false,
   isAuthReady: false,
+  isRequestingReset: false,
+  isResettingPassword: false,
+  isChangingPassword: false,
 
   checkAuth: async () => {
     set({ isLoading: true });
@@ -86,6 +89,73 @@ export const useAuthStore = create((set, get) => ({
       toast.error(error.message);
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  /**
+   * Sends a request to the backend to initiate the password reset process.
+   * @param {string} email - The email address for which to reset the password.
+   */
+  forgotPassword: async (email) => {
+    set({ isRequestingReset: true });
+    try {
+      const res = await axiosInstance.post('/auth/forgot-password', { email });
+      toast.success(res.data.message); // Backend should return a generic success message
+    } catch (error) {
+      console.error('Error in forgotPassword store action:', error);
+      toast.error(
+        error.response?.data?.message ||
+          'Failed to send reset link. Please try again.'
+      );
+    } finally {
+      set({ isRequestingReset: false });
+    }
+  },
+
+  /**
+   * Resets the user's password using a received token.
+   * @param {string} token - The password reset token from the email link.
+   * @param {string} newPassword - The new password for the user.
+   */
+  resetPassword: async (token, newPassword) => {
+    set({ isResettingPassword: true });
+    try {
+      const res = await axiosInstance.post(`/auth/reset-password/${token}`, {
+        newPassword,
+      });
+      toast.success(res.data.message);
+    } catch (error) {
+      console.error('Error in resetPassword store action:', error);
+      toast.error(
+        error.response?.data?.message ||
+          'Failed to reset password. Please try again.'
+      );
+    } finally {
+      set({ isResettingPassword: false });
+    }
+  },
+
+  /**
+   * Allows an authenticated user to change their password.
+   * @param {string} oldPassword - The user's current password.
+   * @param {string} newPassword - The new password for the user.
+   */
+  changePassword: async (oldPassword, newPassword) => {
+    set({ isChangingPassword: true });
+    try {
+      const res = await axiosInstance.put('/auth/change-password', {
+        oldPassword,
+        newPassword,
+      });
+      toast.success(res.data.message);
+    } catch (error) {
+      console.error('Error in changePassword store action:', error);
+      toast.error(
+        error.response?.data?.message ||
+          'Failed to change password. Please try again.'
+      );
+    } finally {
+      set({ isChangingPassword: false });
     }
   },
 }));

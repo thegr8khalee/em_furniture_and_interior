@@ -16,6 +16,7 @@ const Contact = () => {
   const [formData, setFormData] = useState({
     name: authUser?.username || '',
     email: authUser?.email || '',
+    phoneNumber: authUser?.phoneNumber || '',
     subject: '',
     message: '',
   });
@@ -99,6 +100,25 @@ const Contact = () => {
                   placeholder="Enter your email"
                   className="input input-bordered w-full rounded-md"
                   required
+                />
+              </div>
+              <div>
+                <label htmlFor="phoneNumber" className="label">
+                  <span className="label-text text-base-content">
+                    Your Phone Number
+                  </span>
+                </label>
+                <input
+                  type="tel"
+                  className="input input-bordered w-full rounded-md"
+                  required
+                  placeholder="Phone"
+                  pattern="[0-9]*"
+                  minlength="10"
+                  maxlength="14"
+                  title="Must be at least 10 digits"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
                 />
               </div>
               <div>

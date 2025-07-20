@@ -12,10 +12,10 @@ dotenv.config(); // Load environment variables
  * @param   {Object} res - Express response object
  */
 export const sendContactEmail = async (req, res) => {
-  const { name, email, subject, message } = req.body;
+  const { name, email, phoneNumber, subject, message } = req.body;
 
   // 1. Basic input validation
-  if (!name || !email || !subject || !message) {
+  if (!name || !email || !phoneNumber || !subject || !message) {
     return res.status(400).json({ message: 'All fields are required.' });
   }
 
@@ -39,6 +39,7 @@ export const sendContactEmail = async (req, res) => {
     html: `
             <p><strong>Name:</strong> ${name}</p>
             <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Phone Number:</strong> ${phoneNumber}</p>
             <p><strong>Subject:</strong> ${subject}</p>
             <p><strong>Message:</strong></p>
             <p>${message.replace(/\n/g, '<br>')}</p>
