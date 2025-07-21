@@ -24,11 +24,11 @@ const BottomNavbar = () => {
   const { wishlist, getwishlist } = useWishlistStore();
 
   useEffect(() => {
-    if (isAuthReady) {
+    if (isAuthReady && !isAdmin) {
       getCart();
       getwishlist();
     }
-  }, [getCart, getwishlist, isAuthReady]);
+  }, [getCart, getwishlist, isAuthReady, isAdmin]);
   // Define your navigation items
   const navItems = [
     { name: 'Shop', icon: ShoppingBag, path: '/shop' }, // Example shop page

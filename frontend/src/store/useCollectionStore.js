@@ -9,6 +9,21 @@ export const useCollectionStore = create((set, get) => ({
   currentPage: 0, // Current page loaded (0 means no pages loaded yet)
   hasMoreCollections: true, // Flag to indicate if more collections can be loaded
   currentCollectionFilters: {}, // Stores the filters currently applied to the fetched collections
+  collectionsCount: null,
+
+  getCollectionsCount: async () => {
+    set({ isGettingCollections: true });
+
+    try {
+      const res = await axiosInstance.get('/collections/count');
+      // console.log(res.data.totalCollections)
+      set({ collectionsCount: res.data.totalCollections });
+    } catch (error) {
+      console.error('Error fetching collections count:', error);
+    } finally {
+      set({ isGettingCollections: false });
+    }
+  },
 
   /**
    * Fetches collections from the backend with pagination and filtering.

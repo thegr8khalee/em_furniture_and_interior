@@ -6,18 +6,20 @@ import { useNavigate } from 'react-router-dom';
 
 const AdminDashboardContent = () => {
   // In a real application, you would fetch these stats from your backend
-  const { isGettingProducts, products, getProducts } = useProductsStore();
-  const { isGettingCollections, collections, getCollections } =
+  const { isGettingProducts, productsCount, getProductsCount } =
+    useProductsStore();
+  const { isGettingCollections, collectionsCount, getCollectionsCount } =
     useCollectionStore();
 
+  console.log(collectionsCount);
   useEffect(() => {
-    getProducts();
-    getCollections();
-  }, [getProducts, getCollections]);
+    getProductsCount();
+    getCollectionsCount();
+  }, [getProductsCount, getCollectionsCount]);
 
   const stats = [
-    { label: 'Total Products', value: products.length },
-    { label: 'Total Collections', value: collections.length },
+    { label: 'Total Products', value: productsCount },
+    { label: 'Total Collections', value: collectionsCount },
   ];
 
   const navigate = useNavigate();

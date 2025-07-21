@@ -84,6 +84,20 @@ export const getProducts = async (req, res) => {
   }
 };
 
+export const getProductsCount = async (req, res) => {
+  try {
+    // Get the total count of all products (no filters applied)
+    const totalProducts = await Product.countDocuments({});
+
+    res.status(200).json({
+      totalProducts, // Returns the total count of products
+    });
+  } catch (error) {
+    console.error('Error in getProducts controller: ', error.message);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
 export const getProductById = async (req, res) => {
   const { productId } = req.params;
 

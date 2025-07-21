@@ -68,6 +68,20 @@ export const getCollections = async (req, res) => {
   }
 };
 
+export const getCollectionsCount = async (req, res) => {
+  try {
+    // Get the total count of all collections (no filters or pagination)
+    const totalCollections = await Collection.countDocuments({});
+
+    res.status(200).json({
+      totalCollections, // Returns only the total count
+    });
+  } catch (error) {
+    console.error('Error in getCollections controller: ', error.message);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
 export const getCollectionById = async (req, res) => {
   const { collectionId } = req.params;
 

@@ -8,6 +8,20 @@ export const useProductsStore = create((set, get) => ({
   currentPage: 0, // Current page loaded (0 means no pages loaded yet)
   hasMoreProducts: true, // Flag to indicate if more products can be loaded
   currentFilters: {}, // Stores the filters currently applied to the fetched products
+  productsCount: null,
+
+  getProductsCount: async () => {
+    set({ isGettingProducts: true });
+
+    try {
+      const res = await axiosInstance.get('/products/count');
+      set({ productsCount: res.data.totalProducts });
+    } catch (error) {
+      console.error('Error fetching products count:', error);
+    } finally {
+      set({ isGettingProducts: false });
+    }
+  },
 
   /**
    * Fetches products from the backend with pagination and filtering.

@@ -27,11 +27,11 @@ const Navbar = () => {
   const { getwishlist, wishlist } = useWishlistStore();
 
   useEffect(() => {
-    if (isAuthReady) {
+    if (isAuthReady && !isAdmin) {
       getCart();
       getwishlist();
     }
-  }, [getCart, getwishlist, isAuthReady]);
+  }, [getCart, getwishlist, isAuthReady, isAdmin]);
 
   // console.log(wishlist)
 
