@@ -228,9 +228,13 @@ const HomePage = () => {
             ))}
           </div>
 
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 font-black text-3xl sm:text-4xl md:text-6xl w-full px-6 sm:px-10 lg:px-15 text-base-100 text-shadow-lg">
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 font-black text-3xl sm:text-4xl md:text-6xl w-full px-6 sm:px-10 lg:px-15 text-base-100 text-shadow-lg">
             <div>Transforming Spaces.</div>
             <div>Elevating Lives.</div>
+          </div>
+          <div className="absolute flex space-x-2 bottom-8 left-1/2 -translate-x-1/2 font-black text-3xl sm:text-4xl md:text-6xl w-full px-6 sm:px-10 lg:px-15 text-base-100 text-shadow-lg">
+            <button onClick={() => handleShopNow()} className='btn sm:w-50 bg-primary border-0 shadow-none rounded-xl'>Shop Now!</button>
+            <button onClick={() => handleContatClick()} className='btn sm:w-50 bg-secondary text-white border-0 shadow-none rounded-xl'> Contact Us</button>
           </div>
         </div>
       </section>
@@ -251,6 +255,9 @@ const HomePage = () => {
         </div>
       </section>
       <section className="my-10 pl-4 sm:pl-8 lg:pl-16">
+        <h2 className="text-2xl font-bold mb-4 font-[poppins]">
+          Featured Products
+        </h2>
         <div
           className="flex space-x-4 overflow-x-auto pb-4"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -258,7 +265,7 @@ const HomePage = () => {
           {categories.map((category) => (
             <button
               key={category.id}
-              className="relative flex-shrink-0 w-80 h-80 rounded-2xl overflow-hidden shadow-md group"
+              className="relative flex-shrink-0 w-60 h-60 rounded-2xl overflow-hidden shadow-md group"
               onClick={() => handleCategoryClick(category.link)}
             >
               {/* Image with object-cover to maintain aspect ratio and fill container */}
@@ -441,6 +448,9 @@ const HomePage = () => {
       ) : null}
 
       <section className="my-10 pl-4 sm:pl-8 lg:pl-16">
+        <h2 className="text-2xl font-bold mb-4 font-[poppins]">
+          Featured Styles
+        </h2>
         <div
           className="flex space-x-4 overflow-x-auto pb-4"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
@@ -448,27 +458,20 @@ const HomePage = () => {
           {designs.map((category) => (
             <button
               key={category.id}
-              className="relative flex-shrink-0 w-80 h-80 rounded-2xl overflow-hidden shadow-md group"
+              className="relative flex-shrink-0 w-60 h-60 rounded-2xl overflow-hidden shadow-md group"
               onClick={() => handleStyleClick(category.link)}
             >
-              <div
-                key={category.id}
-                className="relative flex-shrink-0 w-80 h-80 rounded-2xl overflow-hidden shadow-md group"
-              >
-                {/* Image with object-cover to maintain aspect ratio and fill container */}
-
-                <img
-                  src={category.image}
-                  alt={category.name}
-                  className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-                />
-                {/* Overlay for text and subtle hover effect */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent flex items-end p-4">
-                  <div className="">
-                    <h3 className="text-white text-xl font-semibold font-[poppins]">
-                      {category.name}
-                    </h3>
-                  </div>
+              <img
+                src={category.image}
+                alt={category.name}
+                className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+              />
+              {/* Overlay for text and subtle hover effect */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent flex items-end p-4">
+                <div className="">
+                  <h3 className="text-white text-xl font-semibold font-[poppins]">
+                    {category.name}
+                  </h3>
                 </div>
               </div>
             </button>
