@@ -71,12 +71,12 @@ const AdminDashboardContent = () => {
           >
             Add New Collection
           </button>
-          <button className="flex-4 btn btn-xl btn-outline btn-primary rounded-md text-lg">
+          {/* <button className="flex-4 btn btn-xl btn-outline btn-primary rounded-md text-lg">
             View All Orders
           </button>
           <button className="flex-4 btn btn-xl btn-outline btn-primary rounded-md text-lg">
             Manage Reviews
-          </button>
+          </button> */}
         </div>
       </div>
     </div>
