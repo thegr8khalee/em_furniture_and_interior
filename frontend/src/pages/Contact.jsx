@@ -177,7 +177,7 @@ const Contact = () => {
                 <h3 className="font-bold text-lg">Email:</h3>
                 <p>
                   <a
-                    href="mailto:emfurnitureandinterior@gmial.com.com"
+                    href="mailto:emfurnitureandinterior@gmial.com"
                     className=" hover:underline"
                   >
                     emfurnitureandinterior@gmail.com
