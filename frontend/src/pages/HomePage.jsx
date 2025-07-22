@@ -228,7 +228,7 @@ const HomePage = () => {
             ))}
           </div>
 
-          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 font-black text-3xl sm:text-4xl md:text-6xl w-full px-6 sm:px-10 lg:px-15 text-base-100 text-shadow-lg">
+          <div  className="absolute flex flex-col items-start justify-end pb-22 bottom-0 left-1/2 bg-black/30 h-full -translate-x-1/2 font-black text-3xl sm:text-4xl md:text-6xl w-full px-6 sm:px-10 lg:px-15 text-base-100 text-shadow-lg">
             <div>Transforming Spaces.</div>
             <div>Elevating Lives.</div>
           </div>

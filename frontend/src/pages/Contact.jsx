@@ -112,6 +112,7 @@ const Contact = () => {
                   type="tel"
                   className="input input-bordered w-full rounded-md"
                   required
+                  name="phoneNumber"
                   placeholder="Phone"
                   pattern="[0-9]*"
                   minlength="10"
