@@ -258,7 +258,7 @@ const Privacy = () => {
           <ul className="list-disc list-inside ml-4 mb-6 text-base-content">
             <li>
               Email:{' '}
-              <a href="mailto:info@emgroup.com" className=" hover:underline">
+              <a href="mailto:emfurnitureandinterior@gmail.com" className=" hover:underline">
                 emfurnitureandinterior@gmail.com
               </a>
             </li>
