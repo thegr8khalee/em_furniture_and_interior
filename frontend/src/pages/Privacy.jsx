@@ -1,13 +1,13 @@
 import React from 'react';
-import Hero1 from '../images/Hero1.png';
-import ME from '../images/ME.png';
-import CEO from '../images/CEO.png';
+// import Hero1 from '../images/Hero1.png';
+// import ME from '../images/ME.png';
+// import CEO from '../images/CEO.png';
 
 const Privacy = () => {
   return (
     <div className="pt-16">
       <div className="relative">
-        <img src={Hero1} alt="" className="object-cover h-40 w-full" />
+        <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="" className="object-cover h-40 w-full" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
           <h1 className="absolute bottom-10 left-1/2 -translate-x-1/2 mt-20 w-full mb-2 text-3xl font-bold text-center text-base-100 font-[poppins]">
             Privacy Policy for EM Furnture & Interior

@@ -111,65 +111,65 @@ const seedDB = async () => {
     console.log('Existing data cleared.');
 
     // 1. Create Collections first
-    console.log(`Generating ${NUM_COLLECTIONS} collections...`);
-    const collectionsData = [];
-    for (let i = 0; i < NUM_COLLECTIONS; i++) {
-        collectionsData.push(await generateCollection(i)); // Pass index to generateCollection
-    }
-    const createdCollections = await Collection.insertMany(collectionsData);
-    console.log(`${NUM_COLLECTIONS} collections created.`);
+    // console.log(`Generating ${NUM_COLLECTIONS} collections...`);
+    // const collectionsData = [];
+    // for (let i = 0; i < NUM_COLLECTIONS; i++) {
+    //     collectionsData.push(await generateCollection(i)); // Pass index to generateCollection
+    // }
+    // const createdCollections = await Collection.insertMany(collectionsData);
+    // console.log(`${NUM_COLLECTIONS} collections created.`);
 
-    // 2. Create Products, linking to collections
-    console.log(`Generating ${NUM_PRODUCTS} products...`);
-    const productsToCreate = [];
-    for (let i = 0; i < NUM_PRODUCTS; i++) {
-      productsToCreate.push(await generateProduct(createdCollections));
-    }
-    const createdProducts = await Product.insertMany(productsToCreate);
-    console.log(`${NUM_PRODUCTS} products created.`);
+    // // 2. Create Products, linking to collections
+    // console.log(`Generating ${NUM_PRODUCTS} products...`);
+    // const productsToCreate = [];
+    // for (let i = 0; i < NUM_PRODUCTS; i++) {
+    //   productsToCreate.push(await generateProduct(createdCollections));
+    // }
+    // const createdProducts = await Product.insertMany(productsToCreate);
+    // console.log(`${NUM_PRODUCTS} products created.`);
 
-    // 3. Update Collections with associated Product IDs
-    console.log('Updating collections with product links...');
-    for (const product of createdProducts) {
-      if (product.collectionId) {
-        await Collection.findByIdAndUpdate(
-          product.collectionId,
-          { $addToSet: { productIds: product._id } }
-        );
-      }
-    }
-    console.log('Collections updated with product links.');
+    // // 3. Update Collections with associated Product IDs
+    // console.log('Updating collections with product links...');
+    // for (const product of createdProducts) {
+    //   if (product.collectionId) {
+    //     await Collection.findByIdAndUpdate(
+    //       product.collectionId,
+    //       { $addToSet: { productIds: product._id } }
+    //     );
+    //   }
+    // }
+    // console.log('Collections updated with product links.');
 
-    // Optional: Add some random reviews to products and collections
-    console.log('Adding some random reviews...');
-    const users = Array.from({ length: 10 }, (_, i) => new mongoose.Types.ObjectId());
+    // // Optional: Add some random reviews to products and collections
+    // console.log('Adding some random reviews...');
+    // const users = Array.from({ length: 10 }, (_, i) => new mongoose.Types.ObjectId());
 
-    for (const product of createdProducts) {
-      const numReviews = faker.number.int({ min: 0, max: 5 });
-      for (let i = 0; i < numReviews; i++) {
-        product.reviews.push({
-          userId: faker.helpers.arrayElement(users),
-          rating: faker.number.int({ min: 1, max: 5 }),
-          comment: faker.lorem.sentence(),
-        });
-      }
-      await product.save();
-    }
+    // for (const product of createdProducts) {
+    //   const numReviews = faker.number.int({ min: 0, max: 5 });
+    //   for (let i = 0; i < numReviews; i++) {
+    //     product.reviews.push({
+    //       userId: faker.helpers.arrayElement(users),
+    //       rating: faker.number.int({ min: 1, max: 5 }),
+    //       comment: faker.lorem.sentence(),
+    //     });
+    //   }
+    //   await product.save();
+    // }
 
-    for (const collection of createdCollections) {
-      const numReviews = faker.number.int({ min: 0, max: 5 });
-      for (let i = 0; i < numReviews; i++) {
-        collection.reviews.push({
-          userId: faker.helpers.arrayElement(users),
-          rating: faker.number.int({ min: 1, max: 5 }),
-          comment: faker.lorem.sentence(),
-        });
-      }
-      await collection.save();
-    }
-    console.log('Reviews added and average ratings updated.');
+    // for (const collection of createdCollections) {
+    //   const numReviews = faker.number.int({ min: 0, max: 5 });
+    //   for (let i = 0; i < numReviews; i++) {
+    //     collection.reviews.push({
+    //       userId: faker.helpers.arrayElement(users),
+    //       rating: faker.number.int({ min: 1, max: 5 }),
+    //       comment: faker.lorem.sentence(),
+    //     });
+    //   }
+    //   await collection.save();
+    // }
+    // console.log('Reviews added and average ratings updated.');
 
-    console.log('Database seeding complete!');
+    // console.log('Database seeding complete!');
   } catch (error) {
     console.error('Error seeding database:', error);
   } finally {

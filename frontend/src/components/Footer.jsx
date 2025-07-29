@@ -1,8 +1,8 @@
 import React from 'react';
-import whatsapp from '../images/whatsapp_4401461.png';
-import ig from '../images/ig.png';
-import tiktok from '../images/tik-tok_4782345 (1).png';
-import x from '../images/twitter_5968830.png';
+// import whatsapp from '../images/whatsapp_4401461.png';
+// import ig from '../images/ig.png';
+// import tiktok from '../images/tik-tok_4782345 (1).png';
+// import x from '../images/twitter_5968830.png';
 import { useNavigate } from 'react-router-dom';
 
 const Footer = () => {
@@ -97,28 +97,28 @@ const Footer = () => {
       <nav>
         <div className="grid grid-flow-col gap-4">
           <a target="_blank" rel="noopener noreferrer" href={whatsappLink}>
-            <img src={whatsapp} alt="" className="size-10" />
+            <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png"} alt="" className="size-10" />
           </a>
           <a
             target="_blank"
             rel="noopener noreferrer"
             href="https://www.instagram.com/em_furniture_and_interior?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
           >
-            <img src={ig} alt="" className="size-10" />
+            <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787005/ig_sb3dpj.png"} alt="" className="size-10" />
           </a>
           <a
             target="_blank"
             rel="noopener noreferrer"
             href="https://www.tiktok.com/@em_furniture_nd_interior?is_from_webapp=1&sender_device=pc"
           >
-            <img src={tiktok} alt="" className="size-10" />
+            <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/tik-tok_4782345_1_smgzmi.png"} alt="" className="size-10" />
           </a>
           <a
             target="_blank"
             rel="noopener noreferrer"
             href="https://x.com/___Emine_"
           >
-            <img src={x} alt="" className="size-10 rounded-full" />
+            <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/twitter_5968830_duuupi.png"} alt="" className="size-10 rounded-full" />
           </a>
         </div>
       </nav>

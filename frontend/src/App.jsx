@@ -19,7 +19,7 @@ import EditCollection from './pages/EditCollection';
 import { Toaster } from 'react-hot-toast';
 import BottomNavbar from './components/BottomNavbar';
 import Footer from './components/Footer';
-import whatsapp from '../src/images/whatsapp_4401461.png';
+// import whatsapp from '../src/images/whatsapp_4401461.png';
 import Shop from './pages/Shop';
 import AdminSidebar from './components/admin/AdminSideBar';
 import ProductPage from './pages/ProductPage';
@@ -143,7 +143,9 @@ function App() {
         aria-label="Chat on WhatsApp"
       >
         <img
-          src={whatsapp}
+          src={
+            'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png'
+          }
           alt="WhatsApp Chat"
           className="w-full h-full object-contain"
         />

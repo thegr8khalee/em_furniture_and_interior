@@ -1,13 +1,19 @@
 import React from 'react';
-import Hero1 from '../images/Hero1.png';
-import ME from '../images/ME.png';
-import CEO from '../images/CEO.png';
+// import Hero1 from '../images/Hero1.png';
+// import ME from '../images/ME.png';
+// import CEO from '../images/CEO.png';
 
 const AboutUs = () => {
   return (
     <div className="pt-16">
       <div className="relative">
-        <img src={Hero1} alt="" className="object-cover h-40 w-full" />
+        <img
+          src={
+            'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png'
+          }
+          alt=""
+          className="object-cover h-40 w-full"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
           <h1 className="absolute bottom-10 left-1/2 -translate-x-1/2 mt-20 w-full mb-2 text-3xl font-bold text-center text-base-100 font-[poppins]">
             About Us
@@ -50,16 +56,31 @@ const AboutUs = () => {
           </div>
           <div className="font-[montserrat] flex flex-col items-center sm:flex-row justify-center">
             <div className="m-5 text-start">
-              <img src={CEO} className="w-70 h-70 object-cover" alt="CEO" />
+              <img
+                src={
+                  'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787002/CEO_ke8cr7.png'
+                }
+                className="w-70 h-70 object-cover"
+                alt="CEO"
+              />
               <p>Amina Abdulahi</p>
               <p>CEO & Visionary</p>
               <p>Lead Interior Designer</p>
-              <a className="text-info" href="mailto:emfurnitureandinterior@gmail.com">
+              <a
+                className="text-info"
+                href="mailto:emfurnitureandinterior@gmail.com"
+              >
                 Contact
               </a>
             </div>
             <div className="m-5 text-start">
-              <img src={ME} className="w-70 h-70 object-cover" alt="Me" />
+              <img
+                src={
+                  'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787007/ME_w9yhjj.png'
+                }
+                className="w-70 h-70 object-cover"
+                alt="Me"
+              />
               <p>Ibrahim Abdulahi</p>
               <p>Head of Business Development</p>
               <p>Head of IT department</p>

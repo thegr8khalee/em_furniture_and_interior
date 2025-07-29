@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import LogoLightMode from '../images/LogoLightMode.png';
+// import LogoLightMode from '../images/LogoLightMode.png';
 
 import { useAuthStore } from '../store/useAuthStore';
 import { useAdminStore } from '../store/useAdminStore';
@@ -151,7 +151,13 @@ const Navbar = () => {
           </div>
           <div className="navbar-center">
             <Link to="/" onClick={closeDrawer}>
-              <img src={LogoLightMode} alt="Logo" className="h-10" />
+              <img
+                src={
+                  'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787007/LogoLightMode_terjhk.png'
+                }
+                alt="Logo"
+                className="h-10"
+              />
             </Link>
           </div>
           <div className="navbar-end">
@@ -294,7 +300,13 @@ const Navbar = () => {
       <div className="hidden lg:flex fixed navbar backdrop-blur-lg bg-base-100/80 shadow-sm z-100">
         <div className="navbar-start">
           <Link to="/">
-            <img src={LogoLightMode} alt="Logo" className="h-10" />
+            <img
+              src={
+                'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787007/LogoLightMode_terjhk.png'
+              }
+              alt="Logo"
+              className="h-10"
+            />
           </Link>
         </div>
         <div className="navbar-center space-x-6">
@@ -344,7 +356,7 @@ const Navbar = () => {
             <SearchIcon />
           </button>
           {!isAdmin ? (
-            <div className='flex'>
+            <div className="flex">
               <button
                 className="relative btn btn-ghost"
                 onClick={() => handleCartClick()}

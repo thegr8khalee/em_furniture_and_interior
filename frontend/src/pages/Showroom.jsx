@@ -1,6 +1,6 @@
 // src/pages/Showroom.jsx
 import React from 'react';
-import Hero1 from '../images/Hero1.png';
+// import Hero1 from '../images/Hero1.png';
 
 const Showroom = () => {
     // REPLACE THESE WITH YOUR ACTUAL SHOWROOM'S LATITUDE AND LONGITUDE
@@ -23,7 +23,7 @@ const Showroom = () => {
     return (
         <div className="pt-16">
             <div className="relative">
-                <img src={Hero1} alt="Showroom Hero" className="object-cover h-40 w-full" />
+                <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="Showroom Hero" className="object-cover h-40 w-full" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-center pb-14">
                     <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-center text-base-100 font-[poppins]">
                         Showroom

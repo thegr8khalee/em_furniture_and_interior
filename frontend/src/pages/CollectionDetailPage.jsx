@@ -14,7 +14,7 @@ import {
 // import { useAdminStore } from '../store/useAdminStore'; // To get collection details
 import { useProductsStore } from '../store/useProductsStore'; // To get all products and filter them
 import { useCollectionStore } from '../store/useCollectionStore';
-import whatsapp from '../images/whatsapp.png';
+// import whatsapp from '../images/whatsapp.png';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
 // import { useAdminStore } from '../store/useAdminStore';
@@ -319,7 +319,7 @@ const CollectionDetailsPage = () => {
             className=" btn bg-green-500 text-base-100 flex-3 w-full rounded-xl font-[poppins] shadow-none border-0"
             href={whatsappHref(collection)}
           >
-            <img src={whatsapp} alt="" className="size-6" />
+            <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png"} alt="" className="size-6" />
             Order Now
           </a>
 
@@ -478,7 +478,7 @@ const CollectionDetailsPage = () => {
                       className="btn rounded-xl bg-green-400"
                       href={whatsappHref(product)}
                     >
-                      <img src={whatsapp} alt="WhatsApp" className="size-5" />
+                      <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png"} alt="WhatsApp" className="size-5" />
                     </a>
                     <button
                       className="btn rounded-xl bg-primary"

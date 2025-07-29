@@ -18,8 +18,8 @@ import {
 } from 'lucide-react'; // Added ChevronUp, Heart, ShoppingCart
 // import { toast } from 'react-hot-toast';
 import FilterModal from '../components/FilterModal';
-import Hero1 from '../images/Hero1.png'; // Assuming your hero image path
-import whatsapp from '../images/whatsapp.png'; // Assuming your whatsapp icon path
+// import Hero1 from '../images/Hero1.png'; // Assuming your hero image path
+// import whatsapp from '../images/whatsapp.png'; // Assuming your whatsapp icon path
 
 const ITEMS_PER_PAGE = 12; // Define how many items to load per click for both products and collections
 
@@ -36,9 +36,10 @@ const Shop = () => {
     isGettingCollections,
     hasMoreCollections,
   } = useCollectionStore();
-  const { addToCart, 
+  const {
+    addToCart,
     // isAddingToCart,
-   } = useCartStore();
+  } = useCartStore();
   const {
     addToWishlist,
     // isAddingToWishlist,
@@ -380,7 +381,13 @@ const Shop = () => {
   return (
     <div className="">
       <div className="relative">
-        <img src={Hero1} alt="Shop Hero" className="object-cover h-50 w-full" />
+        <img
+          src={
+            'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png'
+          }
+          alt="Shop Hero"
+          className="object-cover h-50 w-full"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
           <h1 className="absolute bottom-15 left-1/2 -translate-x-1/2 mt-20 mb-2 text-5xl font-bold text-center text-base-100 font-[poppins]">
             Shop
@@ -600,9 +607,7 @@ const Shop = () => {
                               handleAddToWishlist(product._id, 'Product')
                             }
                           >
-                            
-                              <Heart className="text-primary size-7" />
-                            
+                            <Heart className="text-primary size-7" />
                           </button>
                         )
                       ) : null}
@@ -619,13 +624,13 @@ const Shop = () => {
 
                     <div className="p-2">
                       <div className="flex items-center justify-between">
-                        <div className='w-full'>
+                        <div className="w-full">
                           <div>
                             <h2 className="text truncate whitespace-nowrap">
                               {product.name}
                             </h2>
                           </div>
-                          <div className='flex justify-between w-full items-center'>
+                          <div className="flex justify-between w-full items-center">
                             <div>
                               {product.isPromo &&
                               product.discountedPrice !== undefined ? (
@@ -673,7 +678,9 @@ const Shop = () => {
                                     rel="noopener noreferrer"
                                   >
                                     <img
-                                      src={whatsapp}
+                                      src={
+                                        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png'
+                                      }
                                       alt="WhatsApp"
                                       className="size-5"
                                     />
@@ -686,9 +693,7 @@ const Shop = () => {
                                     }
                                     // disabled={isAddingToCart}
                                   >
-                                    
-                                      <ShoppingCart className="" />
-                                    
+                                    <ShoppingCart className="" />
                                   </button>
                                 </div>
                               ) : null}
@@ -844,9 +849,7 @@ const Shop = () => {
                               handleAddToWishlist(collection._id, 'Collection')
                             }
                           >
-                            
-                              <Heart className="text-primary size-7" />
-                            
+                            <Heart className="text-primary size-7" />
                           </button>
                         )
                       ) : null}
@@ -856,13 +859,13 @@ const Shop = () => {
                     </figure>
                     <div className="p-2">
                       <div className="flex items-center justify-between">
-                        <div className='w-full'>
+                        <div className="w-full">
                           <div>
                             <h2 className="text truncate whitespace-nowrap">
                               {collection.name}
                             </h2>
                           </div>
-                          <div className='flex justify-between w-full items-center'>
+                          <div className="flex justify-between w-full items-center">
                             <div>
                               {collection.isPromo &&
                               collection.discountedPrice !== undefined ? (
@@ -910,7 +913,9 @@ const Shop = () => {
                                     rel="noopener noreferrer"
                                   >
                                     <img
-                                      src={whatsapp}
+                                      src={
+                                        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png'
+                                      }
                                       alt="WhatsApp"
                                       className="size-5"
                                     />
@@ -919,13 +924,15 @@ const Shop = () => {
                                     type="button"
                                     className="btn rounded-xl bg-primary"
                                     onClick={() =>
-                                      handleAddToCart(collection._id, 1, 'Collection')
+                                      handleAddToCart(
+                                        collection._id,
+                                        1,
+                                        'Collection'
+                                      )
                                     }
                                     // disabled={isAddingToCart}
                                   >
-                                    
-                                      <ShoppingCart className="" />
-                                    
+                                    <ShoppingCart className="" />
                                   </button>
                                 </div>
                               ) : null}

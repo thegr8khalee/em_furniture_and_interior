@@ -5,8 +5,8 @@ import { useCartStore } from '../store/useCartStore';
 import { Loader2, Trash2, Minus, Plus, ShoppingCart, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { axiosInstance } from '../lib/axios.js';
-import whatsapp from '../images/whatsapp.png';
-import Hero1 from '../images/Hero1.png';
+// import whatsapp from '../images/whatsapp.png';
+// import Hero1 from '../images/Hero1.png';
 import { useAuthStore } from '../store/useAuthStore.js';
 
 const CartPage = () => {
@@ -331,7 +331,7 @@ const CartPage = () => {
   return (
     <div className="pt-12 w-screen">
       <div className="relative">
-        <img src={Hero1} alt="" className="object-cover h-40 w-full" />
+        <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="" className="object-cover h-40 w-full" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
           <h1 className="absolute bottom-10 left-1/2 -translate-x-1/2 mt-20 w-full mb-2 text-3xl font-bold text-center text-base-100 font-[poppins]">
             Your Shopping Cart
@@ -503,7 +503,7 @@ const CartPage = () => {
               href={whatsappCartHref(detailedCartItems)}
               disabled={isRemovingFromCart || !cart || cart.length === 0}
             >
-              <img src={whatsapp} alt="" className="size-8" /> Order On WhatsApp
+              <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png"} alt="" className="size-8" /> Order On WhatsApp
             </a>
           </div>
         </div>
