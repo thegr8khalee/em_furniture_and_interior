@@ -8,6 +8,7 @@
     "dotenv": "^17.0.0",
     "em_furniture_and_interior": "file:..",
     "express": "^4.19.2",
+    "googleapis": "^160.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.17.0",
     "mongoose": "^8.16.1",
