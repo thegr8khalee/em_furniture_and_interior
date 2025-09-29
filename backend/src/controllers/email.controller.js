@@ -24,16 +24,18 @@ export const sendContactEmail = async (req, res) => {
   // Example for Gmail (less secure app access must be enabled or use App Passwords):
   // For production, consider a dedicated email service like SendGrid, Mailgun, AWS SES.
   const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT || 465,
-    secure: (process.env.SMTP_PORT || 465) == 465,
-
+    service: 'gmail', // or your email provider
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // true for 465, false for other ports
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      pass: process.env.EMAIL_PASSWORD // Use App Password for Gmail
     },
+    // Add these timeout settings
     connectionTimeout: 60000, // 60 seconds
-    socketTimeout: 60000, // 60 seconds
+    greetingTimeout: 30000,   // 30 seconds
+    socketTimeout: 60000,     // 60 seconds
   });
 
   // 3. Define email options
