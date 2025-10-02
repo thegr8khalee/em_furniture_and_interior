@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useProjectsStore } from '../store/useProjectsStore';
 import { Loader2 } from 'lucide-react';
-import ProjectCard from '../components/projectCard';
+import ProjectCard from '../components/ProjectCard';
 
 const Projects = () => {
   const {
