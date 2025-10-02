@@ -189,7 +189,7 @@ const Navbar = () => {
               </button>
             </li>
             <div className="flex">
-              <li>
+              {/* <li>
                 <Link
                   to="/"
                   className="btn btn-lg font-normal border-0 justify-start"
@@ -197,7 +197,7 @@ const Navbar = () => {
                 >
                   Home
                 </Link>
-              </li>
+              </li> */}
               <li>
                 <Link
                   to="/e-catalog"
@@ -214,6 +214,15 @@ const Navbar = () => {
                   onClick={closeDrawer}
                 >
                   Showroom
+                </Link>
+              </li>
+               <li>
+                <Link
+                  to="/projects"
+                  className="btn btn-lg font-normal border-0 justify-start"
+                  onClick={closeDrawer}
+                >
+                  Projects
                 </Link>
               </li>
             </div>
