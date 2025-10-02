@@ -31,10 +31,18 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'; // Import ico
 import { useProductsStore } from '../store/useProductsStore';
 import { useCollectionStore } from '../store/useCollectionStore';
 import { useNavigate } from 'react-router-dom';
+import { useProjectsStore } from '../store/useProjectsStore';
+import ProjectCardHome from '../components/ProjectCardHome';
 
 const HomePage = () => {
   // Array of hero images
-  const heroImages = ["https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png", "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/Hero2_mnsyx3.png", "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787005/Hero3_mmltlv.png", "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787010/Hero4_d42fq3.png", "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787007/Hero5_kcqj5j.png"];
+  const heroImages = [
+    'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png',
+    'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/Hero2_mnsyx3.png',
+    'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787005/Hero3_mmltlv.png',
+    'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787010/Hero4_d42fq3.png',
+    'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787007/Hero5_kcqj5j.png',
+  ];
   const [currentSlide, setCurrentSlide] = useState(0); // State to track the current slide index
   const slideIntervalTime = 5000; // Time in milliseconds for automatic slide transition (5 seconds)
 
@@ -56,17 +64,48 @@ const HomePage = () => {
   }, [currentSlide]); // Re-run effect when currentSlide changes to reset timer
 
   const designs = [
-    { id: '1', name: 'Modern', link: 'modern', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787010/sofa_k5et34.jpg" },
+    {
+      id: '1',
+      name: 'Modern',
+      link: 'modern',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787010/sofa_k5et34.jpg',
+    },
     {
       id: '2',
       name: 'Contemporary',
       link: 'contemporary',
-      image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787001/contemporary_uunph9.jpg",
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787001/contemporary_uunph9.jpg',
     },
-    { id: '3', name: 'Antique/Royal', link: 'antique%2Froyal', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/antique_ktxajm.jpg" },
-    { id: '4', name: 'Bespoke', link: 'bespoke', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/bespoke_bs55kv.jpg" },
-    { id: '5', name: 'Minimalist', link: 'minimalist', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787007/minimalist_c5zk8r.jpg" },
-    { id: '6', name: 'Glam', link: 'glam', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/Livingroom_dahbsh.png" }, // Using Hero1 as a placeholder for now
+    {
+      id: '3',
+      name: 'Antique/Royal',
+      link: 'antique%2Froyal',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/antique_ktxajm.jpg',
+    },
+    {
+      id: '4',
+      name: 'Bespoke',
+      link: 'bespoke',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/bespoke_bs55kv.jpg',
+    },
+    {
+      id: '5',
+      name: 'Minimalist',
+      link: 'minimalist',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787007/minimalist_c5zk8r.jpg',
+    },
+    {
+      id: '6',
+      name: 'Glam',
+      link: 'glam',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/Livingroom_dahbsh.png',
+    }, // Using Hero1 as a placeholder for now
   ];
 
   //   const [uniqueCategories, setUniqueCategories] = useState([]);
@@ -74,6 +113,11 @@ const HomePage = () => {
   const { products, getProducts, isGettingProducts } = useProductsStore();
   const { collections, getCollections, isGettingCollections } =
     useCollectionStore();
+  const {
+    fetchProjects,
+    loading: LoadingProjects,
+    projects,
+  } = useProjectsStore();
 
   const promotionProducts = products.filter((products) => products.isPromo);
 
@@ -81,20 +125,88 @@ const HomePage = () => {
 
   //   console.log(promotionProducts);
   useEffect(() => {
-    getProducts(1, 10, {}, false);
-    getCollections(1, 10, {}, false);
-  }, [getProducts, getCollections]);
+    if (products.length === 0) {
+      getProducts(1, 10, {}, false);
+    }
+    if (collections.length === 0) {
+      getCollections(1, 10, {}, false);
+    }
+    if (projects.length === 0) {
+      fetchProjects(1, 10);
+    }
+  }, [
+    getProducts,
+    getCollections,
+    fetchProjects,
+    products.length,
+    collections.length,
+    projects.length,
+  ]);
 
   const categories = [
-    { id: '1', name: 'Sofas', link: 'Living%20Room', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787010/sofa_k5et34.jpg" },
-    { id: '2', name: 'Armchairs', link: 'Armchair', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787010/Panama-Armchair_djdgqt.jpg" },
-    { id: '3', name: 'Living Rooms', link: 'Living%20Room', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/Livingroom_dahbsh.png" },
-    { id: '4', name: 'Bedrooms', link: 'Bedroom', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787010/Modern_Bedroom_design_gvw20n.jpg" },
-    { id: '5', name: 'Dining Rooms', link: 'Dining%20Room', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787002/Dining_reagth.jpg" },
-    { id: '6', name: 'Center Tables', link: 'Center%20Table', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753787001/center_i487sg.jpg" }, // Using Hero1 as a placeholder for now
-    { id: '7', name: 'Wardrobe', link: 'Wardrobe', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/wardrobe_j5c6to.jpg" },
-    { id: '8', name: 'TV Unit', link: 'TV%20unit', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/TV_unit_goevgl.jpg" },
-    { id: '9', name: 'Carpets', link: 'Carpet', image: "https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/carpets_bdy56z.jpg" }, // Using Hero2 as a placeholder for now
+    {
+      id: '1',
+      name: 'Sofas',
+      link: 'Living%20Room',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787010/sofa_k5et34.jpg',
+    },
+    {
+      id: '2',
+      name: 'Armchairs',
+      link: 'Armchair',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787010/Panama-Armchair_djdgqt.jpg',
+    },
+    {
+      id: '3',
+      name: 'Living Rooms',
+      link: 'Living%20Room',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/Livingroom_dahbsh.png',
+    },
+    {
+      id: '4',
+      name: 'Bedrooms',
+      link: 'Bedroom',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787010/Modern_Bedroom_design_gvw20n.jpg',
+    },
+    {
+      id: '5',
+      name: 'Dining Rooms',
+      link: 'Dining%20Room',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787002/Dining_reagth.jpg',
+    },
+    {
+      id: '6',
+      name: 'Center Tables',
+      link: 'Center%20Table',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787001/center_i487sg.jpg',
+    }, // Using Hero1 as a placeholder for now
+    {
+      id: '7',
+      name: 'Wardrobe',
+      link: 'Wardrobe',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/wardrobe_j5c6to.jpg',
+    },
+    {
+      id: '8',
+      name: 'TV Unit',
+      link: 'TV%20unit',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/TV_unit_goevgl.jpg',
+    },
+    {
+      id: '9',
+      name: 'Carpets',
+      link: 'Carpet',
+      image:
+        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/carpets_bdy56z.jpg',
+    }, // Using Hero2 as a placeholder for now
   ];
 
   const navigate = useNavigate();
@@ -172,7 +284,7 @@ const HomePage = () => {
 
   console.log(promotionProducts);
 
-  if (isGettingProducts || isGettingCollections) {
+  if (isGettingProducts || isGettingCollections || LoadingProjects) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -228,32 +340,93 @@ const HomePage = () => {
             ))}
           </div>
 
-          <div  className="absolute flex flex-col items-start justify-end pb-22 bottom-0 left-1/2 bg-black/30 h-full -translate-x-1/2 font-black text-3xl sm:text-4xl md:text-6xl w-full px-6 sm:px-10 lg:px-15 text-base-100 text-shadow-lg">
+          <div className="absolute flex flex-col items-start justify-end pb-22 bottom-0 left-1/2 bg-black/30 h-full -translate-x-1/2 font-black text-3xl sm:text-4xl md:text-6xl w-full px-6 sm:px-10 lg:px-15 text-base-100 text-shadow-lg">
             <div>Transforming Spaces.</div>
             <div>Elevating Lives.</div>
           </div>
           <div className="absolute flex space-x-2 bottom-8 left-1/2 -translate-x-1/2 font-black text-3xl sm:text-4xl md:text-6xl w-full px-6 sm:px-10 lg:px-15 text-base-100 text-shadow-lg">
-            <button onClick={() => handleShopNow()} className='btn sm:w-50 bg-primary border-0 shadow-none rounded-xl'>Shop Now!</button>
-            <button onClick={() => handleContatClick()} className='btn sm:w-50 bg-secondary text-white border-0 shadow-none rounded-xl'> Contact Us</button>
+            <button
+              onClick={() => handleShopNow()}
+              className="btn sm:w-50 bg-primary border-0 shadow-none rounded-xl"
+            >
+              Shop Now!
+            </button>
+            <button
+              onClick={() => handleContatClick()}
+              className="btn sm:w-50 bg-secondary text-white border-0 shadow-none rounded-xl"
+            >
+              {' '}
+              Contact Us
+            </button>
           </div>
         </div>
       </section>
       <section className="h-25 bg-secondary flex items-center justify-center space-x-7 sm:space-x-25 md:space-x-35 lg:space-x-45">
         <div className="text-white space-y-1 text-xxs sm:text-sm font-[montserrat] items-center flex flex-col">
-          <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/worldwide-shipping_by9zox.png"} alt="" className="size-12" />
+          <img
+            src={
+              'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/worldwide-shipping_by9zox.png'
+            }
+            alt=""
+            className="size-12"
+          />
           <h1>World Wide Shipping</h1>
         </div>
 
         <div className="text-white space-y-1 text-xxs font-[montserrat] items-center flex flex-col">
-          <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/verify_vnl0hf.png"} alt="" className="size-12" />
+          <img
+            src={
+              'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/verify_vnl0hf.png'
+            }
+            alt=""
+            className="size-12"
+          />
           <h1>Quality Assurance</h1>
         </div>
 
         <div className="text-white space-y-1 text-xxs font-[montserrat] items-center flex flex-col">
-          <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787002/easy-installation_dmiwxi.png"} alt="" className="size-12" />
+          <img
+            src={
+              'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787002/easy-installation_dmiwxi.png'
+            }
+            alt=""
+            className="size-12"
+          />
           <h1>Free Installation</h1>
         </div>
       </section>
+      <section className="my-10 px-4 sm:pl-8 lg:pl-16">
+        {projects.length > 0 ? ( // Correct conditional check: use ? instead of (
+          <>
+            {' '}
+            {/* Use a React Fragment to wrap multiple elements */}
+            <div className="w-full flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold font-[poppins]">
+                Featured Projects
+              </h2>
+              <a
+                href="/projects"
+                className="font-[montserrat] text-primary font-medium"
+              >
+                View More
+              </a>
+            </div>
+            <div
+              className="flex space-x-4 overflow-x-auto pb-4"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {/* Map over the 'projects' array. Ensure you use a unique 'key' prop. */}
+              {projects.map((project) => (
+                <ProjectCardHome
+                  key={project._id} // Assuming projects have a unique _id
+                  project={project}
+                />
+              ))}
+            </div>
+          </>
+        ) : null}
+      </section>
+
       <section className="my-10 pl-4 sm:pl-8 lg:pl-16">
         <h2 className="text-2xl font-bold mb-4 font-[poppins]">
           Featured Products
@@ -486,7 +659,9 @@ const HomePage = () => {
             {' '}
             {/* Added bottom margin for mobile, removed for desktop */}
             <img
-              src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/living_lsdtn8.jpg"} // Use the imported image
+              src={
+                'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/living_lsdtn8.jpg'
+              } // Use the imported image
               alt="Luxurious Living Room"
               className="w-full h-auto rounded-lg object-cover" // Added rounded corners and shadow
             />
@@ -542,7 +717,9 @@ const HomePage = () => {
           {/* 🟩 IMAGE SECTION (comes first on mobile, second on desktop) */}
           <div className="md:flex-1 mb-6 md:mb-0">
             <img
-              src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/diningroom_voqqk6.png"}
+              src={
+                'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/diningroom_voqqk6.png'
+              }
               alt="Luxurious Living Room"
               className="w-full h-auto rounded-lg object-cover"
             />
@@ -557,7 +734,9 @@ const HomePage = () => {
             {' '}
             {/* Added bottom margin for mobile, removed for desktop */}
             <img
-              src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/bedroom_mv5jzr.png"} // Use the imported image
+              src={
+                'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/bedroom_mv5jzr.png'
+              } // Use the imported image
               alt="Luxurious Living Room"
               className="w-full h-auto rounded-lg object-cover" // Added rounded corners and shadow
             />
@@ -614,7 +793,9 @@ const HomePage = () => {
           {/* 🟩 IMAGE SECTION (comes first on mobile, second on desktop) */}
           <div className="md:flex-1 mb-6 md:mb-0">
             <img
-              src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787002/corner_it609b.png"}
+              src={
+                'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787002/corner_it609b.png'
+              }
               alt="Luxurious Living Room"
               className="w-full h-auto rounded-lg object-cover"
             />

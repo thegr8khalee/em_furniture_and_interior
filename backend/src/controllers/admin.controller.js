@@ -7,6 +7,7 @@ import Product from '../models/product.model.js'; // Ensure correct path
 import Collection from '../models/collection.model.js'; // To validate collectionId
 import mongoose from 'mongoose';
 import cloudinary from '../lib/cloudinary.js';
+import Project from '../models/project.model.js';
 
 export const adminSignup = async (req, res) => {
   const { username, email, password } = req.body;
@@ -978,3 +979,236 @@ export const delCollection = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
+export const addProject = async (req, res) => {
+  const { title, description, category, location, price, images } = req.body;
+
+  let parsedPrice = parseFloat(price);
+
+  // Basic validation
+  if (
+    !title ||
+    !description ||
+    !category ||
+    !location ||
+    !price ||
+    !images ||
+    images.length === 0
+  ) {
+    return res.status(400).json({
+      message:
+        'Please enter all required project fields, including at least one image.',
+    });
+  }
+
+  if (isNaN(parsedPrice) || parsedPrice < 0) {
+    return res
+      .status(400)
+      .json({ message: 'Price must be a non-negative number.' });
+  }
+
+  try {
+    const uploadedImages = [];
+
+    // Image upload logic (similar to products)
+    for (const imageData of images) {
+      if (
+        typeof imageData !== 'string' ||
+        !imageData.startsWith('data:image')
+      ) {
+        console.warn('Skipping invalid image data:', imageData);
+        continue;
+      }
+      const uploadResponse = await cloudinary.uploader.upload(imageData, {
+        folder: 'project_images', // Dedicated folder for projects
+      });
+      uploadedImages.push({
+        url: uploadResponse.secure_url,
+        public_id: uploadResponse.public_id,
+      });
+    }
+
+    if (uploadedImages.length === 0) {
+      return res
+        .status(400)
+        .json({ message: 'No valid images were provided for upload.' });
+    }
+
+    const newProject = new Project({
+      title,
+      description,
+      images: uploadedImages,
+      category,
+      location,
+      price: parsedPrice,
+    });
+
+    const savedProject = await newProject.save();
+
+    res.status(201).json(savedProject);
+  } catch (error) {
+    console.error('Error in addProject controller: ', error.message);
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map((err) => err.message);
+      return res
+        .status(400)
+        .json({ message: 'Project validation failed', errors });
+    }
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+export const updateProject = async (req, res) => {
+  const { projectId } = req.params;
+  const { title, description, category, location, price, images } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    return res.status(400).json({ message: 'Invalid Project ID format.' });
+  }
+
+  let updateFields = {};
+  let parsedPrice;
+
+  // Validate and prepare price
+  if (price !== undefined) {
+    parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return res
+        .status(400)
+        .json({ message: 'Price must be a non-negative number.' });
+    }
+    updateFields.price = parsedPrice;
+  }
+
+  if (title !== undefined) updateFields.title = title;
+  if (description !== undefined) updateFields.description = description;
+  if (category !== undefined) updateFields.category = category;
+  if (location !== undefined) updateFields.location = location;
+
+  try {
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found.' });
+    }
+
+    // --- Image Handling for Update (Copied & adapted from updateProduct) ---
+    const newImageUploads = [];
+    const imagesToKeep = [];
+
+    if (images && images.length > 0) {
+      for (const imageData of images) {
+        // Condition for keeping an existing image (must match the structure sent by the frontend product update)
+        if (
+          typeof imageData === 'object' &&
+          imageData.url &&
+          imageData.public_id // Assuming the frontend sends back existing images with public_id
+        ) {
+          imagesToKeep.push(imageData);
+        } else if (
+          typeof imageData === 'object' &&
+          imageData.url &&
+          imageData.isNew // Condition for a new Base64 image
+        ) {
+          const base64String = imageData.url;
+          if (
+            typeof base64String === 'string' &&
+            base64String.startsWith('data:image')
+          ) {
+            const uploadResponse = await cloudinary.uploader.upload(
+              base64String,
+              {
+                folder: 'project_images',
+              }
+            );
+            newImageUploads.push({
+              url: uploadResponse.secure_url,
+              public_id: uploadResponse.public_id,
+            });
+          } else {
+            console.warn(
+              'Skipping invalid new image data (not a Base64 string):',
+              imageData
+            );
+          }
+        } else {
+          console.warn('Skipping unrecognized image data format:', imageData);
+        }
+      }
+    }
+
+    const finalImages = [...imagesToKeep, ...newImageUploads];
+
+    if (finalImages.length === 0) {
+      return res
+        .status(400)
+        .json({ message: 'A project must have at least one image.' });
+    }
+
+    // Identify and delete images removed by the user
+    const publicIdsToDelete = project.images
+      .map((img) => img.public_id)
+      .filter(
+        (publicId) =>
+          publicId && !finalImages.some((img) => img.public_id === publicId)
+      );
+
+    for (const publicId of publicIdsToDelete) {
+      try {
+        await cloudinary.uploader.destroy(publicId);
+        console.log(`Deleted image from Cloudinary: ${publicId}`);
+      } catch (deleteError) {
+        console.error(
+          `Error deleting image ${publicId} from Cloudinary:`,
+          deleteError
+        );
+      }
+    }
+    // --- End Image Handling ---
+
+    // Apply updates
+    Object.assign(project, updateFields);
+    project.images = finalImages; // Assign the processed images
+
+    const updatedProject = await project.save();
+    res.status(200).json(updatedProject);
+  } catch (error) {
+    console.error('Error in updateProject controller: ', error.message);
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map((err) => err.message);
+      return res
+        .status(400)
+        .json({ message: 'Project validation failed', errors });
+    }
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+export const delProject = async (req, res) => {
+  const { projectId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    return res.status(400).json({ message: 'Invalid Project ID format.' });
+  }
+
+  try {
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found.' });
+    }
+
+    for (const image of project.images) {
+      if (image.public_id) {
+        await cloudinary.uploader.destroy(image.public_id);
+        console.log(`Deleted image from Cloudinary: ${image.public_id}`);
+      }
+    }
+
+    await Project.deleteOne({ _id: projectId });
+
+    res.status(200).json({ message: 'Project deleted successfully.' });
+  } catch (error) {
+    console.error('Error in delProject controller: ', error.message);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+

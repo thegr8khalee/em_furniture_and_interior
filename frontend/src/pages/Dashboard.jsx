@@ -7,6 +7,7 @@ import ProductManagement from '../components/admin/ProductManagement'; // Compon
 import CollectionManagement from '../components/admin/CollectionManagement'; // Component for collection management
 import { Menu } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
+import ProjectManagement from '../components/admin/ProjectManagement';
 // import UserManagement from '../components/Admin/UserManagement'; // Future: Component for user management
 // import OrderManagement from '../components/Admin/OrderManagement'; // Future: Component for order management
 
@@ -23,6 +24,8 @@ const AdminDashboard = () => {
                 return <ProductManagement />;
             case 'collections':
                 return <CollectionManagement />;
+            case 'projects':
+                return <ProjectManagement />;
             default:
                 return <AdminDashboardContent />;
         }

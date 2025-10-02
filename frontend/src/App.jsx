@@ -37,6 +37,10 @@ import ECatalog from './pages/ECatalog';
 import Showroom from './pages/Showroom';
 import CookieConsentBanner from './components/CookieConsentBanner';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import AdminAddProjectPage from './pages/AddProject';
+import AdminEditProjectPage from './pages/EditProject';
+import Projects from './pages/ProjectsPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
 
 function App() {
   const { checkAuth, authUser, isAdmin, isAuthReady } = useAuthStore();
@@ -96,6 +100,8 @@ function App() {
             path="/signup"
             element={!authUser ? <SignupPage /> : <LoginPage />}
           />
+          <Route path='/projects' element={<Projects />} />
+          <Route path='/project/:id' element={<ProjectDetailPage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/aboutUs" element={<AboutUs />} />
@@ -129,6 +135,8 @@ function App() {
               path="/admin/collections/edit/:collectionId"
               element={<EditCollection />}
             />
+            <Route path="/admin/addProject" element={<AdminAddProjectPage />} />
+            <Route path='/admin/editProject/:projectId' element={<AdminEditProjectPage />}/>
           </Route>
 
           <Route path="*" element={<div>404 Not Found</div>} />

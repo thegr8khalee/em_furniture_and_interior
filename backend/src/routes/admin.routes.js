@@ -4,13 +4,16 @@ import express from 'express';
 import {
   addCollection,
   addProduct,
+  addProject,
   adminLogin,
   adminLogout,
   adminSignup,
   delCollection,
   delProduct,
+  delProject,
   updateCollection,
   updateProduct,
+  updateProject,
 } from '../controllers/admin.controller.js';
 import { protectAdminRoute } from '../middleware/protectAdminRoute.js';
 
@@ -42,6 +45,17 @@ router.delete(
   '/operations/delCollection/:collectionId',
   protectAdminRoute,
   delCollection
+);
+router.post('/operations/addProject', protectAdminRoute, addProject);
+router.put(
+  '/operations/updateProject/:projectId',
+  protectAdminRoute,
+  updateProject
+);
+router.delete(
+  '/operations/delProject/:projectId',
+  protectAdminRoute,
+  delProject
 );
 
 export default router;

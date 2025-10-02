@@ -1,68 +1,81 @@
-// src/components/Admin/ProductManagement.jsx
+// src/components/Admin/ProjectManagement.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useProductsStore } from '../../store/useProductsStore';
+import { useProjectsStore } from '../../store/useProjectsStore';
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import AdminProductListCard from './ProductList';
+import AdminProjectListCard from './ProjectList';
 
-const ProductManagement = () => {
+const ProjectManagement = () => {
   const {
-    products,
-    getProducts,
-    isGettingProducts,
-    getProductsCount,
-    productsCount,
-    resetProducts
-  } = useProductsStore();
+    projects,
+    fetchProjects,
+    loading,
+    error,
+    pagination,
+    getProjectsCount,
+    totalCount
+  } = useProjectsStore();
 
   const navigate = useNavigate();
 
   // Local state for pagination
-  const [currentPageLocal, setCurrentPageLocal] = useState(1);
-  const [itemsPerPage] = useState(12); // You can make this configurable
+  const [itemsPerPage] = useState(10); // Match your store's default limit
 
   useEffect(() => {
-    getProducts(1, itemsPerPage, {}, false);
-  }, [getProducts, getProductsCount, resetProducts, itemsPerPage]);
+    // Initialize by fetching projects count and first page
+    getProjectsCount();
+    fetchProjects(1, itemsPerPage);
+  }, [fetchProjects, getProjectsCount, itemsPerPage]);
 
-  console.log(products)
-
-  const handleAddProduct = () => {
-    navigate('/admin/products/new');
+  const handleAddProject = () => {
+    navigate('/admin/addproject');
   };
 
   const handlePageChange = (newPage) => {
-    if (newPage < 1) return;
-    
-    setCurrentPageLocal(newPage);
-    resetProducts();
-    getProducts(newPage, itemsPerPage, {}, false);
+    if (newPage < 1 || newPage > pagination.totalPages) return;
+    fetchProjects(newPage, itemsPerPage);
   };
 
   const handlePrevPage = () => {
-    if (currentPageLocal > 1) {
-      handlePageChange(currentPageLocal - 1);
+    if (pagination.hasPrevPage) {
+      handlePageChange(pagination.currentPage - 1);
     }
   };
 
   const handleNextPage = () => {
-    const totalPages = Math.ceil(productsCount / itemsPerPage);
-    if (currentPageLocal < totalPages) {
-      handlePageChange(currentPageLocal + 1);
+    if (pagination.hasNextPage) {
+      handlePageChange(pagination.currentPage + 1);
     }
   };
 
   // Calculate pagination info
-  const totalPages = productsCount ? Math.ceil(productsCount / itemsPerPage) : 0;
-  const startItem = (currentPageLocal - 1) * itemsPerPage + 1;
-  const endItem = Math.min(currentPageLocal * itemsPerPage, productsCount || 0);
+  const { currentPage, totalPages } = pagination;
+  const startItem = totalCount > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
+  const endItem = Math.min(currentPage * itemsPerPage, totalCount);
 
-  if (isGettingProducts && products.length === 0) {
+  if (loading && projects.length === 0) {
     // Show a loading indicator while initial data is being fetched
     return (
       <div className="flex justify-center items-center p-8">
         <Loader2 className="animate-spin mr-2" size={24} />
-        <span>Loading Products...</span>
+        <span>Loading Projects...</span>
+      </div>
+    );
+  }
+
+  if (error && projects.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8">
+        <div className="text-red-500 text-center mb-4">
+          <p className="text-lg font-semibold">Error Loading Projects</p>
+          <p className="text-sm">{error}</p>
+        </div>
+        <button
+          onClick={() => fetchProjects(1, itemsPerPage)}
+          className="btn btn-primary"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -70,42 +83,49 @@ const ProductManagement = () => {
   return (
     <div>
       <h2 className="text-3xl font-semibold mb-6 text-secondary font-[poppins]">
-        Manage Products
+        Manage Projects
       </h2>
 
       {/* Header with Add button and results info */}
       <div className="flex justify-between items-center mb-6">
         <button
           className="btn btn-primary text-white border-0 shadow-0 rounded-full"
-          onClick={handleAddProduct}
+          onClick={handleAddProject}
         >
-          Add New Product
+          Add New Project
         </button>
         
-        {productsCount !== null && (
+        {totalCount !== null && (
           <div className="text-sm text-gray-600">
-            Showing {products.length > 0 ? startItem : 0}-{endItem} of {productsCount} products
+            Showing {projects.length > 0 ? startItem : 0}-{endItem} of {totalCount} projects
           </div>
         )}
       </div>
 
-      {/* Products List */}
+      {/* Error banner for non-critical errors */}
+      {error && projects.length > 0 && (
+        <div className="alert alert-warning mb-4">
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Projects List */}
       <div className="bg-base-200 rounded-lg space-y-2 max-h-[60vh] overflow-y-auto mb-6">
-        {products.length === 0 && !isGettingProducts ? (
+        {projects.length === 0 && !loading ? (
           <div className="text-center p-8">
-            <p className="text-lg text-gray-500">No products found.</p>
+            <p className="text-lg text-gray-500">No projects found.</p>
           </div>
         ) : (
-          products.map((product) => (
-            <AdminProductListCard
-              key={product._id}
-              item={product}
+          projects.map((project) => (
+            <AdminProjectListCard
+              key={project._id}
+              item={project}
             />
           ))
         )}
         
         {/* Loading indicator for page changes */}
-        {isGettingProducts && products.length > 0 && (
+        {loading && projects.length > 0 && (
           <div className="flex justify-center items-center p-4">
             <Loader2 className="animate-spin mr-2" size={20} />
             <span>Loading...</span>
@@ -118,7 +138,7 @@ const ProductManagement = () => {
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
           {/* Page Info */}
           <div className="text-sm text-gray-600">
-            Page {currentPageLocal} of {totalPages}
+            Page {currentPage} of {totalPages}
           </div>
           
           {/* Pagination Buttons */}
@@ -126,7 +146,7 @@ const ProductManagement = () => {
             {/* Previous Button */}
             <button
               onClick={handlePrevPage}
-              disabled={currentPageLocal === 1 || isGettingProducts}
+              disabled={!pagination.hasPrevPage || loading}
               className="btn btn-sm btn-outline disabled:opacity-50"
             >
               <ChevronLeft size={16} />
@@ -136,16 +156,16 @@ const ProductManagement = () => {
             {/* Page Numbers */}
             <div className="flex items-center gap-1">
               {/* Show first page */}
-              {currentPageLocal > 3 && (
+              {currentPage > 3 && (
                 <>
                   <button
                     onClick={() => handlePageChange(1)}
                     className="btn btn-sm btn-outline"
-                    disabled={isGettingProducts}
+                    disabled={loading}
                   >
                     1
                   </button>
-                  {currentPageLocal > 4 && <span className="px-2">...</span>}
+                  {currentPage > 4 && <span className="px-2">...</span>}
                 </>
               )}
               
@@ -154,12 +174,12 @@ const ProductManagement = () => {
                 let pageNum;
                 if (totalPages <= 5) {
                   pageNum = i + 1;
-                } else if (currentPageLocal <= 3) {
+                } else if (currentPage <= 3) {
                   pageNum = i + 1;
-                } else if (currentPageLocal >= totalPages - 2) {
+                } else if (currentPage >= totalPages - 2) {
                   pageNum = totalPages - 4 + i;
                 } else {
-                  pageNum = currentPageLocal - 2 + i;
+                  pageNum = currentPage - 2 + i;
                 }
                 
                 if (pageNum < 1 || pageNum > totalPages) return null;
@@ -168,9 +188,9 @@ const ProductManagement = () => {
                   <button
                     key={pageNum}
                     onClick={() => handlePageChange(pageNum)}
-                    disabled={isGettingProducts}
+                    disabled={loading}
                     className={`btn btn-sm ${
-                      pageNum === currentPageLocal 
+                      pageNum === currentPage 
                         ? 'btn-primary text-white' 
                         : 'btn-outline'
                     }`}
@@ -181,13 +201,13 @@ const ProductManagement = () => {
               })}
               
               {/* Show last page */}
-              {currentPageLocal < totalPages - 2 && (
+              {currentPage < totalPages - 2 && (
                 <>
-                  {currentPageLocal < totalPages - 3 && <span className="px-2">...</span>}
+                  {currentPage < totalPages - 3 && <span className="px-2">...</span>}
                   <button
                     onClick={() => handlePageChange(totalPages)}
                     className="btn btn-sm btn-outline"
-                    disabled={isGettingProducts}
+                    disabled={loading}
                   >
                     {totalPages}
                   </button>
@@ -198,7 +218,7 @@ const ProductManagement = () => {
             {/* Next Button */}
             <button
               onClick={handleNextPage}
-              disabled={currentPageLocal === totalPages || isGettingProducts}
+              disabled={!pagination.hasNextPage || loading}
               className="btn btn-sm btn-outline disabled:opacity-50"
             >
               Next
@@ -211,4 +231,4 @@ const ProductManagement = () => {
   );
 };
 
-export default ProductManagement;
+export default ProjectManagement;

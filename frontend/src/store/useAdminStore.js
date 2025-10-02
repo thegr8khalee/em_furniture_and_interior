@@ -15,6 +15,10 @@ export const useAdminStore = create((set) => ({
   isAddingCollection: false,
   isDeletingCollection: false,
   isUpdatingCollection: false,
+  isAddingProject: false,
+  isUpdatingProject: false,
+  isDeletingProject: false,
+
   // Action to toggle sidebar visibility
   toggleSidebar: () =>
     set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
@@ -160,6 +164,56 @@ export const useAdminStore = create((set) => ({
       console.log(error.message);
     } finally {
       set({ isUpdatingCollection: false });
+    }
+  },
+
+  addProject: async (data) => {
+    try {
+      set({ isAddingProject: true });
+      const res = await axiosInstance.post(
+        '/admin/operations/addProject',
+        data
+      );
+      // Optionally, you can manage projects in a separate store similar to products and collections
+      toast.success('Project added successfully');
+      return res
+    } catch (error) {
+      toast.error(error.response.data.message);
+    } finally {
+      set({ isAddingProject: false });
+    }
+  },
+
+  updateProject: async (projectId, data) => {
+    try {
+      set({ isUpdatingProject: true });
+      const res = await axiosInstance.put(
+        `/admin/operations/updateProject/${projectId}`,
+        data
+      );
+      // Optionally, you can manage projects in a separate store similar to products and collections
+      toast.success('Project updated successfully');
+      return res
+    } catch (error) {
+      toast.error(error.response.data.message);
+    } finally {
+      set({ isUpdatingProject: false });
+    }
+  },
+
+  delProject: async (projectId) => {
+    try {
+      set({ isDeletingProject: true });
+      const res = await axiosInstance.delete(
+        `/admin/operations/delProject/${projectId}`
+      );
+      // Optionally, you can manage projects in a separate store similar to products and collections
+      toast.success('Project deleted successfully');
+      return res
+    } catch (error) {
+      toast.error(error.response.data.message);
+    } finally {
+      set({ isDeletingProject: false });
     }
   },
 }));

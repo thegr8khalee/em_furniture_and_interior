@@ -15,6 +15,8 @@ import reviewRoutes from './routes/review.routes.js';
 import cartRoutes from './routes/cart.routes.js';
 import wishlistRoutes from './routes/wishlist.routes.js';
 import contactRoutes from './routes/contact.routes.js';
+import projectRoutes from './routes/project.routes.js';
+
 const app = express();
 
 if (process.env.NODE_ENV !== 'production') {
@@ -42,6 +44,7 @@ app.use('/api/review', reviewRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/projects', projectRoutes);
 
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../frontend/dist')));
