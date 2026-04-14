@@ -451,3 +451,17 @@ export const checkItemExistence = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
+export const getDetailsByIds = async (req, res) => {
+  try {
+    const { productIds = [], collectionIds = [] } = req.body;
+
+    const products = await Product.find({ _id: { $in: productIds } });
+    const collections = await Collection.find({ _id: { $in: collectionIds } });
+
+    res.status(200).json({ products, collections });
+  } catch (error) {
+    console.error('Error fetching item details by IDs:', error);
+    res.status(500).json({ message: 'Failed to fetch item details.' });
+  }
+};

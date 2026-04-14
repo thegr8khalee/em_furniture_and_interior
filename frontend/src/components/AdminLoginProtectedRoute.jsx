@@ -4,13 +4,13 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 
 const AdminLoginProtectedRoute = () => {
-    const { authUser, isLoading, isAdmin, checkAuth } = useAuthStore(); // Access state from Zustand store
+    const { authUser, isCheckingAuth, isAdmin, checkAuth } = useAuthStore(); // Access state from Zustand store
 
     useEffect(() => {
         checkAuth();
       }, [checkAuth]);
 
-    if (isLoading) {
+    if (isCheckingAuth) {
         // Show a loading indicator while authentication status is being determined
         return <div className="text-center p-4">Loading authentication...</div>;
     }

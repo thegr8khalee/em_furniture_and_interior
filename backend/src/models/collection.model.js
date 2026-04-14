@@ -6,6 +6,8 @@ const reviewSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   rating: { type: Number, required: true, min: 1, max: 5 },
   comment: { type: String, trim: true },
+  isVerifiedPurchase: { type: Boolean, default: false },
+  isApproved: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -47,12 +49,16 @@ const collectionSchema = new mongoose.Schema(
 
 // Pre-save hook to calculate average rating for the collection
 collectionSchema.pre('save', function (next) {
-  if (this.reviews && this.reviews.length > 0) {
-    const totalRating = this.reviews.reduce(
+  const approvedReviews = (this.reviews || []).filter(
+    (review) => review.isApproved
+  );
+
+  if (approvedReviews.length > 0) {
+    const totalRating = approvedReviews.reduce(
       (acc, review) => acc + review.rating,
       0
     );
-    this.averageRating = (totalRating / this.reviews.length).toFixed(1);
+    this.averageRating = (totalRating / approvedReviews.length).toFixed(1);
   } else {
     this.averageRating = 0;
   }

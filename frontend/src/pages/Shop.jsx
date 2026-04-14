@@ -2,11 +2,16 @@
 // src/pages/Shop.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { luxuryEase, elegantEase } from '../lib/animations';
+import { PageWrapper, SectionReveal, FadeIn } from '../components/animations';
 import { useProductsStore } from '../store/useProductsStore';
 import { useCollectionStore } from '../store/useCollectionStore';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useCompareStore } from '../store/useCompareStore';
+import { useMarketingStore } from '../store/useMarketingStore';
 import {
   Loader2,
   Filter,
@@ -14,10 +19,12 @@ import {
   ChevronDown,
   ChevronUp,
   Heart,
+  GitCompare,
   ShoppingCart,
 } from 'lucide-react'; // Added ChevronUp, Heart, ShoppingCart
 // import { toast } from 'react-hot-toast';
 import FilterModal from '../components/FilterModal';
+import { Button, EmptyState, ProductCardSkeleton } from '../components/ui';
 // import Hero1 from '../images/Hero1.png'; // Assuming your hero image path
 // import whatsapp from '../images/whatsapp.png'; // Assuming your whatsapp icon path
 
@@ -49,6 +56,9 @@ const Shop = () => {
     isRemovingFromWishlist,
   } = useWishlistStore();
   const { isAdmin, checkAuth, isAuthReady } = useAuthStore();
+  const { compareIds, toggleCompare, clearCompare } = useCompareStore();
+  const { banners, flashSales, getActiveBanners, getActiveFlashSales } =
+    useMarketingStore();
 
   // --- View Mode State ('products' or 'collections') ---
   const [viewMode, setViewMode] = useState('products');
@@ -94,7 +104,9 @@ const Shop = () => {
   // --- Initial Auth Check ---
   useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+    getActiveBanners();
+    getActiveFlashSales();
+  }, [checkAuth, getActiveBanners, getActiveFlashSales]);
 
   // --- Fetch Wishlist ONLY when auth is ready and user is not admin ---
   useEffect(() => {
@@ -126,7 +138,7 @@ const Shop = () => {
         navigate(location.pathname, { replace: true, state: {} });
       }
     }
-  }, [location.state?.focusSearch, productSearchInputRef, viewMode, navigate]);
+  }, [location.pathname, location.state?.focusSearch, productSearchInputRef, viewMode, navigate]);
 
   // --- Unique Categories Extraction from Products ---
   useEffect(() => {
@@ -349,6 +361,7 @@ const Shop = () => {
 
   const isInWishlist = (id) =>
     (wishlist || []).some((wishlistItem) => wishlistItem.item === id);
+  const isInCompare = (id) => (compareIds || []).includes(id);
 
   const handleAddToWishlist = (id, type) => {
     addToWishlist(id, type);
@@ -379,29 +392,47 @@ const Shop = () => {
   };
 
   return (
-    <div className="">
-      <div className="relative">
-        <img
-          src={
-            'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png'
-          }
-          alt="Shop Hero"
-          className="object-cover h-50 w-full"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
-          <h1 className="absolute bottom-15 left-1/2 -translate-x-1/2 mt-20 mb-2 text-5xl font-bold text-center text-base-100 font-[poppins]">
+    <PageWrapper>
+    <div className="min-h-screen bg-white">
+      {/* Hero Banner */}
+      <div className="relative z-10 h-56 sm:h-64 lg:h-72 overflow-visible">
+        <div className="absolute inset-0 overflow-hidden">
+          <motion.img
+            src="https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"
+            alt="Shop Hero"
+            className="object-cover w-full h-full"
+            initial={{ scale: 1.15, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 1.4, ease: luxuryEase }}
+          />
+          <div className="absolute inset-0 bg-primary/80" />
+        </div>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <motion.div
+            className="divider-gold mb-4"
+            style={{ background: '#c9a84c' }}
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 1, delay: 0.3, ease: luxuryEase }}
+          />
+          <motion.h1
+            className="font-heading text-4xl sm:text-5xl font-medium text-white"
+            initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 0.8, delay: 0.5, ease: elegantEase }}
+          >
             Shop
-          </h1>
+          </motion.h1>
 
           {/* Filters Section: Category Dropdown (conditionally rendered) */}
-          <div className="absolute bottom-8 flex flex-col justify-center items-center gap-4 w-full">
+          <div className="absolute bottom-6 flex flex-col justify-center items-center gap-4 w-full z-200">
             {viewMode === 'products' && (
               <div
                 className="form-control relative w-full max-w-xs"
                 ref={dropdownRef}
               >
                 <div
-                  className="input border-0 w-full bg-transparent rounded-md flex items-center justify-center cursor-pointer shadow-none"
+                  className="input border-0 w-full bg-transparent rounded-none flex items-center justify-center cursor-pointer shadow-none"
                   onClick={() =>
                     setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
                   }
@@ -413,7 +444,7 @@ const Shop = () => {
                     }
                   }}
                 >
-                  <span className="font-[montserrat] text-base-100 font-bold">
+                  <span className="text-white/80 font-heading text-sm tracking-wider">
                     {selectedCategory === 'all'
                       ? 'All Products'
                       : selectedCategory}
@@ -426,17 +457,17 @@ const Shop = () => {
                 </div>
 
                 {isCategoryDropdownOpen && (
-                  <div className="absolute z-101 w-full bg-base-100 border border-base-300 rounded-md shadow-lg mt-1 top-full max-h-60 overflow-y-auto">
+                  <div className="absolute z-200 w-full bg-base-100 border border-base-300 rounded-none shadow-lg mt-1 top-full max-h-60 overflow-y-auto">
                     <div className="p-2 sticky top-0 bg-base-100 border-b border-base-300 z-20">
                       <div className="relative">
                         <Search
-                          className="absolute z-100 left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                          className="absolute z-100 left-3 top-1/2 -translate-y-1/2 text-neutral/40"
                           size={18}
                         />
                         <input
                           type="text"
                           placeholder="Search categories..."
-                          className="input input-bordered w-full pl-10 pr-3 rounded-md"
+                          className="input input-bordered w-full pl-10 pr-3 rounded-none"
                           value={categorySearchQuery}
                           onChange={(e) =>
                             setCategorySearchQuery(e.target.value)
@@ -446,7 +477,7 @@ const Shop = () => {
                     </div>
                     {uniqueCategories.length === 0 &&
                     filteredCategories.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500">
+                      <div className="p-4 text-center text-neutral/60">
                         No categories found.
                       </div>
                     ) : (
@@ -454,7 +485,7 @@ const Shop = () => {
                         <li>
                           <button
                             onClick={() => handleCategoryChange('all')}
-                            className={`font-[montserrat] btn border-0 shadow-0 w-full p-2 hover:bg-base-200 rounded-none
+                            className={`btn border-0 shadow-0 w-full p-2 hover:bg-base-200 rounded-none text-sm
                                           ${
                                             selectedCategory === 'all'
                                               ? 'font-bold bg-base-200'
@@ -468,7 +499,7 @@ const Shop = () => {
                           <li key={category}>
                             <button
                               onClick={() => handleCategoryChange(category)}
-                              className={`font-[montserrat] btn border-0 shadow-0 bg-base-100 w-full text-left p-2 hover:bg-base-200 rounded-none
+                              className={`btn border-0 shadow-0 bg-base-100 w-full text-left p-2 hover:bg-base-200 rounded-none text-sm
                                           ${
                                             selectedCategory === category
                                               ? 'font-bold bg-base-200'
@@ -489,43 +520,57 @@ const Shop = () => {
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Shop Banners */}
+        
+
         {/* Products/Collections Switch */}
-        <div className="flex justify-center my-5">
-          <div className="tabs tabs-boxed space-x-4">
-            <button
+        <motion.div
+          className="flex justify-center my-5"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: luxuryEase }}
+        >
+          <div className="inline-flex border border-base-300">
+            <motion.button
               type="button"
-              className={`btn tab rounded-xl ${
-                viewMode === 'products' ? 'tab-active bg-primary' : ''
+              className={`px-6 py-2 text-xs font-semibold tracking-[0.15em] uppercase transition-all ${
+                viewMode === 'products' ? 'bg-primary text-white' : 'bg-white text-neutral hover:bg-base-200'
               }`}
               onClick={() => setViewMode('products')}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.2 }}
             >
               Products
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               type="button"
-              className={`btn tab rounded-xl ${
-                viewMode === 'collections' ? 'tab-active bg-primary' : ''
+              className={`px-6 py-2 text-xs font-semibold tracking-[0.15em] uppercase transition-all ${
+                viewMode === 'collections' ? 'bg-primary text-white' : 'bg-white text-neutral hover:bg-base-200'
               }`}
               onClick={() => setViewMode('collections')}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.2 }}
             >
               Collections
-            </button>
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Conditional Rendering based on viewMode */}
         {viewMode === 'products' ? (
           <>
-            <div className="sm:flex w-full my-5">
+            <div className="my-5 flex w-full flex-col gap-3 sm:flex-row">
               {/* Product Search Bar */}
               <div className="form-control w-full">
-                <div className="relative">
+                <div className="relative h-full">
                   <Search className="size-5 z-10 absolute left-3 top-1/2 stroke-gray-400 -translate-y-1/2" />
                   <input
                     type="text"
                     placeholder="Search products by name or description..."
-                    className="input input-bordered w-full pl-10 pr-3 rounded-xl"
+                    className="input h-full input-bordered rounded-none w-full p-4 pl-10"
                     value={productSearchQuery}
                     onChange={(e) => setProductSearchQuery(e.target.value)}
                     ref={productSearchInputRef}
@@ -533,35 +578,44 @@ const Shop = () => {
                 </div>
               </div>
               {/* "More Filters" Button for Products */}
-              <div className="form-control w-full sm:ml-2 sm:mt-0 mt-2 sm:w-auto">
-                <button
+              <div className="form-control w-full sm:w-auto">
+                <Button
                   type="button"
-                  className="btn text-secondary btn-primary rounded-xl w-full"
+                  variant="elegant-outline"
+                  className="w-full text-sm"
+                  leftIcon={Filter}
                   onClick={handleOpenProductFilterModal}
                 >
-                  <Filter size={20} /> Filters
-                </button>
+                  Filters
+                </Button>
               </div>
             </div>
 
             {/* Product Grid */}
             {isGettingProducts && products.length === 0 ? (
-              <div className="flex justify-center items-center min-h-[200px]">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="ml-2 text-lg">Loading products...</p>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <ProductCardSkeleton key={index} />
+                ))}
               </div>
             ) : products.length === 0 && !isGettingProducts ? (
-              <div className="text-center text-xl text-gray-600 my-16">
-                No products found for the selected filters.
-              </div>
+              <EmptyState
+                icon={Search}
+                title="No products found"
+                description="Try adjusting your filters, browsing another category, or clearing the current search."
+              />
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {products.map((product) => (
-                  <div
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {products.map((product, index) => (
+                  <motion.div
                     key={product._id}
-                    className=" rounded-xl overflow-hidden"
+                    className="overflow-hidden border border-base-300 bg-white"
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: (index % 4) * 0.1, ease: luxuryEase }}
+                    whileHover={{ y: -6, boxShadow: '0 16px 32px rgba(0,0,0,0.1)' }}
                   >
-                    <figure className="relative h-60 w-full overflow-hidden rounded-xl">
+                    <figure className="relative h-60 w-full overflow-hidden img-zoom">
                       <button
                         type="button"
                         className="w-full h-full"
@@ -574,7 +628,10 @@ const Shop = () => {
                               : 'https://placehold.co/400x300/E0E0E0/333333?text=No+Image'
                           }
                           alt={product.name}
-                          className="w-full h-full rounded-xl object-cover transform transition-transform duration-300 hover:scale-105"
+                          className="w-full h-full object-cover transition-transform duration-500"
+                          style={{ willChange: 'transform' }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src =
@@ -612,10 +669,10 @@ const Shop = () => {
                         )
                       ) : null}
 
-                      <span className="absolute bottom-3 left-3 text-base text-shadow-lg truncate text-base-100 font-[montserrat]">
+                      <span className="absolute bottom-3 left-3 text-xs tracking-wider uppercase text-white/80">
                         {product.style}{' '}
                         {product.collectionId && product.collectionId.name && (
-                          <span className="text-sm mb-1">
+                          <span className="text-xs mb-1">
                             | {product.collectionId.name}
                           </span>
                         )}
@@ -626,7 +683,7 @@ const Shop = () => {
                       <div className="flex items-center justify-between">
                         <div className="w-full">
                           <div>
-                            <h2 className="text truncate whitespace-nowrap">
+                            <h2 className="text-sm font-heading font-semibold text-neutral truncate whitespace-nowrap">
                               {product.name}
                             </h2>
                           </div>
@@ -635,7 +692,7 @@ const Shop = () => {
                               {product.isPromo &&
                               product.discountedPrice !== undefined ? (
                                 <div className="flex flex-col">
-                                  <span className="text-red-600 font-bold text-lg">
+                                  <span className="text-secondary font-bold text-lg">
                                     ₦
                                     {Number(
                                       product.discountedPrice
@@ -644,7 +701,7 @@ const Shop = () => {
                                       maximumFractionDigits: 2,
                                     })}
                                   </span>
-                                  <span className="text-gray-500 line-through text-sm">
+                                  <span className="text-neutral/60 line-through text-sm">
                                     ₦
                                     {Number(product.price).toLocaleString(
                                       'en-NG',
@@ -670,31 +727,48 @@ const Shop = () => {
                             </div>
                             <div>
                               {!isAdmin ? (
-                                <div className="space-x-1">
-                                  <a
+                                <div className="flex items-center gap-2">
+                                  <Button
                                     href={whatsappHref(product)}
-                                    className="btn rounded-xl bg-green-400"
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    variant="icon"
+                                    size="icon"
+                                    className="h-9 w-9 border-0 bg-green-600 text-white hover:bg-green-700 hover:text-white"
+                                    ariaLabel={`Order ${product.name} on WhatsApp`}
                                   >
                                     <img
                                       src={
                                         'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png'
                                       }
                                       alt="WhatsApp"
-                                      className="size-5"
+                                      className="size-4"
                                     />
-                                  </a>
-                                  <button
+                                  </Button>
+                                  <Button
                                     type="button"
-                                    className="btn rounded-xl bg-primary"
-                                    onClick={() =>
-                                      handleAddToCart(product._id, 1, 'Product')
-                                    }
-                                    // disabled={isAddingToCart}
+                                    variant={isInCompare(product._id) ? 'primary' : 'icon'}
+                                    size="icon"
+                                    className={`h-9 w-9 ${
+                                      isInCompare(product._id)
+                                        ? 'border-0'
+                                        : 'bg-base-100 text-neutral hover:border-secondary hover:text-secondary'
+                                    }`}
+                                    onClick={() => toggleCompare(product._id)}
+                                    ariaLabel="Toggle compare"
                                   >
-                                    <ShoppingCart className="" />
-                                  </button>
+                                    <GitCompare size={16} />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="primary"
+                                    size="icon"
+                                    className="h-9 w-9 border-0"
+                                    onClick={() => handleAddToCart(product._id, 1, 'Product')}
+                                    ariaLabel={`Add ${product.name} to cart`}
+                                  >
+                                    <ShoppingCart size={16} />
+                                  </Button>
                                 </div>
                               ) : null}
                             </div>
@@ -702,7 +776,7 @@ const Shop = () => {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}
@@ -715,23 +789,26 @@ const Shop = () => {
             )} */}
 
             {hasMoreProducts && (
-              <div className="flex justify-center mt-8">
-                <button
-                  type="button"
-                  onClick={handleLoadMoreProducts}
-                  className="mb-4 btn bg-primary px-8 py-3 rounded-xl font-semibold"
+              <motion.div
+                className="flex justify-center mt-8"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <motion.div
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={{ duration: 0.25, ease: luxuryEase }}
                 >
-                  {!isGettingProducts ? (
-                    'Load More'
-                  ) : (
-                    <Loader2 className="animate-spin" />
-                  )}
-                </button>
-              </div>
+                  <Button type="button" onClick={handleLoadMoreProducts} isLoading={isGettingProducts}>
+                    Load More
+                  </Button>
+                </motion.div>
+              </motion.div>
             )}
 
             {!hasMoreProducts && products.length > 0 && !isGettingProducts && (
-              <p className="text-center text-gray-600 my-8">
+              <p className="text-center text-neutral/70 my-8">
                 You've reached the end of the products!
               </p>
             )}
@@ -758,50 +835,59 @@ const Shop = () => {
         ) : (
           // Collections Grid with Search and Filters
           <>
-            <div className="sm:flex w-full my-5">
+            <div className="my-5 flex w-full flex-col gap-3 sm:flex-row">
               {/* Collection Search Bar */}
               <div className="form-control w-full">
-                <div className="relative">
+                <div className="relative h-full ">
                   <Search className="size-5 z-10 absolute left-3 top-1/2 stroke-gray-400 -translate-y-1/2" />
                   <input
                     type="text"
                     placeholder="Search collections by name or description..."
-                    className="rounded-xl input input-bordered w-full pl-10 pr-3"
+                    className="input h-full input-bordered w-full pl-10 p-4"
                     value={collectionSearchQuery}
                     onChange={(e) => setCollectionSearchQuery(e.target.value)}
                   />
                 </div>
               </div>
               {/* "More Filters" Button for Collections */}
-              <div className="form-control w-full sm:ml-2 sm:mt-0 mt-2 sm:w-auto">
-                <button
+              <div className="form-control w-full sm:w-auto">
+                <Button
                   type="button"
-                  className="btn text-secondary btn-primary rounded-xl w-full"
+                  variant="elegant-outline"
+                  className="w-full text-sm"
+                  leftIcon={Filter}
                   onClick={handleOpenCollectionFilterModal}
                 >
-                  <Filter size={20} /> Filters
-                </button>
+                  Filters
+                </Button>
               </div>
             </div>
 
             {/* Collection List */}
             {isGettingCollections && collections.length === 0 ? (
-              <div className="flex justify-center items-center min-h-[200px]">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="ml-2 text-lg">Loading collections...</p>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <ProductCardSkeleton key={index} />
+                ))}
               </div>
             ) : collections.length === 0 && !isGettingCollections ? (
-              <div className="text-center text-xl text-gray-600 my-16">
-                No collections found for the selected filters.
-              </div>
+              <EmptyState
+                icon={Search}
+                title="No collections found"
+                description="Try widening your price range or exploring a different view mode."
+              />
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {collections.map((collection) => (
-                  <div
+                {collections.map((collection, index) => (
+                  <motion.div
                     key={collection._id}
-                    className="rounded-xl overflow-hidden"
+                    className="overflow-hidden border border-base-300 bg-white"
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: (index % 4) * 0.1, ease: luxuryEase }}
+                    whileHover={{ y: -6, boxShadow: '0 16px 32px rgba(0,0,0,0.1)' }}
                   >
-                    <figure className="relative h-60 w-full overflow-hidden rounded-xl">
+                    <figure className="relative h-60 w-full overflow-hidden img-zoom">
                       <button
                         type="button"
                         className="w-full h-full"
@@ -813,7 +899,10 @@ const Shop = () => {
                             'https://placehold.co/400x300/E0E0E0/333333?text=No+Image'
                           }
                           alt={collection.name}
-                          className="w-full h-full rounded-xl object-cover transform transition-transform duration-300 hover:scale-105"
+                          className="w-full h-full object-cover transition-transform duration-500"
+                          style={{ willChange: 'transform' }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src =
@@ -853,7 +942,7 @@ const Shop = () => {
                           </button>
                         )
                       ) : null}
-                      <span className="absolute bottom-3 left-3 text-base text-shadow-lg truncate text-base-100 font-[montserrat]">
+                      <span className="absolute bottom-3 left-3 text-xs tracking-wider uppercase text-white/80">
                         {collection.style}
                       </span>
                     </figure>
@@ -861,7 +950,7 @@ const Shop = () => {
                       <div className="flex items-center justify-between">
                         <div className="w-full">
                           <div>
-                            <h2 className="text truncate whitespace-nowrap">
+                            <h2 className="text-sm font-heading font-semibold text-neutral truncate whitespace-nowrap">
                               {collection.name}
                             </h2>
                           </div>
@@ -870,7 +959,7 @@ const Shop = () => {
                               {collection.isPromo &&
                               collection.discountedPrice !== undefined ? (
                                 <div className="flex flex-col">
-                                  <span className="text-red-600 font-bold text-lg">
+                                  <span className="text-secondary font-bold text-lg">
                                     ₦
                                     {Number(
                                       collection.discountedPrice
@@ -879,7 +968,7 @@ const Shop = () => {
                                       maximumFractionDigits: 2,
                                     })}
                                   </span>
-                                  <span className="text-gray-500 line-through text-sm">
+                                  <span className="text-neutral/60 line-through text-sm">
                                     ₦
                                     {Number(collection.price).toLocaleString(
                                       'en-NG',
@@ -905,35 +994,36 @@ const Shop = () => {
                             </div>
                             <div>
                               {!isAdmin ? (
-                                <div className="space-x-1">
-                                  <a
+                                <div className="flex items-center gap-2">
+                                  <Button
                                     href={whatsappHref(collection)}
-                                    className="btn rounded-xl bg-green-400"
                                     target="_blank"
                                     rel="noopener noreferrer"
+                                    variant="icon"
+                                    size="icon"
+                                    className="h-9 w-9 border-0 bg-green-600 text-white hover:bg-green-700 hover:text-white"
+                                    ariaLabel={`Order ${collection.name} on WhatsApp`}
                                   >
                                     <img
                                       src={
                                         'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png'
                                       }
                                       alt="WhatsApp"
-                                      className="size-5"
+                                      className="size-4"
                                     />
-                                  </a>
-                                  <button
+                                  </Button>
+                                  <Button
                                     type="button"
-                                    className="btn rounded-xl bg-primary"
+                                    variant="primary"
+                                    size="icon"
+                                    className="h-9 w-9 border-0"
                                     onClick={() =>
-                                      handleAddToCart(
-                                        collection._id,
-                                        1,
-                                        'Collection'
-                                      )
+                                      handleAddToCart(collection._id, 1, 'Collection')
                                     }
-                                    // disabled={isAddingToCart}
+                                    ariaLabel={`Add ${collection.name} to cart`}
                                   >
-                                    <ShoppingCart className="" />
-                                  </button>
+                                    <ShoppingCart size={16} />
+                                  </Button>
                                 </div>
                               ) : null}
                             </div>
@@ -941,7 +1031,7 @@ const Shop = () => {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}
@@ -954,25 +1044,28 @@ const Shop = () => {
             )} */}
 
             {hasMoreCollections && (
-              <div className="flex justify-center mt-8">
-                <button
+              <motion.div
+                className="mt-8 flex justify-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Button
                   type="button"
                   onClick={handleLoadMoreCollections}
-                  className="mb-4 btn bg-primary px-8 py-3 rounded-xl font-semibold"
+                  className="mb-4"
+                  isLoading={isGettingCollections}
+                  disabled={isGettingCollections}
                 >
-                  {!isGettingCollections ? (
-                    'Load More'
-                  ) : (
-                    <Loader2 className="animate-spin" />
-                  )}
-                </button>
-              </div>
+                  {!isGettingCollections ? 'Load More' : 'Loading'}
+                </Button>
+              </motion.div>
             )}
 
             {!hasMoreCollections &&
               collections.length > 0 &&
               !isGettingCollections && (
-                <p className="text-center text-gray-600 mt-8">
+                <p className="text-center text-neutral/70 mt-8">
                   You've reached the end of the collections!
                 </p>
               )}
@@ -997,8 +1090,23 @@ const Shop = () => {
             />
           </>
         )}
+
+        {viewMode === 'products' && compareIds.length > 0 && (
+          <div className="fixed bottom-20 right-4 z-40 flex items-center gap-3 border border-base-300 bg-base-100 px-4 py-3 shadow-lg">
+            <div className="text-sm">
+              <span className="font-semibold">Compare list:</span> {compareIds.length}
+            </div>
+            <Button type="button" variant="primary" size="sm" onClick={() => navigate('/compare')}>
+              View compare
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={clearCompare}>
+              Clear
+            </Button>
+          </div>
+        )}
       </div>
     </div>
+    </PageWrapper>
   );
 };
 

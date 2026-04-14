@@ -8,6 +8,7 @@ import Collection from '../models/collection.model.js'; // To validate collectio
 import mongoose from 'mongoose';
 import cloudinary from '../lib/cloudinary.js';
 import Project from '../models/project.model.js';
+import { resolvePermissions } from '../lib/permissions.js';
 
 export const adminSignup = async (req, res) => {
   const { username, email, password } = req.body;
@@ -38,6 +39,8 @@ export const adminSignup = async (req, res) => {
       username,
       email,
       passwordHash,
+      role: 'admin',
+      permissions: resolvePermissions('admin'),
     });
 
     // Save the new admin to the database
@@ -52,6 +55,9 @@ export const adminSignup = async (req, res) => {
       _id: newAdmin._id,
       username: newAdmin.username,
       email: newAdmin.email,
+      role: 'admin',
+      adminRole: newAdmin.role,
+      permissions: newAdmin.permissions,
       createdAt: newAdmin.createdAt,
       updatedAt: newAdmin.updatedAt,
       message: 'Admin registered successfully.',
@@ -90,6 +96,13 @@ export const adminLogin = async (req, res) => {
       return res.status(400).json({ message: 'Invalid Credentials' });
     }
 
+    // Backfill legacy admins with super_admin role.
+    if (!admin.role) {
+      admin.role = 'super_admin';
+      admin.permissions = resolvePermissions('super_admin');
+      await admin.save();
+    }
+
     // Generate JWT token for admin
     generateToken(admin._id, res, 'admin'); // Pass 'admin' role/type
 
@@ -99,6 +112,8 @@ export const adminLogin = async (req, res) => {
       username: admin.username,
       email: admin.email,
       role: 'admin',
+      adminRole: admin.role,
+      permissions: resolvePermissions(admin.role, admin.permissions),
       createdAt: admin.createdAt,
       updatedAt: admin.updatedAt,
       message: 'Admin logged in successfully.',
@@ -138,6 +153,13 @@ export const addProduct = async (req, res) => {
     isPromo, // This will be a number or undefined from frontend
     isForeign,
     origin,
+    leadTimeDays,
+    shippingMinDays,
+    shippingMaxDays,
+    seoTitle,
+    seoDescription,
+    seoKeywords,
+    seoSchemaJsonLd,
   } = req.body;
 
   let price = parseFloat(req.body.price);
@@ -145,6 +167,27 @@ export const addProduct = async (req, res) => {
     req.body.discountedPrice !== ''
       ? parseFloat(req.body.discountedPrice)
       : undefined;
+  const parsedLeadTimeDays =
+    leadTimeDays !== undefined && leadTimeDays !== ''
+      ? parseInt(leadTimeDays, 10)
+      : undefined;
+  const parsedShippingMinDays =
+    shippingMinDays !== undefined && shippingMinDays !== ''
+      ? parseInt(shippingMinDays, 10)
+      : undefined;
+  const parsedShippingMaxDays =
+    shippingMaxDays !== undefined && shippingMaxDays !== ''
+      ? parseInt(shippingMaxDays, 10)
+      : undefined;
+
+  const normalizedSeoKeywords = Array.isArray(seoKeywords)
+    ? seoKeywords
+    : typeof seoKeywords === 'string'
+      ? seoKeywords.split(',')
+      : [];
+  const cleanedSeoKeywords = normalizedSeoKeywords
+    .map((keyword) => (typeof keyword === 'string' ? keyword.trim() : ''))
+    .filter((keyword) => keyword);
 
   // Basic validation using the parsed numeric values
 
@@ -182,6 +225,39 @@ export const addProduct = async (req, res) => {
     return res
       .status(400)
       .json({ message: 'Origin is required if product is foreign.' });
+  }
+  if (
+    parsedLeadTimeDays !== undefined &&
+    (isNaN(parsedLeadTimeDays) || parsedLeadTimeDays < 0)
+  ) {
+    return res
+      .status(400)
+      .json({ message: 'Lead time days must be a non-negative number.' });
+  }
+  if (
+    parsedShippingMinDays !== undefined &&
+    (isNaN(parsedShippingMinDays) || parsedShippingMinDays < 0)
+  ) {
+    return res
+      .status(400)
+      .json({ message: 'Shipping min days must be a non-negative number.' });
+  }
+  if (
+    parsedShippingMaxDays !== undefined &&
+    (isNaN(parsedShippingMaxDays) || parsedShippingMaxDays < 0)
+  ) {
+    return res
+      .status(400)
+      .json({ message: 'Shipping max days must be a non-negative number.' });
+  }
+  if (
+    parsedShippingMinDays !== undefined &&
+    parsedShippingMaxDays !== undefined &&
+    parsedShippingMaxDays < parsedShippingMinDays
+  ) {
+    return res
+      .status(400)
+      .json({ message: 'Shipping max days must be >= shipping min days.' });
   }
 
   try {
@@ -238,6 +314,24 @@ export const addProduct = async (req, res) => {
           : undefined,
       isForeign: isForeign || false,
       origin: isForeign ? origin : undefined,
+      leadTimeDays:
+        typeof parsedLeadTimeDays === 'number' && !isNaN(parsedLeadTimeDays)
+          ? parsedLeadTimeDays
+          : 0,
+      shippingMinDays:
+        typeof parsedShippingMinDays === 'number' &&
+        !isNaN(parsedShippingMinDays)
+          ? parsedShippingMinDays
+          : undefined,
+      shippingMaxDays:
+        typeof parsedShippingMaxDays === 'number' &&
+        !isNaN(parsedShippingMaxDays)
+          ? parsedShippingMaxDays
+          : undefined,
+      seoTitle: seoTitle || undefined,
+      seoDescription: seoDescription || undefined,
+      seoKeywords: cleanedSeoKeywords.length > 0 ? cleanedSeoKeywords : undefined,
+      seoSchemaJsonLd: seoSchemaJsonLd || undefined,
     });
 
     const savedProduct = await newProduct.save();
@@ -288,6 +382,13 @@ export const updateProduct = async (req, res) => {
     isPromo,
     isForeign,
     origin,
+    leadTimeDays,
+    shippingMinDays,
+    shippingMaxDays,
+    seoTitle,
+    seoDescription,
+    seoKeywords,
+    seoSchemaJsonLd,
   } = req.body;
 
   // Parse price and discountedPrice from string to number for update
@@ -297,6 +398,29 @@ export const updateProduct = async (req, res) => {
     req.body.discountedPrice !== undefined && req.body.discountedPrice !== ''
       ? parseFloat(req.body.discountedPrice)
       : undefined;
+  const parsedLeadTimeDays =
+    leadTimeDays !== undefined && leadTimeDays !== ''
+      ? parseInt(leadTimeDays, 10)
+      : undefined;
+  const parsedShippingMinDays =
+    shippingMinDays !== undefined && shippingMinDays !== ''
+      ? parseInt(shippingMinDays, 10)
+      : undefined;
+  const parsedShippingMaxDays =
+    shippingMaxDays !== undefined && shippingMaxDays !== ''
+      ? parseInt(shippingMaxDays, 10)
+      : undefined;
+
+  const normalizedSeoKeywords = Array.isArray(seoKeywords)
+    ? seoKeywords
+    : typeof seoKeywords === 'string'
+      ? seoKeywords.split(',')
+      : undefined;
+  const cleanedSeoKeywords = Array.isArray(normalizedSeoKeywords)
+    ? normalizedSeoKeywords
+        .map((keyword) => (typeof keyword === 'string' ? keyword.trim() : ''))
+        .filter((keyword) => keyword)
+    : undefined;
 
   if (!mongoose.Types.ObjectId.isValid(productId)) {
     return res.status(400).json({ message: 'Invalid Product ID format.' });
@@ -340,6 +464,39 @@ export const updateProduct = async (req, res) => {
     return res
       .status(400)
       .json({ message: 'Discounted price must be non-negative.' });
+  }
+  if (
+    parsedLeadTimeDays !== undefined &&
+    (isNaN(parsedLeadTimeDays) || parsedLeadTimeDays < 0)
+  ) {
+    return res
+      .status(400)
+      .json({ message: 'Lead time days must be a non-negative number.' });
+  }
+  if (
+    parsedShippingMinDays !== undefined &&
+    (isNaN(parsedShippingMinDays) || parsedShippingMinDays < 0)
+  ) {
+    return res
+      .status(400)
+      .json({ message: 'Shipping min days must be a non-negative number.' });
+  }
+  if (
+    parsedShippingMaxDays !== undefined &&
+    (isNaN(parsedShippingMaxDays) || parsedShippingMaxDays < 0)
+  ) {
+    return res
+      .status(400)
+      .json({ message: 'Shipping max days must be a non-negative number.' });
+  }
+  if (
+    parsedShippingMinDays !== undefined &&
+    parsedShippingMaxDays !== undefined &&
+    parsedShippingMaxDays < parsedShippingMinDays
+  ) {
+    return res
+      .status(400)
+      .json({ message: 'Shipping max days must be >= shipping min days.' });
   }
 
   try {
@@ -496,6 +653,37 @@ export const updateProduct = async (req, res) => {
     if (isBestSeller !== undefined) product.isBestSeller = isBestSeller;
     if (isPromo !== undefined) product.isPromo = isPromo;
     if (isForeign !== undefined) product.isForeign = isForeign;
+    if (leadTimeDays !== undefined) {
+      product.leadTimeDays =
+        typeof parsedLeadTimeDays === 'number' && !isNaN(parsedLeadTimeDays)
+          ? parsedLeadTimeDays
+          : 0;
+    }
+    if (shippingMinDays !== undefined) {
+      product.shippingMinDays =
+        typeof parsedShippingMinDays === 'number' &&
+        !isNaN(parsedShippingMinDays)
+          ? parsedShippingMinDays
+          : undefined;
+    }
+    if (shippingMaxDays !== undefined) {
+      product.shippingMaxDays =
+        typeof parsedShippingMaxDays === 'number' &&
+        !isNaN(parsedShippingMaxDays)
+          ? parsedShippingMaxDays
+          : undefined;
+    }
+    if (seoTitle !== undefined) product.seoTitle = seoTitle || undefined;
+    if (seoDescription !== undefined) {
+      product.seoDescription = seoDescription || undefined;
+    }
+    if (cleanedSeoKeywords !== undefined) {
+      product.seoKeywords =
+        cleanedSeoKeywords.length > 0 ? cleanedSeoKeywords : undefined;
+    }
+    if (seoSchemaJsonLd !== undefined) {
+      product.seoSchemaJsonLd = seoSchemaJsonLd || undefined;
+    }
 
     // Handle discountedPrice logic based on isPromo
     if (product.isPromo) {

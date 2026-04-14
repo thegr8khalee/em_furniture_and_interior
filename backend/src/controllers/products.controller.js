@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
 import Product from '../models/product.model.js';
 
+const filterApprovedReviews = (productDoc) => {
+  const product = productDoc.toObject();
+  product.reviews = (product.reviews || []).filter((review) => review.isApproved);
+  return product;
+};
+
 export const getProducts = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1; // Default to page 1
@@ -114,9 +120,44 @@ export const getProductById = async (req, res) => {
       return res.status(404).json({ message: 'Product not found.' });
     }
 
-    res.status(200).json(product);
+    res.status(200).json(filterApprovedReviews(product));
   } catch (error) {
     console.error('Error in getProductById controller: ', error.message);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+export const getProductsByIds = async (req, res) => {
+  const idsParam = req.query.ids || '';
+  const ids = idsParam
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean);
+
+  if (ids.length === 0) {
+    return res.status(400).json({ message: 'ids query param is required.' });
+  }
+
+  const validIds = ids.filter((id) => mongoose.Types.ObjectId.isValid(id));
+  if (validIds.length === 0) {
+    return res.status(200).json({ products: [] });
+  }
+
+  try {
+    const products = await Product.find({ _id: { $in: validIds } })
+      .populate('collectionId', 'name')
+      .populate('reviews.userId', 'username');
+
+    const productMap = new Map(
+      products.map((product) => [product._id.toString(), filterApprovedReviews(product)])
+    );
+    const orderedProducts = ids
+      .map((id) => productMap.get(id))
+      .filter(Boolean);
+
+    res.status(200).json({ products: orderedProducts });
+  } catch (error) {
+    console.error('Error in getProductsByIds controller: ', error.message);
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };

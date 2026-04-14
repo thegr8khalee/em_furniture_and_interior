@@ -6,12 +6,14 @@ import { generateToken } from '../lib/utils.js'; // Assuming generateToken is in
 import { mergeGuestDataToUser } from './guest.controller.js'; // Import the new merge function
 import jwt from 'jsonwebtoken';
 import Admin from '../models/admin.model.js';
+import { resolvePermissions } from '../lib/permissions.js';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
+import { sendEmail } from '../services/gmail.service.js';
 
 export const signup = async (req, res) => {
   // Destructure fullName from req.body, but map to username for the User model
-  const { fullName, email, password, phoneNumber, anonymousId } = req.body; // Added anonymousId
+  const { fullName, email, password, phoneNumber } = req.body;
+  const anonymousId = req.cookies?.anonymousId;
 
   try {
     // Input validation
@@ -49,12 +51,11 @@ export const signup = async (req, res) => {
     // Generate JWT token and set it as a cookie
     generateToken(newUser._id, res);
 
-    // --- NEW: Merge guest data if anonymousId is provided ---
+    // Merge guest cart/wishlist data if a guest session exists
     if (anonymousId) {
       await mergeGuestDataToUser(newUser._id, anonymousId);
-      // Frontend should also clear the anonymousId cookie after this
+      res.clearCookie('anonymousId', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' });
     }
-    // --- END NEW ---
 
     // Respond with success message and user data (excluding passwordHash)
     res.status(201).json({
@@ -74,7 +75,8 @@ export const signup = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const { email, password, anonymousId } = req.body; // Added anonymousId
+  const { email, password } = req.body;
+  const anonymousId = req.cookies?.anonymousId;
 
   try {
     // Input validation
@@ -97,12 +99,11 @@ export const login = async (req, res) => {
     // Generate JWT token and set it as a cookie
     generateToken(user._id, res);
 
-    // --- NEW: Merge guest data if anonymousId is provided ---
+    // Merge guest cart/wishlist data if a guest session exists
     if (anonymousId) {
       await mergeGuestDataToUser(user._id, anonymousId);
-      // Frontend should also clear the anonymousId cookie after this
+      res.clearCookie('anonymousId', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' });
     }
-    // --- END NEW ---
 
     // Respond with user data (excluding passwordHash)
     res.status(200).json({
@@ -275,6 +276,17 @@ export const checkAuth = async (req, res) => {
     }
 
     // Authenticated entity found, send their details including role
+    const adminPayload =
+      role === 'admin'
+        ? {
+            adminRole: authenticatedEntity.role || 'super_admin',
+            permissions: resolvePermissions(
+              authenticatedEntity.role || 'super_admin',
+              authenticatedEntity.permissions
+            ),
+          }
+        : {};
+
     return res.status(200).json({
       _id: authenticatedEntity._id,
       username: authenticatedEntity.username,
@@ -286,6 +298,7 @@ export const checkAuth = async (req, res) => {
         cart: authenticatedEntity.cart,
         wishlist: authenticatedEntity.wishlist,
       }),
+      ...adminPayload,
       createdAt: authenticatedEntity.createdAt,
       updatedAt: authenticatedEntity.updatedAt,
     });
@@ -389,46 +402,33 @@ export const forgotPassword = async (req, res) => {
     await user.save();
 
     // Construct the reset URL for the email
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-    // --- EMAIL SENDING LOGIC (Nodemailer) ---
-    const transporter = nodemailer.createTransport({
-      service: 'Gmail', // You can change this to your email service (e.g., 'Outlook', 'SendGrid', etc.)
-      auth: {
-        user: process.env.EMAIL_USER, // Your email address from .env
-        pass: process.env.EMAIL_PASS, // Your email password or app password from .env
-      },
-    });
+    // Send password reset email via Gmail API (OAuth2)
+    const htmlContent = `
+      <p>Hello ${user.username || user.email},</p>
+      <p>You are receiving this because you (or someone else) have requested the reset of the password for your account.</p>
+      <p>Please click on the following link to reset your password:</p>
+      <p><a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a></p>
+      <p>Or copy and paste this URL into your browser:</p>
+      <p><code>${resetUrl}</code></p>
+      <p>This link is valid for 1 hour. After that, you will need to request a new one.</p>
+      <p>If you did not request this, please ignore this email and your password will remain unchanged.</p>
+      <p>Thank you,</p>
+      <p>EM Furniture and Interior Team</p>
+    `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: 'Password Reset Request for Your Account',
-      html: `
-        <p>Hello ${user.username || user.email},</p>
-        <p>You are receiving this because you (or someone else) have requested the reset of the password for your account.</p>
-        <p>Please click on the following link to reset your password:</p>
-        <p><a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a></p>
-        <p>Or copy and paste this URL into your browser:</p>
-        <p><code>${resetUrl}</code></p>
-        <p>This link is valid for 1 hour. After that, you will need to request a new one.</p>
-        <p>If you did not request this, please ignore this email and your password will remain unchanged.</p>
-        <p>Thank you,</p>
-        <p>EM Furniture and Interior Team</p>
-      `,
-    };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error('Error sending password reset email:', error);
-        // Do NOT send an error response to the client here,
-        // as we already sent a generic success message to prevent email enumeration.
-        // Log the error for debugging purposes.
-      } else {
-        console.log('Password reset email sent: %s', info.messageId);
-      }
-    });
-    // --- END EMAIL SENDING LOGIC ---
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Password Reset Request for Your Account',
+        text: `Reset your password using this link: ${resetUrl}`,
+        html: htmlContent,
+      });
+      console.log('Password reset email sent to:', user.email);
+    } catch (emailError) {
+      console.error('Error sending password reset email:', emailError);
+    }
 
     res.status(200).json({
       message:

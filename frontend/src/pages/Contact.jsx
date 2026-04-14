@@ -1,18 +1,66 @@
 // src/pages/Contact.jsx
-import React, { useState } from 'react'; // Import useState
-import { Loader2 } from 'lucide-react'; // Import Loader2 for loading state
-import { toast } from 'react-hot-toast'; // Import toast for notifications
-import { axiosInstance } from '../lib/axios.js'; // Your configured Axios instance
-// import Hero1 from '../images/Hero1.png';
-// import whatsapp from '../images/whatsapp_4401461.png'; // Assuming correct path
-// import ig from '../images/ig.png';
-// import tiktok from '../images/tik-tok_4782345 (1).png';
-// import x from '../images/twitter_5968830.png';
+import React, { useEffect, useState } from 'react';
+import { Clock3, Mail, MapPin, Phone } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { motion } from 'framer-motion';
+import { axiosInstance } from '../lib/axios.js';
+
+void motion;
 import { useAuthStore } from '../store/useAuthStore.js';
+import { PageWrapper, FadeIn, SlideIn } from '../components/animations';
+import { luxuryEase } from '../lib/animations';
+import { Button, Card, Input, PageHeader, Textarea } from '../components/ui';
+
+const contactItems = [
+  {
+    label: 'Email',
+    value: 'emfurnitureandinterior@gmail.com',
+    href: 'mailto:emfurnitureandinterior@gmail.com',
+    icon: Mail,
+  },
+  {
+    label: 'Phone',
+    value: '+234 903 769 1860',
+    href: 'tel:+2349037691860',
+    icon: Phone,
+  },
+  {
+    label: 'Address',
+    value: 'C16 Bamaiyi Road, Kaduna, Nigeria.',
+    icon: MapPin,
+  },
+  {
+    label: 'Hours',
+    value: 'Open 24/7',
+    icon: Clock3,
+  },
+];
+
+const socialLinks = [
+  {
+    img: 'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png',
+    href: 'https://wa.me/2349037691860',
+    label: 'WhatsApp',
+  },
+  {
+    img: 'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787005/ig_sb3dpj.png',
+    href: 'https://www.instagram.com/em_furniture_and_interior',
+    label: 'Instagram',
+  },
+  {
+    img: 'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/tik-tok_4782345_1_smgzmi.png',
+    href: 'https://www.tiktok.com/@em_furniture_nd_interior',
+    label: 'TikTok',
+  },
+  {
+    img: 'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/twitter_5968830_duuupi.png',
+    href: 'https://x.com/___Emine_',
+    label: 'X',
+  },
+];
 
 const Contact = () => {
   const { authUser } = useAuthStore();
-  console.log(authUser);
   const [formData, setFormData] = useState({
     name: authUser?.username || '',
     email: authUser?.email || '',
@@ -20,10 +68,21 @@ const Contact = () => {
     subject: '',
     message: '',
   });
-  const [isSending, setIsSending] = useState(false); // Loading state for form submission
+  const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    if (!authUser) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      name: prev.name || authUser.username || '',
+      email: prev.email || authUser.email || '',
+      phoneNumber: prev.phoneNumber || authUser.phoneNumber || '',
+    }));
+  }, [authUser]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e) => {
@@ -33,12 +92,17 @@ const Contact = () => {
     try {
       const res = await axiosInstance.post('/contact', formData);
       toast.success(res.data.message || 'Message sent successfully!');
-      setFormData({ name: '', email: '', subject: '', message: '' }); // Clear form
+      setFormData({
+        name: authUser?.username || '',
+        email: authUser?.email || '',
+        phoneNumber: authUser?.phoneNumber || '',
+        subject: '',
+        message: '',
+      });
     } catch (error) {
       console.error('Error sending contact message:', error);
       toast.error(
-        error.response?.data?.message ||
-          'Failed to send message. Please try again.'
+        error.response?.data?.message || 'Failed to send message. Please try again.'
       );
     } finally {
       setIsSending(false);
@@ -46,233 +110,169 @@ const Contact = () => {
   };
 
   return (
-    <div className="pt-16">
-      <div className="relative">
-        <img
-          src={
-            'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png'
-          }
-          alt="Contact Hero"
-          className="object-cover h-40 w-full"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-center pb-10">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-center text-base-100 font-[poppins]">
-            Contact Us
-          </h1>
-        </div>
-      </div>
+    <PageWrapper className="min-h-screen mt-16 bg-white">
+      <PageHeader
+        title="Contact Us"
+        subtitle="We'd love to hear from you"
+        image="https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"
+        alt="Luxury furniture showroom"
+      />
 
-      <div className="container mx-auto p-4 pt-0 sm:p-6 lg:p-8 my-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Contact Form Section */}
-          <div className="bg-base-100 px-4 pb-4 rounded-lg shadow-xl">
-            <h2 className="text-2xl font-semibold font-[poppins] mb-6">
-              Send Us a Message
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="content-shell section-shell">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-5 lg:gap-10">
+          <SlideIn direction="left" className="lg:col-span-3">
+            <Card className="surface-elevated space-y-6" padding="p-6 sm:p-8">
               <div>
-                <label htmlFor="name" className="label">
-                  <span className="label-text text-base-content">
-                    Your Name
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  placeholder="Name Surname"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="input input-bordered w-full rounded-md"
-                  required
-                />
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-secondary">
+                  Send a message
+                </p>
+                <h2 className="mt-2 font-heading text-3xl font-semibold text-neutral">
+                  Let’s discuss your space
+                </h2>
+                <p className="mt-2 text-sm text-neutral/65">
+                  Share your idea, request, or product question and our team will get back to you promptly.
+                </p>
               </div>
-              <div>
-                <label htmlFor="email" className="label">
-                  <span className="label-text text-base-content">
-                    Your Email
-                  </span>
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="Enter your email"
-                  className="input input-bordered w-full rounded-md"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="phoneNumber" className="label">
-                  <span className="label-text text-base-content">
-                    Your Phone Number
-                  </span>
-                </label>
-                <input
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <Input
+                    id="name"
+                    name="name"
+                    label="Name"
+                    placeholder="Your name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                  />
+                  <Input
+                    id="email"
+                    type="email"
+                    name="email"
+                    label="Email"
+                    placeholder="you@email.com"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                <Input
+                  id="phoneNumber"
                   type="tel"
-                  className="input input-bordered w-full rounded-md"
-                  required
                   name="phoneNumber"
-                  placeholder="Phone"
+                  label="Phone"
+                  placeholder="Your phone number"
                   pattern="[0-9]*"
-                  minlength="10"
-                  maxlength="14"
-                  title="Must be at least 10 digits"
+                  minLength="10"
+                  maxLength="14"
                   value={formData.phoneNumber}
                   onChange={handleChange}
+                  required
                 />
-              </div>
-              <div>
-                <label htmlFor="subject" className="label">
-                  <span className="label-text text-base-content">Subject</span>
-                </label>
-                <input
-                  type="text"
+
+                <Input
                   id="subject"
                   name="subject"
+                  label="Subject"
+                  placeholder="e.g. Product Inquiry"
                   value={formData.subject}
                   onChange={handleChange}
-                  placeholder="e.g Inquiry about products"
-                  className="input input-bordered w-full rounded-md"
                   required
                 />
-              </div>
-              <div>
-                <label htmlFor="message" className="label">
-                  <span className="label-text text-base-content">
-                    Your Message
-                  </span>
-                </label>
-                <textarea
+
+                <Textarea
                   id="message"
                   name="message"
+                  label="Message"
+                  placeholder="Tell us what you need..."
                   value={formData.message}
                   onChange={handleChange}
-                  placeholder="Type your message here..."
-                  className="textarea textarea-bordered h-32 w-full rounded-md"
+                  rows="6"
+                  className="resize-none"
                   required
-                ></textarea>
-              </div>
-              <button
-                type="submit"
-                className="btn bg-primary w-full rounded-xl"
-                disabled={isSending}
-              >
-                {isSending ? (
-                  <Loader2 className="animate-spin mr-2" />
-                ) : (
-                  'Send Message'
-                )}
-              </button>
-            </form>
-          </div>
+                />
 
-          {/* Contact Information Section */}
-          <div className="bg-base-100 p-6 rounded-lg shadow-xl">
-            <h2 className="text-2xl font-semibold font-[poppins] mb-6">
-              Our Contact Details
-            </h2>
-            <div className="space-y-4 text-base-content">
+                <Button type="submit" isLoading={isSending}>
+                  Send Message
+                </Button>
+              </form>
+            </Card>
+          </SlideIn>
+
+          <SlideIn direction="right" delay={0.15} className="lg:col-span-2">
+            <Card className="surface-elevated space-y-6" padding="p-6 sm:p-8">
               <div>
-                <h3 className="font-bold text-lg">Email:</h3>
-                <p>
-                  <a
-                    href="mailto:emfurnitureandinterior@gmial.com"
-                    className=" hover:underline"
-                  >
-                    emfurnitureandinterior@gmail.com
-                  </a>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-secondary">
+                  Get in touch
                 </p>
+                <h2 className="mt-2 font-heading text-3xl font-semibold text-neutral">
+                  Reach us directly
+                </h2>
               </div>
+
+              <div className="space-y-4">
+                {contactItems.map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <FadeIn key={item.label} direction="up" delay={index * 0.08}>
+                      <div className="flex items-start gap-3 border-b border-base-300 pb-4 last:border-b-0 last:pb-0">
+                        <div className="mt-0.5 border border-secondary/30 bg-secondary/10 p-2 text-secondary">
+                          <Icon size={16} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral/55">
+                            {item.label}
+                          </p>
+                          {item.href ? (
+                            <a
+                              href={item.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-1 block text-sm text-neutral/75 hover:text-secondary"
+                            >
+                              {item.value}
+                            </a>
+                          ) : (
+                            <p className="mt-1 text-sm text-neutral/75">{item.value}</p>
+                          )}
+                        </div>
+                      </div>
+                    </FadeIn>
+                  );
+                })}
+              </div>
+
               <div>
-                <h3 className="font-bold text-lg">Phone:</h3>
-                <p>
-                  <a
-                    href="tel:+2349037691860"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:underline"
-                  >
-                    +2349037691860
-                  </a>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-secondary">
+                  Follow Us
                 </p>
-              </div>
-              <div>
-                <h3 className="font-bold text-lg">Address:</h3>
-                <p>C16 Bamaiyi Road, Kaduna, Nigeria.</p>
-              </div>
-              <div>
-                <h3 className="font-bold text-lg">Business Hours:</h3>
-                <p>Open 24/7</p>
-              </div>
-              <div>
-                <h3 className="font-bold text-lg">Follow Us:</h3>
-                <div className="flex space-x-4 mt-2">
-                  <a
-                    href="https://wa.me/2349037691860"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="WhatsApp"
-                  >
-                    <img
-                      src={
-                        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png'
-                      }
-                      alt="WhatsApp"
-                      className="size-10"
-                    />
-                  </a>
-                  <a
-                    href="https://www.instagram.com/em_furniture_and_interior?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Instagram"
-                  >
-                    <img
-                      src={
-                        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787005/ig_sb3dpj.png'
-                      }
-                      alt="Instagram"
-                      className="size-10"
-                    />
-                  </a>
-                  <a
-                    href="https://www.tiktok.com/@em_furniture_nd_interior?is_from_webapp=1&sender_device=pc"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="TikTok"
-                  >
-                    <img
-                      src={
-                        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/tik-tok_4782345_1_smgzmi.png'
-                      }
-                      alt="TikTok"
-                      className="size-10"
-                    />
-                  </a>
-                  <a
-                    href="https://x.com/___Emine_"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="X (Twitter)"
-                  >
-                    <img
-                      src={
-                        'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/twitter_5968830_duuupi.png'
-                      }
-                      alt="X (Twitter)"
-                      className="size-10 rounded-full"
-                    />
-                  </a>
+                <div className="flex gap-3">
+                  {socialLinks.map((social, index) => (
+                    <motion.a
+                      key={social.label}
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-11 w-11 items-center justify-center border border-base-300 bg-base-100 hover:border-secondary hover:bg-secondary/10"
+                      aria-label={social.label}
+                      whileHover={{ scale: 1.08, y: -2 }}
+                      whileTap={{ scale: 0.94 }}
+                      initial={{ opacity: 0, scale: 0.92 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.1 + index * 0.06, duration: 0.35, ease: luxuryEase }}
+                    >
+                      <img src={social.img} alt={social.label} className="size-5" />
+                    </motion.a>
+                  ))}
                 </div>
               </div>
-            </div>
-          </div>
+            </Card>
+          </SlideIn>
         </div>
       </div>
-    </div>
+    </PageWrapper>
   );
 };
 

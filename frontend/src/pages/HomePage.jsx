@@ -1,41 +1,33 @@
 // src/pages/HomePage.jsx
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'; // Import icons for navigation
+import { ChevronLeft, ChevronRight, Loader2, ArrowRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// Import your hero images
-// import Hero1 from '../images/Hero1.png';
-// import Hero2 from '../images/Hero2.png';
-// import Hero3 from '../images/Hero3.png';
-// import Hero4 from '../images/Hero4.png';
-// import Hero5 from '../images/Hero5.png';
-// import shipping from '../images/worldwide-shipping.png';
-// import quality from '../images/verify.png';
-// import installation from '../images/easy-installation.png';
-// import sofa from '../images/sofa.jpeg';
-// import armchair from '../images/Panama-Armchair.jpg';
-// import living from '../images/living.jpg';
-// import livingRoom from '../images/Livingroom.png';
-// import bed from '../images/Modern Bedroom design.jpeg';
-// import dinign from '../images/Dining.jpeg';
-// import center from '../images/center.jpeg';
-// import wardrobe from '../images/wardrobe.jpeg';
-// import tv from '../images/TV unit.jpeg';
-// import carpet from '../images/carpets.jpeg';
-// import contempoeary from '../images/contemporary.jpeg';
-// import antique from '../images/antique.jpeg';
-// import bespoke from '../images/bespoke.jpeg';
-// import minimalist from '../images/minimalist.jpeg';
-// import diningroom from '../images/diningroom.png';
-// import bedroom from '../images/bedroom.png';
-// import corner from '../images/corner.png';
+void motion;
+
 import { useProductsStore } from '../store/useProductsStore';
 import { useCollectionStore } from '../store/useCollectionStore';
 import { useNavigate } from 'react-router-dom';
 import { useProjectsStore } from '../store/useProjectsStore';
 import ProjectCardHome from '../components/ProjectCardHome';
+import {
+  PageWrapper,
+  FadeIn,
+  SectionReveal,
+  AnimatedCard,
+  GoldDivider,
+  SlideIn,
+} from '../components/animations';
+import { ProductCardSkeleton } from '../components/ui';
+import {
+  heroText,
+  heroSubtext,
+  heroButtons,
+  elegantEase,
+  luxuryEase,
+} from '../lib/animations';
 
 const HomePage = () => {
-  // Array of hero images
   const heroImages = [
     'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png',
     'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/Hero2_mnsyx3.png',
@@ -43,25 +35,20 @@ const HomePage = () => {
     'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787010/Hero4_d42fq3.png',
     'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787007/Hero5_kcqj5j.png',
   ];
-  const [currentSlide, setCurrentSlide] = useState(0); // State to track the current slide index
-  const slideIntervalTime = 5000; // Time in milliseconds for automatic slide transition (5 seconds)
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const slideIntervalTime = 5000;
 
-  // Function to go to the next slide
   const nextSlide = () => {
     setCurrentSlide((prevSlide) =>
-      prevSlide === heroImages.length - 1 ? 0 : prevSlide + 1
+      prevSlide === heroImages.length - 1 ? 0 : prevSlide + 1,
     );
   };
-  // useEffect for automatic slide transition
-  useEffect(() => {
-    const interval = setInterval(() => {
-      nextSlide();
-    }, slideIntervalTime);
 
-    // Clear the interval when the component unmounts or dependencies change
+  useEffect(() => {
+    const interval = setInterval(() => nextSlide(), slideIntervalTime);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSlide]); // Re-run effect when currentSlide changes to reset timer
+  }, [currentSlide]);
 
   const designs = [
     {
@@ -105,10 +92,8 @@ const HomePage = () => {
       link: 'glam',
       image:
         'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/Livingroom_dahbsh.png',
-    }, // Using Hero1 as a placeholder for now
+    },
   ];
-
-  //   const [uniqueCategories, setUniqueCategories] = useState([]);
 
   const { products, getProducts, isGettingProducts } = useProductsStore();
   const { collections, getCollections, isGettingCollections } =
@@ -119,21 +104,13 @@ const HomePage = () => {
     projects,
   } = useProjectsStore();
 
-  const promotionProducts = products.filter((products) => products.isPromo);
+  const promotionProducts = products.filter((p) => p.isPromo);
+  const BestSeller = products.filter((p) => p.isBestSeller);
 
-  const BestSeller = products.filter((products) => products.isBestSeller);
-
-  //   console.log(promotionProducts);
   useEffect(() => {
-    if (products.length === 0) {
-      getProducts(1, 10, {}, false);
-    }
-    if (collections.length === 0) {
-      getCollections(1, 10, {}, false);
-    }
-    if (projects.length === 0) {
-      fetchProjects(1, 10);
-    }
+    if (products.length === 0) getProducts(1, 10, {}, false);
+    if (collections.length === 0) getCollections(1, 10, {}, false);
+    if (projects.length === 0) fetchProjects(1, 10);
   }, [
     getProducts,
     getCollections,
@@ -185,7 +162,7 @@ const HomePage = () => {
       link: 'Center%20Table',
       image:
         'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787001/center_i487sg.jpg',
-    }, // Using Hero1 as a placeholder for now
+    },
     {
       id: '7',
       name: 'Wardrobe',
@@ -206,629 +183,751 @@ const HomePage = () => {
       link: 'Carpet',
       image:
         'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/carpets_bdy56z.jpg',
-    }, // Using Hero2 as a placeholder for now
+    },
   ];
 
   const navigate = useNavigate();
 
-  const handleExploreLivingRoomsClick = () => {
-    // Navigate to the shop page and pass 'Living Room' as a category query parameter
-    navigate('/shop?category=Living%20Room');
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 10);
+  const nav = (path) => {
+    navigate(path);
+    setTimeout(() => window.scrollTo(0, 0), 10);
   };
-
-  const handleShopNow = () => {
-    navigate('/shop');
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 10);
-  };
-
-  const handleExploreDiningRoomsClick = () => {
-    navigate('/shop?category=Dining%20Room');
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 10);
-  };
-
-  const handleExploreBedRoomsClick = () => {
-    navigate('/shop?category=Bedroom');
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 10);
-  };
-
-  const handleExploreCornerSofasClick = () => {
-    navigate('/shop?category=Corner%20Sofas');
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 10);
-  };
-
-  const handleCategoryClick = (category) => {
-    navigate(`/shop?category=${category}`);
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 10);
-  };
-
-  const handleProductClick = (Id) => {
-    navigate(`/product/${Id}`);
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 10);
-  };
-
-  const handleStyleClick = (style) => {
-    navigate(`/styles/${style}`);
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 10);
-  };
-
-  const handleCollectionClick = (Id) => {
-    navigate(`/collection/${Id}`);
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 10);
-  };
-
-  const handleContatClick = () => {
-    navigate(`/contact`);
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-    }, 10);
-  };
-
-  console.log(promotionProducts);
 
   if (isGettingProducts || isGettingCollections || LoadingProjects) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="ml-2 text-lg">Loading data...</p>
-      </div>
+      <PageWrapper className="min-h-screen bg-white">
+        <section className="content-shell section-shell">
+          <div className="mb-8 flex flex-col items-center text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-secondary" />
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-secondary">
+              Preparing the showroom
+            </p>
+            <h2 className="mt-2 font-heading text-3xl font-semibold text-primary">
+              Curating your experience
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <ProductCardSkeleton key={index} />
+            ))}
+          </div>
+        </section>
+      </PageWrapper>
     );
   }
 
   return (
-    <div className="justify-center pb-30 items-start min-h-screen bg-base-100">
-      <section className="lg:h-150 relative w-full overflow-hidden z-0">
-        {/* This container will now dynamically take its height based on the images. */}
-        {/* The 'invisible' image acts as a height placeholder for the 'relative' parent. */}
-        <div className="w-full">
-          {/* Invisible placeholder image to define the container's height based on its aspect ratio */}
-          {/* This ensures the parent div has a height even when children are absolute */}
-          <img
-            src={heroImages[0]}
-            alt=""
-            className="w-full  h-100 max-h-screen object-cover invisible"
-            aria-hidden="true"
+    <PageWrapper className="min-h-screen bg-white">
+      {/* ===== Hero Section ===== */}
+      <section className="relative w-full h-[85vh] lg:h-screen overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={currentSlide}
+            src={heroImages[currentSlide]}
+            alt={`Hero Slide ${currentSlide + 1}`}
+            className="absolute inset-0 w-full h-full object-cover"
+            initial={{ opacity: 0, scale: 1.08 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.2, ease: elegantEase }}
           />
+        </AnimatePresence>
+        {/* accent image temporarily removed */}
+        {/* Overlay */}
+        <div className="absolute inset-0 bg-primary/60" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10" />
 
-          {/* All images are absolutely positioned to allow for smooth opacity transitions */}
-          {heroImages.map((image, index) => (
-            <img
+        {/* Hero Content */}
+        <div className="absolute inset-0 flex flex-col justify-end pb-24 sm:pb-28 lg:pb-32 px-6 sm:px-10 lg:px-20">
+          <div className="max-w-2xl">
+            <motion.h1
+              variants={heroText}
+              initial="hidden"
+              animate="visible"
+              className="font-heading text-3xl sm:text-4xl lg:text-6xl font-medium text-white leading-tight mb-3"
+            >
+              Transforming{' '}
+              <span className="text-secondary italic font-light">Spaces.</span>
+            </motion.h1>
+            <motion.h1
+              variants={heroText}
+              initial="hidden"
+              animate="visible"
+              transition={{ delay: 0.2 }}
+              className="font-heading text-3xl sm:text-4xl lg:text-6xl font-medium text-white leading-tight mb-3"
+            >
+              Elevating{' '}
+              <span className="text-secondary italic font-light">Lives.</span>
+            </motion.h1>
+            <motion.p
+              variants={heroSubtext}
+              initial="hidden"
+              animate="visible"
+              className="text-white text-lg sm:text-xl tracking-wide mb-8 max-w-md"
+            >
+              Elevating lives through exceptional craftsmanship and timeless
+              design.
+            </motion.p>
+            <motion.div
+              variants={heroButtons}
+              initial="hidden"
+              animate="visible"
+              className="flex flex-wrap gap-3"
+            >
+              <motion.button
+                onClick={() => nav('/shop')}
+                className="btn-elegant border-secondary bg-secondary px-8 py-3.5 text-primary hover:bg-white"
+                whileHover={{
+                  scale: 1.04,
+                  boxShadow: '0 8px 25px rgba(201,168,76,0.3)',
+                }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.3 }}
+              >
+                Shop Now
+              </motion.button>
+              <motion.button
+                onClick={() => nav('/contact')}
+                className="btn-elegant border-white/40 text-white hover:bg-white hover:text-primary px-8 py-3.5"
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.3 }}
+              >
+                Contact Us
+              </motion.button>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Slide Indicators */}
+        <motion.div
+          className="absolute bottom-8 left-6 sm:left-10 lg:left-20 flex gap-2"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8, duration: 0.6, ease: luxuryEase }}
+        >
+          {heroImages.map((_, index) => (
+            <motion.button
               key={index}
-              src={image}
-              alt={`Hero Slide ${index + 1}`}
-              className={`absolute lg:pt-16 top-0 left-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out
-                            ${
-                              index === currentSlide
-                                ? 'opacity-100'
-                                : 'opacity-0'
-                            }`}
+              onClick={() => setCurrentSlide(index)}
+              className={`rounded-full ${index === currentSlide ? 'w-8 h-1.5 bg-secondary' : 'w-4 h-1.5 bg-white/40 hover:bg-white/60'}`}
+              aria-label={`Go to slide ${index + 1}`}
+              animate={{ width: index === currentSlide ? 32 : 16 }}
+              transition={{ duration: 0.4, ease: luxuryEase }}
             />
           ))}
+        </motion.div>
+      </section>
 
-          {/* Dot Indicators */}
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10 items-end">
-            {heroImages.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                className={`w-7 h-0.5 transition-colors duration-300
-                                ${
-                                  index === currentSlide
-                                    ? 'bg-primary h-1'
-                                    : 'bg-gray-300 hover:bg-gray-200'
-                                }`}
-                aria-label={`Go to slide ${index + 1}`}
-              ></button>
+      {/* ===== Trust Bar ===== */}
+      <SectionReveal className="bg-primary py-6 sm:py-8">
+        <div className="max-w-5xl mx-auto flex items-center justify-around px-4">
+          {[
+            {
+              img: 'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/worldwide-shipping_by9zox.png',
+              text: 'Worldwide Shipping',
+            },
+            {
+              img: 'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/verify_vnl0hf.png',
+              text: 'Quality Assured',
+            },
+            {
+              img: 'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787002/easy-installation_dmiwxi.png',
+              text: 'Free Installation',
+            },
+          ].map((item, i) => (
+            <FadeIn
+              key={item.text}
+              direction="up"
+              delay={i * 0.15}
+              duration={0.7}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <img
+                  src={item.img}
+                  alt={item.text}
+                  className="w-8 h-8 sm:w-10 sm:h-10 opacity-80"
+                />
+                <span className="text-white/80 text-[10px] sm:text-xs font-medium tracking-wider uppercase">
+                  {item.text}
+                </span>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </SectionReveal>
+
+      {/* Promotions are now shown in the rotating top bar above the navbar. */}
+
+      {/* ===== Featured Projects ===== */}
+      {projects.length > 0 && (
+        <SectionReveal className="py-16 sm:py-20 px-6 sm:px-10 lg:px-20">
+          <div className="flex justify-between items-end mb-8">
+            <FadeIn direction="left">
+              <div>
+                <span className="text-xs font-medium tracking-[0.2em] uppercase text-secondary">
+                  Portfolio
+                </span>
+                <h2 className="font-heading text-3xl sm:text-4xl font-medium text-neutral mt-1">
+                  Featured Projects
+                </h2>
+              </div>
+            </FadeIn>
+            <FadeIn direction="right" delay={0.2}>
+              <motion.button
+                onClick={() => nav('/projects')}
+                className="text-secondary text-sm font-medium flex items-center gap-1 hover:gap-2 transition-all"
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.3 }}
+              >
+                View All <ArrowRight size={14} />
+              </motion.button>
+            </FadeIn>
+          </div>
+          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-4">
+            {projects.map((project, index) => (
+              <AnimatedCard
+                key={project._id}
+                index={index}
+                hoverLift={false}
+                className="flex-shrink-0"
+              >
+                <ProjectCardHome project={project} />
+              </AnimatedCard>
             ))}
           </div>
+        </SectionReveal>
+      )}
 
-          <div className="absolute flex flex-col items-start justify-end pb-22 bottom-0 left-1/2 bg-black/30 h-full -translate-x-1/2 font-black text-3xl sm:text-4xl md:text-6xl w-full px-6 sm:px-10 lg:px-15 text-base-100 text-shadow-lg">
-            <div>Transforming Spaces.</div>
-            <div>Elevating Lives.</div>
-          </div>
-          <div className="absolute flex space-x-2 bottom-8 left-1/2 -translate-x-1/2 font-black text-3xl sm:text-4xl md:text-6xl w-full px-6 sm:px-10 lg:px-15 text-base-100 text-shadow-lg">
-            <button
-              onClick={() => handleShopNow()}
-              className="btn sm:w-50 bg-primary border-0 shadow-none rounded-xl"
-            >
-              Shop Now!
-            </button>
-            <button
-              onClick={() => handleContatClick()}
-              className="btn sm:w-50 bg-secondary text-white border-0 shadow-none rounded-xl"
-            >
-              {' '}
-              Contact Us
-            </button>
-          </div>
+      {/* ===== Browse Categories ===== */}
+      <SectionReveal className="py-16 sm:py-20 px-6 sm:px-10 lg:px-20 bg-base-200">
+        <div className="text-center mb-10">
+          <FadeIn direction="up">
+            <span className="text-xs font-medium tracking-[0.2em] uppercase text-secondary">
+              Explore
+            </span>
+            <h2 className="font-heading text-3xl sm:text-4xl font-medium text-neutral mt-1">
+              Browse by Category
+            </h2>
+          </FadeIn>
+          <GoldDivider className="mt-4" />
         </div>
-      </section>
-      <section className="h-25 bg-secondary flex items-center justify-center space-x-7 sm:space-x-25 md:space-x-35 lg:space-x-45">
-        <div className="text-white space-y-1 text-xxs sm:text-sm font-[montserrat] items-center flex flex-col">
-          <img
-            src={
-              'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/worldwide-shipping_by9zox.png'
-            }
-            alt=""
-            className="size-12"
-          />
-          <h1>World Wide Shipping</h1>
-        </div>
-
-        <div className="text-white space-y-1 text-xxs font-[montserrat] items-center flex flex-col">
-          <img
-            src={
-              'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/verify_vnl0hf.png'
-            }
-            alt=""
-            className="size-12"
-          />
-          <h1>Quality Assurance</h1>
-        </div>
-
-        <div className="text-white space-y-1 text-xxs font-[montserrat] items-center flex flex-col">
-          <img
-            src={
-              'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787002/easy-installation_dmiwxi.png'
-            }
-            alt=""
-            className="size-12"
-          />
-          <h1>Free Installation</h1>
-        </div>
-      </section>
-      <section className="my-10 px-4 sm:pl-8 lg:pl-16">
-        {projects.length > 0 ? ( // Correct conditional check: use ? instead of (
-          <>
-            {' '}
-            {/* Use a React Fragment to wrap multiple elements */}
-            <div className="w-full flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold font-[poppins]">
-                Featured Projects
-              </h2>
-              <a
-                href="/projects"
-                className="font-[montserrat] text-primary font-medium"
+        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4">
+          {categories.map((category, index) => (
+            <AnimatedCard key={category.id} index={index} hoverLift={false}>
+              <motion.button
+                className="relative flex-shrink-0 w-64 sm:w-76 h-76 sm:h-84 overflow-hidden group"
+                onClick={() => nav(`/shop?category=${category.link}`)}
+                whileHover={{ scale: 1.03 }}
+                transition={{ duration: 0.4, ease: luxuryEase }}
               >
-                View More
-              </a>
-            </div>
-            <div
-              className="flex space-x-4 overflow-x-auto pb-4"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              {/* Map over the 'projects' array. Ensure you use a unique 'key' prop. */}
-              {projects.map((project) => (
-                <ProjectCardHome
-                  key={project._id} // Assuming projects have a unique _id
-                  project={project}
+                <motion.img
+                  src={category.image}
+                  alt={category.name}
+                  className="object-cover w-full h-full"
+                  whileHover={{ scale: 1.08 }}
+                  transition={{ duration: 0.6, ease: luxuryEase }}
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent group-hover:from-black/70 transition-all duration-300" />
+                <div className="absolute text-start bottom-0 left-0 right-0 p-4">
+                  <h3 className="text-white text-lg sm:text-xl font-medium tracking-wide">
+                    {category.name}
+                  </h3>
+                  <motion.div
+                    className="h-0.5 bg-secondary mt-2"
+                    initial={{ width: '1.5rem' }}
+                    whileHover={{ width: '2.5rem' }}
+                    transition={{ duration: 0.3 }}
+                    style={{ width: '1.5rem' }}
+                  />
+                </div>
+              </motion.button>
+            </AnimatedCard>
+          ))}
+        </div>
+      </SectionReveal>
+
+      {/* ===== Promotions ===== */}
+      {promotionProducts.length !== 0 && (
+        <SectionReveal className="py-16 sm:py-20 px-6 sm:px-10 lg:px-20">
+          <div className="flex justify-between items-end mb-8">
+            <FadeIn direction="left">
+              <div>
+                <span className="text-xs font-medium tracking-[0.2em] uppercase text-secondary">
+                  Special Offers
+                </span>
+                <h2 className="font-heading text-3xl sm:text-4xl font-medium text-neutral mt-1">
+                  Promotions
+                </h2>
+              </div>
+            </FadeIn>
+            <FadeIn direction="right" delay={0.2}>
+              <motion.button
+                onClick={() => nav('/shop')}
+                className="text-secondary text-sm font-medium flex items-center gap-1 hover:gap-2 transition-all"
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.3 }}
+              >
+                Shop All <ArrowRight size={14} />
+              </motion.button>
+            </FadeIn>
+          </div>
+          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-4">
+            {promotionProducts.map((product, index) => (
+              <AnimatedCard
+                key={product._id}
+                index={index}
+                className="flex-shrink-0 w-64 sm:w-72 group cursor-pointer"
+                onClick={() => nav(`/product/${product._id}`)}
+              >
+                <div className="relative overflow-hidden">
+                  <motion.img
+                    src={product?.images[0]?.url}
+                    alt={product.name}
+                    className="w-full h-56 sm:h-64 object-cover"
+                    whileHover={{ scale: 1.06 }}
+                    transition={{ duration: 0.5, ease: luxuryEase }}
+                  />
+                  {product.price && product.discountedPrice && (
+                    <div className="absolute top-3 left-3 bg-error text-white text-[10px] font-medium px-3 py-1 tracking-wider uppercase">
+                      {Math.round(
+                        ((product.price - product.discountedPrice) /
+                          product.price) *
+                          100,
+                      )}
+                      % Off
+                    </div>
+                  )}
+                </div>
+                <div className="pt-3 pb-1">
+                  <h3 className="text-sm font-medium text-neutral truncate tracking-wide">
+                    {product.name}
+                  </h3>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-secondary font-medium text-base">
+                      ₦{product.discountedPrice?.toLocaleString()}
+                    </span>
+                    <span className="text-neutral/40 line-through text-xs">
+                      ₦{product.price?.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </AnimatedCard>
+            ))}
+          </div>
+        </SectionReveal>
+      )}
+
+      {/* ===== Best Sellers ===== */}
+      {BestSeller.length !== 0 && (
+        <SectionReveal className="py-16 sm:py-20 px-6 sm:px-10 lg:px-20 bg-base-200">
+          <div className="flex justify-between items-end mb-8">
+            <FadeIn direction="left">
+              <div>
+                <span className="text-xs font-medium tracking-[0.2em] uppercase text-secondary">
+                  Most Popular
+                </span>
+                <h2 className="font-heading text-3xl sm:text-4xl font-medium text-neutral mt-1">
+                  Best Sellers
+                </h2>
+              </div>
+            </FadeIn>
+            <FadeIn direction="right" delay={0.2}>
+              <motion.button
+                onClick={() => nav('/shop')}
+                className="text-secondary text-sm font-medium flex items-center gap-1 hover:gap-2 transition-all"
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.3 }}
+              >
+                Shop All <ArrowRight size={14} />
+              </motion.button>
+            </FadeIn>
+          </div>
+          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-4">
+            {BestSeller.map((product, index) => (
+              <AnimatedCard
+                key={product._id}
+                index={index}
+                className="flex-shrink-0 w-64 sm:w-72 group cursor-pointer"
+                onClick={() => nav(`/product/${product._id}`)}
+              >
+                <div className="relative overflow-hidden">
+                  <motion.img
+                    src={product.images[0]?.url}
+                    alt={product.name}
+                    className="w-full h-56 sm:h-64 object-cover"
+                    whileHover={{ scale: 1.06 }}
+                    transition={{ duration: 0.5, ease: luxuryEase }}
+                  />
+                </div>
+                <div className="pt-3 pb-1">
+                  <h3 className="text-sm font-medium text-neutral truncate tracking-wide">
+                    {product.name}
+                  </h3>
+                  <span className="text-neutral/60 text-sm mt-1 block">
+                    ₦{product.price?.toLocaleString()}
+                  </span>
+                </div>
+              </AnimatedCard>
+            ))}
+          </div>
+        </SectionReveal>
+      )}
+
+      {/* ===== Collections ===== */}
+      {collections.length !== 0 && (
+        <SectionReveal className="py-16 sm:py-20 px-6 sm:px-10 lg:px-20">
+          <div className="flex justify-between items-end mb-8">
+            <FadeIn direction="left">
+              <div>
+                <span className="text-xs font-medium tracking-[0.2em] uppercase text-secondary">
+                  Curated Sets
+                </span>
+                <h2 className="font-heading text-3xl sm:text-4xl font-medium text-neutral mt-1">
+                  Collections
+                </h2>
+              </div>
+            </FadeIn>
+            <FadeIn direction="right" delay={0.2}>
+              <motion.button
+                onClick={() => nav('/shop?view=collections')}
+                className="text-secondary text-sm font-medium flex items-center gap-1 hover:gap-2 transition-all"
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.3 }}
+              >
+                View All <ArrowRight size={14} />
+              </motion.button>
+            </FadeIn>
+          </div>
+          <div className="flex gap-5 overflow-x-auto no-scrollbar pb-4">
+            {collections.map((collection, index) => (
+              <AnimatedCard
+                key={collection._id}
+                index={index}
+                className="flex-shrink-0 w-64 sm:w-72 group cursor-pointer"
+                onClick={() => nav(`/collection/${collection._id}`)}
+              >
+                <div className="relative overflow-hidden">
+                  <motion.img
+                    src={collection.coverImage?.url}
+                    alt={collection.name}
+                    className="w-full h-56 sm:h-64 object-cover"
+                    whileHover={{ scale: 1.06 }}
+                    transition={{ duration: 0.5, ease: luxuryEase }}
+                  />
+                </div>
+                <div className="pt-3 pb-1">
+                  <h3 className="text-sm font-medium text-neutral truncate tracking-wide">
+                    {collection.name}
+                  </h3>
+                  <span className="text-neutral/60 text-sm mt-1 block">
+                    ₦{collection.price?.toLocaleString()}
+                  </span>
+                </div>
+              </AnimatedCard>
+            ))}
+          </div>
+        </SectionReveal>
+      )}
+
+      {/* ===== Featured Styles ===== */}
+      <SectionReveal className="py-16 sm:py-20 px-6 sm:px-10 lg:px-20 bg-base-200">
+        <div className="text-center mb-10">
+          <FadeIn direction="up">
+            <span className="text-xs font-medium tracking-[0.2em] uppercase text-secondary">
+              Aesthetics
+            </span>
+            <h2 className="font-heading text-3xl sm:text-4xl font-medium text-neutral mt-1">
+              Featured Styles
+            </h2>
+          </FadeIn>
+          <GoldDivider className="mt-4" />
+        </div>
+        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4">
+          {designs.map((design, index) => (
+            <AnimatedCard key={design.id} index={index} hoverLift={false}>
+              <motion.button
+                className="relative flex-shrink-0 w-64 sm:w-76 h-76 sm:h-84 overflow-hidden group"
+                onClick={() => nav(`/styles/${design.link}`)}
+                whileHover={{ scale: 1.03 }}
+                transition={{ duration: 0.4, ease: luxuryEase }}
+              >
+                <motion.img
+                  src={design.image}
+                  alt={design.name}
+                  className="object-cover w-full h-full"
+                  whileHover={{ scale: 1.08 }}
+                  transition={{ duration: 0.6, ease: luxuryEase }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent group-hover:from-black/70 transition-all duration-300" />
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <h3 className="text-white text-sm sm:text-base font-medium tracking-wide">
+                    {design.name}
+                  </h3>
+                  <div className="w-6 h-0.5 bg-secondary mt-2 group-hover:w-10 transition-all duration-300"></div>
+                </div>
+              </motion.button>
+            </AnimatedCard>
+          ))}
+        </div>
+      </SectionReveal>
+
+      {/* ===== Interior Design Section ===== */}
+      <SectionReveal className="relative py-20 sm:py-28 px-6 sm:px-10 lg:px-20 bg-primary text-white overflow-hidden">
+        {/* accent image temporarily removed */}
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-10 lg:gap-16">
+          {/* Image Grid */}
+          <SlideIn direction="left" className="md:flex-1">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="row-span-2 overflow-hidden">
+                <motion.img
+                  src="https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/Livingroom_dahbsh.png"
+                  alt="Interior Design - Living Space"
+                  className="w-full h-full object-cover"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ duration: 0.6, ease: luxuryEase }}
+                />
+              </div>
+              <div className="overflow-hidden">
+                <motion.img
+                  src="https://res.cloudinary.com/dnwppcwec/image/upload/v1753787010/Modern_Bedroom_design_gvw20n.jpg"
+                  alt="Interior Design - Bedroom"
+                  className="w-full h-full object-cover"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ duration: 0.6, ease: luxuryEase }}
+                />
+              </div>
+              <div className="overflow-hidden">
+                <motion.img
+                  src="https://res.cloudinary.com/dnwppcwec/image/upload/v1753787002/Dining_reagth.jpg"
+                  alt="Interior Design - Dining"
+                  className="w-full h-full object-cover"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ duration: 0.6, ease: luxuryEase }}
+                />
+              </div>
+            </div>
+          </SlideIn>
+
+          {/* Content */}
+          <SlideIn direction="right" delay={0.2} className="md:flex-1">
+            <span className="text-xs font-medium tracking-[0.2em] uppercase text-secondary">
+              Our Services
+            </span>
+            <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-medium text-white mt-2 mb-6 leading-tight">
+              Bespoke{' '}
+              <span className="text-secondary italic font-light">Interior</span>{' '}
+              Design
+            </h2>
+            <p className="text-white/70 text-base leading-relaxed mb-8 max-w-md">
+              From concept to completion, our expert designers craft
+              personalized interiors that reflect your unique taste. We blend
+              functionality with luxury to create spaces that inspire and
+              elevate everyday living.
+            </p>
+
+            <div className="space-y-4 mb-10">
+              {[
+                {
+                  title: 'Space Planning',
+                  desc: 'Optimized layouts tailored to your lifestyle',
+                },
+                {
+                  title: 'Custom Furnishing',
+                  desc: 'Handpicked furniture and bespoke pieces',
+                },
+                {
+                  title: 'Full Room Makeovers',
+                  desc: 'Complete transformations from floor to ceiling',
+                },
+              ].map((service, i) => (
+                <FadeIn key={i} direction="up" delay={0.3 + i * 0.1}>
+                  <div className="flex items-start gap-3">
+                    <motion.div
+                      className="w-1.5 h-1.5 rounded-full bg-secondary mt-2 flex-shrink-0"
+                      initial={{ scale: 0 }}
+                      whileInView={{ scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.4 + i * 0.1, duration: 0.3 }}
+                    />
+                    <div>
+                      <h4 className="text-white text-sm font-medium tracking-wide">
+                        {service.title}
+                      </h4>
+                      <p className="text-white/50 text-xs mt-0.5">
+                        {service.desc}
+                      </p>
+                    </div>
+                  </div>
+                </FadeIn>
               ))}
             </div>
-          </>
-        ) : null}
-      </section>
 
-      <section className="my-10 pl-4 sm:pl-8 lg:pl-16">
-        <h2 className="text-2xl font-bold mb-4 font-[poppins]">
-          Featured Products
-        </h2>
-        <div
-          className="flex space-x-4 overflow-x-auto pb-4"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              className="relative flex-shrink-0 w-60 h-60 rounded-2xl overflow-hidden shadow-md group"
-              onClick={() => handleCategoryClick(category.link)}
+            <motion.div
+              className="flex flex-wrap gap-3"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.6, duration: 0.7, ease: luxuryEase }}
             >
-              {/* Image with object-cover to maintain aspect ratio and fill container */}
-              <img
-                src={category.image}
-                alt={category.name}
-                className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+              <motion.button
+                onClick={() => nav('/consultation')}
+                className="btn- bg-secondary px-8 py-3.5"
+                whileHover={{
+                  scale: 1.04,
+                  boxShadow: '0 8px 25px rgba(201,168,76,0.3)',
+                }}
+                whileTap={{ scale: 0.97 }}
+              >
+                Book a Consultation
+              </motion.button>
+              <motion.button
+                onClick={() => nav('/projects')}
+                className="btn-elegant border-white/40 text-white hover:bg-white hover:text-primary px-8 py-3.5"
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                View Our Work
+              </motion.button>
+            </motion.div>
+          </SlideIn>
+        </div>
+      </SectionReveal>
+
+      {/* ===== Room Showcases ===== */}
+      {[
+        {
+          title: 'Luxurious',
+          highlight: 'Living Rooms',
+          img: 'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/living_lsdtn8.jpg',
+          desc: 'The living room stands out as one of the most important and beautifully decorated living spaces — where comfort meets elegance.',
+          cat: 'Living%20Room',
+          reverse: false,
+        },
+        {
+          title: 'Perfect',
+          highlight: 'Dining Rooms',
+          img: 'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/diningroom_voqqk6.png',
+          desc: 'A central space for celebration, connection, and hospitality — one of the most inviting areas of the home.',
+          cat: 'Dining%20Room',
+          reverse: true,
+        },
+        {
+          title: 'Elegant',
+          highlight: 'Bedrooms',
+          img: 'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/bedroom_mv5jzr.png',
+          desc: 'A personal retreat where you unwind, find comfort, and recharge — adorned with cozy fabrics and soothing colors.',
+          cat: 'Bedroom',
+          reverse: false,
+        },
+        {
+          title: 'Sophisticated',
+          highlight: 'Corner Sofas',
+          img: 'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787002/corner_it609b.png',
+          desc: 'Transform any living space into a haven of comfort and style — perfect for maximizing seating and creating a cozy atmosphere.',
+          cat: 'Corner%20Sofas',
+          reverse: true,
+        },
+      ].map((room, i) => (
+        <SectionReveal
+          key={i}
+          className="py-16 sm:py-20 px-6 sm:px-10 lg:px-20"
+        >
+          <div
+            className={`flex flex-col ${room.reverse ? 'md:flex-row-reverse' : 'md:flex-row'} md:items-center gap-8 lg:gap-16 max-w-6xl mx-auto`}
+          >
+            <SlideIn
+              direction={room.reverse ? 'right' : 'left'}
+              className="md:flex-1 overflow-hidden"
+            >
+              <motion.img
+                src={room.img}
+                alt={`${room.highlight}`}
+                className="w-full h-72 sm:h-80 md:h-96 object-cover"
+                whileHover={{ scale: 1.04 }}
+                transition={{ duration: 0.6, ease: luxuryEase }}
               />
-              {/* Overlay for text and subtle hover effect */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent flex items-end p-4">
-                <div className="">
-                  <h3 className="text-white text-xl font-semibold font-[poppins]">
-                    {category.name}
-                  </h3>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
-      {promotionProducts.length !== 0 ? (
-        <section className="pl-4 sm:pl-8 lg:pl-16">
-          <h2 className="text-2xl font-bold mb-4 font-[poppins]">Promotions</h2>
-          <div
-            className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400 scrollbar-track-gray-100"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {promotionProducts.map((product) => (
-              <div
-                key={product.id}
-                className="flex-shrink-0 w-75 md:w-90 lg:w-100 rounded-lg overflow-hidden"
-              >
-                <div className="relative">
-                  <button
-                    className="w-full h-full"
-                    onClick={() => handleProductClick(product._id)}
-                  >
-                    <img
-                      src={product?.images[0].url}
-                      alt={product.name}
-                      className="w-full h-50 md:h-60 lg:h-70 rounded-lg object-cover rounded-t-lg"
-                    />
-                  </button>
-                  {/* Discount Badge */}
-                  <div className="absolute top-4 left-4 bg-red-500 text-white font-bold text-sm px-3 py-1.5 rounded-full shadow-md">
-                    {product.price && product.discountedPrice
-                      ? `${Math.round(
-                          ((product.price - product.discountedPrice) /
-                            product.price) *
-                            100
-                        )}% OFF`
-                      : ''}
-                  </div>
-                </div>
-                <div className="mt-1">
-                  <h3 className="text-lg font-medium truncate font-[poppins]">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-baseline space-x-2">
-                    <span className="text-red-600 font-bold text-lg">
-                      ₦{product.discountedPrice.toLocaleString()}
-                    </span>
-                    <span className="text-gray-500 line-through text-sm">
-                      ₦{product.price.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-            <div className="w-full h-full py-20 lg:py-30">
-              <button
-                onClick={() => handleShopNow()}
-                className="btn bg-primary rounded-xl mx-4 w-30 font-semibold"
-              >
-                Shop Now
-              </button>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {BestSeller.length !== 0 ? (
-        <section className="pl-4 sm:pl-8 lg:pl-16">
-          <h2 className="text-2xl font-bold mb-4 font-[poppins]">
-            Best Sellers
-          </h2>
-          <div
-            className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400 scrollbar-track-gray-100"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {BestSeller.map((product) => (
-              <div
-                key={product.id}
-                className="flex-shrink-0 w-75 md:w-90 lg:w-100 rounded-lg overflow-hidden"
-              >
-                <div className="relative">
-                  <button
-                    className="w-full h-full"
-                    onClick={() => handleProductClick(product._id)}
-                  >
-                    <img
-                      src={product.images[0].url}
-                      alt={product.name}
-                      className="w-full h-50 md:h-60 lg:h-70 rounded-lg object-cover rounded-t-lg"
-                    />
-                  </button>
-                </div>
-                <div className="mt-1">
-                  <h3 className="text-lg font-medium truncate font-[poppins]">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-baseline space-x-2">
-                    <span className=" text-gray-500">
-                      ₦{product.price.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-            <div className="w-full h-full py-20 lg:py-30">
-              <button
-                onClick={() => handleShopNow()}
-                className="btn bg-primary rounded-xl mx-4 w-30 font-semibold"
-              >
-                Shop Now
-              </button>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {collections.length !== 0 ? (
-        <section className="pl-4 sm:pl-8 lg:pl-16">
-          <h2 className="text-2xl font-bold mb-4 font-[poppins]">
-            Collections
-          </h2>
-          <div
-            className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-400 scrollbar-track-gray-100"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {collections.map((product) => (
-              <div
-                key={product.id}
-                className="flex-shrink-0 w-75 md:w-90 lg:w-100 rounded-lg overflow-hidden"
-              >
-                <div className="relative">
-                  <button
-                    className="w-full h-full"
-                    onClick={() => handleCollectionClick(product._id)}
-                  >
-                    <img
-                      src={product.coverImage.url}
-                      alt={product.name}
-                      className="w-full h-50 md:h-60 lg:h-70 rounded-lg object-cover rounded-t-lg"
-                    />
-                  </button>
-                </div>
-                <div className="mt-1">
-                  <h3 className="text-lg font-medium truncate font-[poppins]">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-baseline space-x-2">
-                    <span className=" text-gray-500">
-                      ₦{product.price.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-            <div className="w-full h-full py-20 lg:py-30">
-              <button
-                onClick={() => handleShopNow()}
-                className="btn bg-primary rounded-xl mx-4 w-30 font-semibold"
-              >
-                Shop Now
-              </button>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="my-10 pl-4 sm:pl-8 lg:pl-16">
-        <h2 className="text-2xl font-bold mb-4 font-[poppins]">
-          Featured Styles
-        </h2>
-        <div
-          className="flex space-x-4 overflow-x-auto pb-4"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {designs.map((category) => (
-            <button
-              key={category.id}
-              className="relative flex-shrink-0 w-60 h-60 rounded-2xl overflow-hidden shadow-md group"
-              onClick={() => handleStyleClick(category.link)}
+            </SlideIn>
+            <SlideIn
+              direction={room.reverse ? 'left' : 'right'}
+              delay={0.15}
+              className="md:flex-1"
             >
-              <img
-                src={category.image}
-                alt={category.name}
-                className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+              <motion.div
+                className="w-10 h-0.5 bg-secondary mb-6"
+                initial={{ scaleX: 0, opacity: 0 }}
+                whileInView={{ scaleX: 1, opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, ease: elegantEase }}
+                style={{ originX: 0 }}
               />
-              {/* Overlay for text and subtle hover effect */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent flex items-end p-4">
-                <div className="">
-                  <h3 className="text-white text-xl font-semibold font-[poppins]">
-                    {category.name}
-                  </h3>
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
-      <section className="my-10 px-4 sm:px-8 lg:px-16">
-        <div className="md:flex md:items-center md:space-x-8 lg:space-x-16">
-          {' '}
-          {/* Increased space-x for larger screens */}
-          <div className="md:flex-1 mb-6 md:mb-0">
-            {' '}
-            {/* Added bottom margin for mobile, removed for desktop */}
-            <img
-              src={
-                'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/living_lsdtn8.jpg'
-              } // Use the imported image
-              alt="Luxurious Living Room"
-              className="w-full h-auto rounded-lg object-cover" // Added rounded corners and shadow
-            />
+              <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-medium text-neutral mb-4">
+                <span className="text-gold-gradient italic">{room.title}</span>
+                <br />
+                {room.highlight}
+              </h2>
+              <p className="text-neutral/60 text-base leading-relaxed mb-8 max-w-md">
+                {room.desc}
+              </p>
+              <motion.button
+                className="btn-elegant"
+                onClick={() => nav(`/shop?category=${room.cat}`)}
+                whileHover={{ scale: 1.04, x: 5 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ duration: 0.3 }}
+              >
+                Explore {room.highlight}
+              </motion.button>
+            </SlideIn>
           </div>
-          <div className="md:flex-1 md:items-startmd:text-left">
-            {' '}
-            {/* Text alignment responsive */}
-            <div className="text-4xl sm:text-5xl md:text-4xl lg:text-5xl font-extrabold font-[poppins] mb-4">
-              {' '}
-              {/* Responsive font sizes */}
-              <span className="text-primary">Luxurious</span> Living Rooms
-            </div>
-            <div className="font-[montserrat] text-base lg:text-lg mb-6">
-              {' '}
-              {/* Responsive font size and bottom margin */}
-              The Living room is where we spend long hours of the day watching
-              television, reading a book or newspaper, relaxing, hosting guests,
-              or enjoying coffee; it stands out as one of the most important and
-              decorated living spaces.
-            </div>
-            <button
-              className="btn border-0 shadow-none text-lg btn-primary w-full rounded-xl text-secondary px-8 py-3"
-              onClick={handleExploreLivingRoomsClick} // NEW: Add onClick handler
-            >
-              Explore Living Rooms{' '}
-              {/* Text remains "Dining Rooms" as per your code */}
-            </button>
-          </div>
-        </div>
-      </section>
-      <section className="my-10 px-4 sm:px-8 lg:px-16">
-        <div className="flex flex-col-reverse md:flex-row md:items-center md:space-x-8 lg:space-x-16">
-          {/* 🟨 TEXT SECTION (comes second on mobile, first on desktop) */}
-          <div className="md:flex-1">
-            <div className="text-4xl sm:text-5xl md:text-4xl lg:text-5xl font-extrabold font-[poppins] mb-4">
-              <span className="text-primary">Perfect</span> Dining Rooms
-            </div>
-            <div className="font-[montserrat] text-base mb-6">
-              The dining room is where we gather to share meals, engage in
-              conversations, and create cherished memories with family and
-              friends. It serves as a central space for celebration, connection,
-              and hospitality, making it one of the most inviting and
-              thoughtfully curated areas of the home.
-            </div>
-            <button
-              className="btn border-0 shadow-none text-lg btn-primary w-full rounded-xl text-secondary px-8"
-              onClick={handleExploreDiningRoomsClick}
-            >
-              Explore Dining Rooms
-            </button>
-          </div>
+        </SectionReveal>
+      ))}
 
-          {/* 🟩 IMAGE SECTION (comes first on mobile, second on desktop) */}
-          <div className="md:flex-1 mb-6 md:mb-0">
-            <img
-              src={
-                'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/diningroom_voqqk6.png'
-              }
-              alt="Luxurious Living Room"
-              className="w-full h-auto rounded-lg object-cover"
-            />
-          </div>
-        </div>
-      </section>
-      <section className="my-10 px-4 sm:px-8 lg:px-16">
-        <div className="md:flex md:items-center md:space-x-8 lg:space-x-16">
-          {' '}
-          {/* Increased space-x for larger screens */}
-          <div className="md:flex-1 mb-6 md:mb-0">
-            {' '}
-            {/* Added bottom margin for mobile, removed for desktop */}
-            <img
-              src={
-                'https://res.cloudinary.com/dnwppcwec/image/upload/v1753786997/bedroom_mv5jzr.png'
-              } // Use the imported image
-              alt="Luxurious Living Room"
-              className="w-full h-auto rounded-lg object-cover" // Added rounded corners and shadow
-            />
-          </div>
-          <div className="md:flex-1 md:items-startmd:text-left">
-            {' '}
-            {/* Text alignment responsive */}
-            <div className="text-4xl sm:text-5xl md:text-4xl lg:text-5xl font-extrabold font-[poppins] mb-4">
-              {' '}
-              {/* Responsive font sizes */}
-              <span className="text-primary">Elegant</span> Bed Rooms
-            </div>
-            <div className="font-[montserrat] text-base lg:text-lg mb-6">
-              {' '}
-              {/* Responsive font size and bottom margin */}
-              The bedroom is a personal retreat where we unwind, find comfort,
-              and recharge for the day ahead. It offers a sanctuary of
-              tranquility and intimacy, adorned with cozy fabrics, soothing
-              colors, and elements that reflect our deepest sense of style and
-              relaxation.
-            </div>
-            <button
-              className="btn border-0 shadow-none text-lg btn-primary w-full rounded-xl text-secondary px-8"
-              onClick={handleExploreBedRoomsClick}
+      {/* ===== Brand Statement ===== */}
+      <SectionReveal className="py-20 sm:py-28 px-6 sm:px-10 lg:px-20 bg-primary text-white text-center">
+        <div className="max-w-3xl mx-auto">
+          <GoldDivider className="mb-8" style={{ background: '#c9a84c' }} />
+          <FadeIn direction="up" blur>
+            <h2 className="font-heading text-2xl sm:text-4xl font-medium leading-snug mb-6">
+              The Epitome of Luxury
+              <br />& Craftsmanship
+            </h2>
+          </FadeIn>
+          <FadeIn direction="up" delay={0.2}>
+            <p className="text-white/60 text-sm sm:text-base leading-relaxed mb-10">
+              At EM Group Limited, we redefine elegance by blending exceptional
+              craftsmanship, timeless design, and the finest materials to create
+              luxury furniture and interior solutions that transform spaces into
+              breathtaking havens.
+            </p>
+          </FadeIn>
+          <FadeIn direction="up" delay={0.4}>
+            <motion.button
+              className="m-4 btn-secondary border-white/30 text-white bg-secondary hover:border-secondary hover:text-primary px-10 py-3.5"
+              onClick={() => nav('/contact')}
+              whileHover={{
+                scale: 1.04,
+                boxShadow: '0 8px 25px rgba(201,168,76,0.3)',
+              }}
+              whileTap={{ scale: 0.97 }}
             >
-              {' '}
-              {/* Responsive width and padding */}
-              Explore Bed Rooms
-            </button>
-          </div>
-        </div>
-      </section>
-      <section className="my-10 px-4 sm:px-8 lg:px-16">
-        <div className="flex flex-col-reverse md:flex-row md:items-center md:space-x-8 lg:space-x-16">
-          {/* 🟨 TEXT SECTION (comes second on mobile, first on desktop) */}
-          <div className="md:flex-1">
-            <div className="text-4xl sm:text-5xl md:text-4xl lg:text-5xl font-extrabold font-[poppins] mb-4">
-              <span className="text-primary">Sophisticated</span> Corner Sofas
-            </div>
-            <div className="font-[montserrat] text-base mb-6">
-              Corner sofas transform any living space into a haven of comfort
-              and style. Perfect for maximizing seating and creating a cozy
-              atmosphere, they offer both functionality and elegance, becoming
-              the centerpiece for relaxation, conversation, and modern living.
-            </div>
-            <button
-              className="btn border-0 shadow-none text-lg btn-primary w-full rounded-xl text-secondary px-8"
-              onClick={handleExploreCornerSofasClick}
+              Get in Touch
+            </motion.button>
+            <motion.button
+              className="btn-secondary-outline border-white/30 text-white bg-secondary hover:border-secondary hover:text-primary px-10 py-3.5"
+              onClick={() => nav('/consultation')}
+              whileHover={{
+                scale: 1.04,
+                boxShadow: '0 8px 25px rgba(201,168,76,0.3)',
+              }}
+              whileTap={{ scale: 0.97 }}
             >
-              Explore Corner Sofas
-            </button>
-          </div>
-
-          {/* 🟩 IMAGE SECTION (comes first on mobile, second on desktop) */}
-          <div className="md:flex-1 mb-6 md:mb-0">
-            <img
-              src={
-                'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787002/corner_it609b.png'
-              }
-              alt="Luxurious Living Room"
-              className="w-full h-auto rounded-lg object-cover"
-            />
-          </div>
+              Book a Consultation
+            </motion.button>
+          </FadeIn>
         </div>
-      </section>
-      <section className="items-center justify-center flex px-4 sm:px-8 lg:px-16">
-        <div className="max-w-5xl text-center">
-          <h1 className="font-bold text-xl sm:text-5xl font-[poppins]">
-            The Epitome of Luxury & Craftsmanship
-          </h1>
-          <p className="font-[montserrat] pt-2">
-            At EM Group Limited, we redefine elegance by blending exceptional
-            craftsmanship, timeless design, and the finest materials to create
-            luxury furniture and interior solutions that transform spaces into
-            breathtaking havens. With a deep-rooted passion for aesthetics and
-            functionality, we specialize in bespoke, handcrafted furniture,
-            ensuring that every piece reflects sophistication, durability, and
-            comfort. Each creation is meticulously crafted by master artisans,
-            using only premium wood, rich fabrics, and exquisite finishes,
-            making every piece a statement of prestige.
-          </p>
-        </div>
-      </section>
-      <div className="items-center justify-center flex px-8 mt-10 sm:px-8 lg:px-16">
-        <button
-          className="btn bg-primary font-[poppins] rounded-xl w-full"
-          onClick={() => handleContatClick()}
-        >
-          Contact Us
-        </button>
-      </div>
-    </div>
+      </SectionReveal>
+    </PageWrapper>
   );
 };
 

@@ -4,6 +4,13 @@ import { sendEmail } from '../services/gmail.service.js';
 
 dotenv.config();
 
+const escapeHtml = (str) =>
+  String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 
 export const sendContactEmail = async (req, res) => {
   const { name, email, phoneNumber, subject, message } = req.body;
@@ -31,12 +38,12 @@ ${message}
   `;
 
   const htmlContent = `
-    <p><strong>Name:</strong> ${name}</p>
-    <p><strong>Email:</strong> ${email}</p>
-    <p><strong>Phone Number:</strong> ${phoneNumber}</p>
-    <p><strong>Subject:</strong> ${subject}</p>
+    <p><strong>Name:</strong> ${escapeHtml(name)}</p>
+    <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+    <p><strong>Phone Number:</strong> ${escapeHtml(phoneNumber)}</p>
+    <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
     <p><strong>Message:</strong></p>
-    <p>${message.replace(/\n/g, '<br>')}</p>
+    <p>${escapeHtml(message).replace(/\n/g, '<br>')}</p>
   `;
 
   // 4. Send the email using Gmail API

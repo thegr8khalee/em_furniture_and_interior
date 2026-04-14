@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Info } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { luxuryEase } from '../lib/animations';
 
 const ProjectCardHome = ({ project }) => {
   const [isHovered, setIsHovered] = useState(false);
@@ -17,18 +19,24 @@ const ProjectCardHome = ({ project }) => {
   };
 
   return (
-    <div className={`relative flex-shrink-0 aspect-[14/16] w-90 rounded-2xl overflow-hidden shadow-lg`}>
+    <motion.div
+      className={`relative flex-shrink-0 aspect-[14/16] w-90 overflow-hidden shadow-md group`}
+      whileHover={{ y: -6, boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
+      transition={{ duration: 0.4, ease: luxuryEase }}
+    >
       <button
-        className="relative w-full h-full rounded-2xl overflow-hidden shadow-md group cursor-pointer"
+        className="relative w-full h-full overflow-hidden group cursor-pointer"
         onClick={handleCardClick}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         {/* Project Image */}
-        <img
+        <motion.img
           src={project.images?.[0]?.url || '/placeholder-project.jpg'}
           alt={project.title}
-          className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+          className="object-cover w-full h-full"
+          whileHover={{ scale: 1.08 }}
+          transition={{ duration: 0.6, ease: luxuryEase }}
         />
 
         {/* Dark Overlay for better text visibility */}
@@ -46,7 +54,7 @@ const ProjectCardHome = ({ project }) => {
         {/* Bottom Left Content Overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
           {/* Project Title */}
-          <h3 className="text-lg font-bold font-[poppins] mb-2 line-clamp-2 text-left">
+          <h3 className="text-lg font-heading font-semibold mb-2 line-clamp-2 text-left">
             {project.title}
           </h3>
 
@@ -57,38 +65,60 @@ const ProjectCardHome = ({ project }) => {
           </div>
 
           {/* Budget */}
-          <div className="text-sm font-semibold text-green-300">
+          <div className="text-sm font-semibold text-secondary">
             Budget: ₦{Number(project.price).toLocaleString()}
           </div>
         </div>
 
         {/* Desktop Hover Description Overlay */}
-        <div
-          className={`absolute inset-0 bg-black/80 p-4 flex items-center justify-center transition-all duration-300 hidden sm:flex ${
-            isHovered ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
-        >
-          <div className="text-white text-center max-w-full">
-            {/* Title on hover */}
-            <h3 className="text-xl font-bold font-[poppins] mb-3 line-clamp-2">
-              {project.title}
-            </h3>
+        <AnimatePresence>
+          {isHovered && (
+            <motion.div
+              className="absolute inset-0 bg-black/80 p-4 items-center justify-center hidden sm:flex"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.35, ease: luxuryEase }}
+            >
+              <div className="text-white text-center max-w-full">
+                <motion.h3
+                  className="text-xl font-heading font-semibold mb-3 line-clamp-2"
+                  initial={{ y: 15, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.1, duration: 0.4, ease: luxuryEase }}
+                >
+                  {project.title}
+                </motion.h3>
 
-            {/* Description */}
-            <p
-              className="text-sm leading-relaxed line-clamp-4 mb-3 opacity-90"
-              dangerouslySetInnerHTML={{ __html: project.description }}
-            />
+                <motion.p
+                  className="text-sm leading-relaxed line-clamp-4 mb-3 opacity-90"
+                  dangerouslySetInnerHTML={{ __html: project.description }}
+                  initial={{ y: 15, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.2, duration: 0.4, ease: luxuryEase }}
+                />
 
-            {/* Category Badge */}
-            <div className="inline-block px-3 py-1 bg-primary text-white text-xs font-medium rounded-full">
-              {project.category}
-            </div>
+                <motion.div
+                  className="inline-block px-3 py-1 bg-secondary text-white text-xs font-semibold tracking-wider uppercase rounded-full"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.3, duration: 0.4, ease: luxuryEase }}
+                >
+                  {project.category}
+                </motion.div>
 
-            {/* Click to view indicator */}
-            <div className="mt-3 text-xs opacity-75">Click to view details</div>
-          </div>
-        </div>
+                <motion.div
+                  className="mt-3 text-xs opacity-75 tracking-wider"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 0.75 }}
+                  transition={{ delay: 0.4, duration: 0.4 }}
+                >
+                  Click to view details
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Mobile Details Overlay */}
         <div
@@ -98,7 +128,7 @@ const ProjectCardHome = ({ project }) => {
         >
           <div className="text-white text-center max-w-full">
             {/* Title on mobile details */}
-            <h3 className="text-xl font-bold font-[poppins] mb-3 line-clamp-2">
+            <h3 className="text-xl font-heading font-semibold mb-3 line-clamp-2">
               {project.title}
             </h3>
 
@@ -109,7 +139,7 @@ const ProjectCardHome = ({ project }) => {
             />
 
             {/* Category Badge */}
-            <div className="inline-block px-3 py-1 bg-primary text-white text-xs font-medium rounded-full">
+            <div className="inline-block px-3 py-1 bg-secondary text-white text-xs font-semibold tracking-wider uppercase rounded-full">
               {project.category}
             </div>
 
@@ -120,7 +150,7 @@ const ProjectCardHome = ({ project }) => {
           </div>
         </div>
       </button>
-    </div>
+    </motion.div>
   );
 };
 

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice Preview — EM Furniture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    @page { size: A4; margin: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 14px; color: #1a1a1a; width: 794px; margin: 0 auto;
+      min-height: 100vh; position: relative; background: #fff;
+    }
+
+    /* ── Background ── */
+    .receipt-bg {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background-repeat: no-repeat; background-size: cover; background-position: center; z-index: 0;
+    }
+    .receipt-bg.lines-pattern {
+      background: repeating-linear-gradient(
+        135deg, transparent, transparent 120px,
+        rgba(0,0,0,0.025) 120px, rgba(0,0,0,0.025) 121px
+      );
+    }
+
+    /* ── Content ── */
+    .receipt-content {
+      position: relative; z-index: 1; padding: 50px 60px 40px;
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+
+    /* ── Logo & Brand ── */
+    .logo-section { text-align: center; margin-bottom: 8px; }
+    .logo-section img { width: 90px; height: auto; }
+    .company-name {
+      text-align: center; font-size: 17px; letter-spacing: 1.5px;
+      margin-bottom: 30px; color: #222;
+    }
+    .company-name .brand { font-weight: 700; font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; }
+    .company-name .fancy { font-style: italic; font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; }
+
+    /* ── Title ── */
+    .receipt-title {
+      text-align: center; font-size: 30px; font-weight: 700;
+      letter-spacing: 10px; text-transform: uppercase; margin-bottom: 40px; color: #222;
+      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    }
+
+    /* ── Meta Section ── */
+    .meta-section {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 50px; padding-top: 20px;
+    }
+    .issued-to .label {
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #222;
+    }
+    .issued-to .name { font-size: 14px; margin-top: 6px; color: #333; }
+    .invoice-meta { text-align: right; }
+    .invoice-meta p { font-size: 13px; line-height: 2; color: #222; }
+    .invoice-meta .label { font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; }
+    .items-table thead th {
+      background: #d9d9d9; color: #000000; font-size: 11px; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase; padding: 14px 24px; text-align: left;
+    }
+    .items-table thead th.right { text-align: right; }
+    .items-table tbody td {
+      padding: 14px 24px; font-size: 14px; border-bottom: 1px solid #eee; color: #333; background-color: #fafafa;
+    }
+    .items-table tbody td.right { text-align: right; font-weight: 500; }
+    .items-table tbody tr:last-child td { border-bottom: none; }
+
+    .summary-table { margin-top: 0; }
+    .summary-table td {
+      padding: 13px 24px; font-size: 13px; font-weight: 700;
+      background: #d9d9d9; color: #000000; letter-spacing: 1.5px; text-transform: uppercase;
+    }
+    .summary-table td.right { text-align: right; }
+    
+
+    /* ── Footer ── */
+    .receipt-footer {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      margin-top: auto; padding-top: 50px;
+    }
+    .bank-details h4 {
+      font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; margin-bottom: 8px; color: #222;
+    }
+    .bank-details p { font-size: 11px; line-height: 1.9; color: #333; text-transform: uppercase; }
+    .signature { text-align: right; }
+    .signature p {
+      font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #222; line-height: 2;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="receipt-bg" style="background-image: url('document-bg.png');"></div>
+
+<div class="receipt-content">
+
+  <div class="logo-section">
+    <img src="em_logo.png" alt="EM Furniture">
+  </div>
+
+  <div class="company-name">
+    <span class="brand">EM</span> <span class="fancy">Furniture &amp; interior</span>&copy;
+  </div>
+
+  <h1 class="receipt-title">Payment Invoice</h1>
+
+  <div class="meta-section">
+    <div class="issued-to">
+      <div class="label">Issued To:</div>
+      <div class="name">Kester Ezeamaka</div>
+    </div>
+    <div class="invoice-meta">
+      <p><span class="label">Invoice No:</span>&nbsp;&nbsp;&nbsp;153</p>
+      <p><span class="label">Date:</span>&nbsp;&nbsp;&nbsp;10.01.2026</p>
+    </div>
+  </div>
+
+  <table class="items-table">
+    <thead>
+      <tr><th>Description</th><th class="right">Price</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Masters bedroom padded bed</td><td class="right">&#8358;1,800,000</td></tr>
+      <tr><td>Kids bedroom</td><td class="right">&#8358;550,000</td></tr>
+      <tr><td>Adults room</td><td class="right">&#8358;600,000</td></tr>
+      <tr><td>Living room sofa 3,3,1,1</td><td class="right">&#8358;1,600,000</td></tr>
+      <tr><td>Small living 3,1,1 1</td><td class="right">&#8358;1,300,000</td></tr>
+      <tr><td>Buffet table</td><td class="right">&#8358;400,000</td></tr>
+      <tr><td>Dining table</td><td class="right">&#8358;800,000</td></tr>
+    </tbody>
+  </table>
+
+  <table class="summary-table">
+    <tr><td>Total</td><td class="right">&#8358;7,050,000</td></tr>
+  </table>
+
+  <div class="receipt-footer">
+    <div class="bank-details">
+      <h4>Bank Details</h4>
+      <p>
+        TAJ BANK<br>
+        Account Number: 0004052820<br>
+        Account Name: AMINA MUSA ABDULLAHI
+      </p>
+    </div>
+    <div class="signature">
+      <p>Signed</p>
+      <p>Management</p>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

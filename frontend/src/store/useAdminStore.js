@@ -38,6 +38,7 @@ export const useAdminStore = create((set) => ({
       useAuthStore.setState({
         authUser: res.data,
         isAdmin: res.data?.role === 'admin',
+        permissions: res.data?.permissions || [],
       });
       toast.success('Logged in successfully');
     } catch (error) {
@@ -52,7 +53,7 @@ export const useAdminStore = create((set) => ({
   AdminLogout: async () => {
     try {
       await axiosInstance.post('/admin/logout');
-      useAuthStore.setState({ authUser: null });
+      useAuthStore.setState({ authUser: null, permissions: [], isAdmin: false });
       toast.success('Logged out successfully');
     } catch (error) {
       toast.error(error.message);

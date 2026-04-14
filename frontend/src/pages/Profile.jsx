@@ -16,6 +16,7 @@ import {
   Eye,
 } from 'lucide-react';
 import toast from 'react-hot-toast'; // Ensure toast is imported for local messages
+import { PageWrapper } from '../components/animations';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -119,13 +120,47 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="pt-16">
-      <div className="container mx-auto p-4 sm:p-6 lg:p-8 pt-16">
-        <h1 className="text-4xl font-bold font-[poppins] mb-8 text-center">
-          My Profile
-        </h1>
+    <PageWrapper>
+    <div className="min-h-screen bg-base-200">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div className="text-center mb-8">
+          <span className="text-xs font-semibold tracking-[0.2em] uppercase text-secondary">Account</span>
+          <h1 className="font-heading text-3xl font-bold text-neutral mt-2">My Profile</h1>
+          <div className="divider-gold mt-3"></div>
+        </div>
 
-        <div className="max-w-2xl mx-auto bg-base-100 p-6 rounded-lg shadow-xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+          <button
+            type="button"
+            onClick={() => navigate('/orders')}
+            className="btn-elegant-outline w-full"
+          >
+            My Orders
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/notifications')}
+            className="btn-elegant-outline w-full"
+          >
+            Notifications
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/loyalty')}
+            className="btn-elegant-outline w-full"
+          >
+            Loyalty Points
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/track-order')}
+            className="btn-elegant-outline w-full"
+          >
+            Track Order
+          </button>
+        </div>
+
+        <div className="max-w-2xl mx-auto bg-white p-6 sm:p-8 border border-base-300">
           {/* Error and Success messages are now handled by react-hot-toast directly from store actions */}
           {/* {profileUpdateError && (
             <div role="alert" className="alert alert-error mb-4">
@@ -141,7 +176,7 @@ const ProfilePage = () => {
           <div className="flex justify-end mb-4">
             <button
               onClick={() => setIsEditing(!isEditing)}
-              className="btn btn-outline btn-primary rounded-md"
+              className="btn-elegant-outline text-sm"
             >
               {isEditing ? (
                 'Cancel Edit'
@@ -164,7 +199,7 @@ const ProfilePage = () => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="input input-bordered w-full rounded-md"
+                className="input input-bordered w-full rounded-none"
                 disabled={!isEditing}
                 required
               />
@@ -180,7 +215,7 @@ const ProfilePage = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input input-bordered w-full rounded-md"
+                className="input input-bordered w-full rounded-none"
                 disabled={!isEditing}
                 required
               />
@@ -196,7 +231,7 @@ const ProfilePage = () => {
                 type="tel"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="input input-bordered w-full rounded-md"
+                className="input input-bordered w-full rounded-none"
                 disabled={!isEditing}
               />
             </div>
@@ -205,7 +240,7 @@ const ProfilePage = () => {
               <div className="flex justify-end space-x-4 mt-6">
                 <button
                   type="submit"
-                  className="btn btn-primary text-secondary rounded-md"
+                  className="btn-elegant text-sm"
                   disabled={isUpdatingProfile}
                 >
                   {isUpdatingProfile ? (
@@ -222,7 +257,7 @@ const ProfilePage = () => {
           <div className="w-full border-t border-base-200 mt-6">
             <button
               onClick={() => setShowChangePasswordForm(!showChangePasswordForm)}
-              className="btn w-full btn-outline btn-info rounded-md"
+              className="btn w-full btn-elegant-outline text-sm"
             >
               <Lock size={18} className="mr-2" />
               {showChangePasswordForm
@@ -233,7 +268,7 @@ const ProfilePage = () => {
 
           {/* NEW: Change Password Form (Conditionally Rendered) */}
           {showChangePasswordForm && (
-            <div className="mt-6 p-4 bg-base-200 rounded-lg shadow-inner">
+            <div className="mt-6 p-4 bg-base-200 rounded-none shadow-inner">
               <h3 className="text-xl font-semibold mb-4 text-center">
                 Change Your Password
               </h3>
@@ -247,7 +282,7 @@ const ProfilePage = () => {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={oldPassword}
-                      placeholder="••••••••"
+                      placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                       onChange={(e) => setOldPassword(e.target.value)}
                       className="w-full"
                       required
@@ -285,7 +320,7 @@ const ProfilePage = () => {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={newPassword}
-                      placeholder="••••••••"
+                      placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="w-full"
                       required
@@ -323,7 +358,7 @@ const ProfilePage = () => {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={confirmNewPassword}
-                      placeholder="••••••••"
+                      placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                       onChange={(e) => setConfirmNewPassword(e.target.value)}
                       className="w-full"
                       required
@@ -355,7 +390,7 @@ const ProfilePage = () => {
                 <div className="flex justify-end mt-4">
                   <button
                     type="submit"
-                    className="btn btn-success text-secondary rounded-md"
+                    className="btn-elegant text-sm"
                     disabled={isChangingPassword}
                   >
                     {isChangingPassword ? (
@@ -373,7 +408,7 @@ const ProfilePage = () => {
           <div className="w-full pt- border-t border-base-200 mt-6">
             <button
               onClick={() => handleLogOut()}
-              className="btn w-full btn-outline btn-error rounded-md"
+              className="btn w-full btn-outline btn-error"
             >
               Logout
             </button>
@@ -381,7 +416,7 @@ const ProfilePage = () => {
           <div className="w-full pt-6">
             <button
               onClick={() => handleDeleteAccount()}
-              className="btn w-full btn-error rounded-md"
+              className="btn w-full btn-error"
             >
               <Trash2 />
               Delete Account
@@ -390,6 +425,7 @@ const ProfilePage = () => {
         </div>
       </div>
     </div>
+    </PageWrapper>
   );
 };
 

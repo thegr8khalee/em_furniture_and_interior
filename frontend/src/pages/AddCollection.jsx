@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Editor } from '@tinymce/tinymce-react';
 import { ChevronDown, ChevronUp, Loader2, Search, XCircle } from 'lucide-react'; // For loading spinner and remove icon
-import { useAdminStore } from '../store/useAdminStore'; // Import useAdminStore for addCollection and getProducts
+import { useAdminStore } from '../store/useAdminStore';
+import AdminPageShell from '../components/admin/AdminPageShell'; // Import useAdminStore for addCollection and getProducts
 import { useProductsStore } from '../store/useProductsStore';
 
 const AddCollection = () => {
@@ -197,14 +198,11 @@ const AddCollection = () => {
     .filter(Boolean); // Filter out any undefined names
 
   return (
-    <div className="flex justify-center items-start min-h-screen py-8 bg-base-200">
-      <div className="px-4 py-12 bg-base-100 rounded-lg shadow-xl w-full max-w-3xl">
-        <h2 className="text-3xl font-bold mb-6 text-primary font-[poppins]">
-          Add New Collection
-        </h2>
+    <AdminPageShell title="Add New Collection">
+      <div className="bg-base-100 border border-base-200 p-6 w-full max-w-3xl">
 
         {error && (
-          <div role="alert" className="alert alert-error mb-4 rounded-md">
+          <div role="alert" className="alert alert-error mb-4 rounded-none">
             <span>{error}</span>
           </div>
         )}
@@ -218,7 +216,7 @@ const AddCollection = () => {
               type="text"
               name="name"
               placeholder="e.g., Scandinavian Simplicity"
-              className="input input-bordered w-full rounded-md"
+              className="input input-bordered w-full rounded-none"
               value={formData.name}
               onChange={handleChange}
               required
@@ -259,7 +257,7 @@ const AddCollection = () => {
             <textarea
               name="items"
               placeholder="(3+3+1+1) or Bed+Wardrobe+mirror..."
-              className="textarea textarea-bordered h-24 w-full rounded-md"
+              className="textarea textarea-bordered h-24 w-full rounded-none"
               value={formData.items}
               onChange={handleChange}
               required
@@ -275,7 +273,7 @@ const AddCollection = () => {
               name="price"
               placeholder="1999.99"
               step="0.01"
-              className="input input-bordered w-full rounded-md"
+              className="input input-bordered w-full rounded-none"
               value={Number(formData.price).toFixed(2)}
               onChange={handleChange}
               required
@@ -288,7 +286,7 @@ const AddCollection = () => {
             </label>
             <select
               name="style"
-              className="select select-bordered w-full rounded-md"
+              className="select select-bordered w-full rounded-none"
               value={formData.style}
               onChange={handleChange}
               required
@@ -311,7 +309,7 @@ const AddCollection = () => {
               </span>
             </label>
             <div
-              className="input input-bordered w-full rounded-md flex items-center justify-between cursor-pointer"
+              className="input input-bordered w-full rounded-none flex items-center justify-between cursor-pointer"
               onClick={() => setIsProductDropdownOpen(!isProductDropdownOpen)}
               tabIndex="0" // Make div focusable for accessibility
               onKeyDown={(e) => {
@@ -333,7 +331,7 @@ const AddCollection = () => {
                   ))}
                 </span>
               ) : (
-                <span className="text-gray-400">Select products...</span>
+                <span className="text-neutral/40">Select products...</span>
               )}
               {isProductDropdownOpen ? (
                 <ChevronUp size={20} />
@@ -343,17 +341,17 @@ const AddCollection = () => {
             </div>
 
             {isProductDropdownOpen && (
-              <div className="absolute z-10 w-full bg-base-100 border border-base-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
+              <div className="absolute z-10 w-full bg-base-100 border border-base-300 rounded-none shadow-lg mt-1 max-h-60 overflow-y-auto">
                 <div className="p-2 sticky top-0 bg-base-100 border-b border-base-300 z-20">
                   <div className="relative">
                     <Search
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral/40"
                       size={18}
                     />
                     <input
                       type="text"
                       placeholder="Search products..."
-                      className="input input-bordered w-full pl-10 pr-3 rounded-md"
+                      className="input input-bordered w-full pl-10 pr-3 rounded-none"
                       value={productSearchQuery}
                       onChange={(e) => setProductSearchQuery(e.target.value)}
                     />
@@ -384,14 +382,14 @@ const AddCollection = () => {
                     ))}
                   </ul>
                 ) : (
-                  <div className="p-4 text-center text-gray-500">
+                  <div className="p-4 text-center text-neutral/60">
                     No products found.
                   </div>
                 )}
               </div>
             )}
             {selectedProductNames.length > 0 && (
-              <p className="text-sm text-gray-500 mt-2">
+              <p className="text-sm text-neutral/60 mt-2">
                 Selected: {selectedProductNames.join(', ')}
               </p>
             )}
@@ -408,10 +406,10 @@ const AddCollection = () => {
               type="file"
               name="coverImage"
               accept="image/*"
-              className="file-input file-input-bordered w-full rounded-md"
+              className="file-input file-input-bordered w-full rounded-none"
               onChange={handleCoverImageChange}
             />
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-neutral/60 mt-1">
               Select a single cover image.
             </p>
 
@@ -422,7 +420,7 @@ const AddCollection = () => {
                 <img
                   src={coverImagePreview}
                   alt="Cover Preview"
-                  className="w-full h-full object-cover rounded-md shadow-sm border border-gray-200"
+                  className="w-full h-full object-cover rounded-none shadow-sm border border-gray-200"
                 />
                 <button
                   type="button"
@@ -472,7 +470,7 @@ const AddCollection = () => {
                 name="discountedPrice"
                 placeholder="e.g., 1499.99"
                 step="0.01"
-                className="input input-bordered w-full rounded-md"
+                className="input input-bordered w-full rounded-none"
                 value={Number(formData.discountedPrice).toFixed(2)}
                 onChange={handleChange}
                 required={formData.isPromo}
@@ -483,7 +481,7 @@ const AddCollection = () => {
           <div className="form-control mt-6">
             <button
               type="submit"
-              className="btn btn-primary w-full text-lg font-semibold py-3 rounded-md shadow-md hover:shadow-lg transition duration-200 text-black font-[poppins]"
+              className="btn btn-primary w-full text-lg font-semibold py-3 rounded-none shadow-md hover:shadow-lg transition duration-200 font-heading"
               disabled={isAddingCollection}
             >
               {isAddingCollection ? (
@@ -497,7 +495,7 @@ const AddCollection = () => {
           <div className="form-control mt-4">
             <button
               type="button"
-              className="btn btn-ghost w-full text-lg font-semibold py-3 rounded-md"
+              className="btn btn-ghost w-full text-lg font-semibold py-3 rounded-none"
               onClick={() => navigate('/admin/dashboard?section=collections')}
               disabled={isAddingCollection}
             >
@@ -506,7 +504,7 @@ const AddCollection = () => {
           </div>
         </form>
       </div>
-    </div>
+    </AdminPageShell>
   );
 };
 

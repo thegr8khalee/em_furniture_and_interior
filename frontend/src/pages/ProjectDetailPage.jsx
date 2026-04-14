@@ -3,6 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2, MapPin, Tag, DollarSign, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
+import { luxuryEase } from '../lib/animations';
+import { PageWrapper, SectionReveal, SlideIn } from '../components/animations';
 import { useProjectsStore } from '../store/useProjectsStore';
 
 const ProjectDetailPage = () => {
@@ -54,7 +57,7 @@ const ProjectDetailPage = () => {
         return (
             <div className="flex flex-col justify-center items-center min-h-[50vh] p-8 bg-base-100">
                 <h1 className="text-3xl font-bold text-error mb-4">Project Not Found</h1>
-                <p className="text-lg text-gray-600 mb-6">
+                <p className="text-lg text-neutral/70 mb-6">
                     We could not load the details for this project ID: **{id}**.
                 </p>
                 <button
@@ -80,32 +83,46 @@ const ProjectDetailPage = () => {
     const project = selectedProject;
 
     return (
-        <div className="container max-w-5xl mx-auto p-4 md:p-8">
+        <PageWrapper>
+        <div className="min-h-screen pt-24 pb-12 px-4 max-w-7xl mx-auto">
             {/* Back Button */}
             <button
                 onClick={() => navigate(-1)} // Go back to the previous page
-                className="btn btn-ghost mb-6 text-primary flex items-center"
+                className="btn btn-ghost mb-8 text-neutral/70 hover:text-neutral hover:bg-transparent -ml-3"
             >
                 <ArrowLeft className="h-5 w-5 mr-2" />
                 Back
             </button>
 
-            <div className="bg-white rounded-xl shadow-2xl p-6 lg:p-10">
-                <h1 className="text-4xl font-extrabold text-gray-900 mb-6 font-[poppins]">{project.title}</h1>
+            <div className="bg-white shadow-xl border border-base-200 p-8 lg:p-12">
+                <motion.h1
+                    className="text-3xl md:text-4xl font-heading font-semibold text-neutral mb-8 tracking-tight"
+                    initial={{ opacity: 0, y: 20, filter: 'blur(6px)' }}
+                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    transition={{ duration: 0.7, ease: luxuryEase }}
+                >
+                    {project.title}
+                </motion.h1>
                 
                 {/* --- Image Gallery Section --- */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
                     {/* Main Image */}
-                    <div className="lg:col-span-2 relative rounded-lg max-h-[60vh] overflow-hidden shadow-xl">
-                        {/* Fallback check for images */}
+                    <div className="lg:col-span-2 relative max-h-[60vh] overflow-hidden shadow-lg border border-base-200">
                         {project.images && project.images.length > 0 ? (
-                            <img
-                                src={project.images[mainImageIndex].url}
-                                alt={project.title}
-                                className="w-full h-full object-contain transition-opacity duration-300"
-                            />
+                            <AnimatePresence mode="wait">
+                                <motion.img
+                                    key={mainImageIndex}
+                                    src={project.images[mainImageIndex].url}
+                                    alt={project.title}
+                                    className="w-full h-full object-cover"
+                                    initial={{ opacity: 0, scale: 1.04 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.98 }}
+                                    transition={{ duration: 0.5, ease: luxuryEase }}
+                                />
+                            </AnimatePresence>
                         ) : (
-                            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-neutral/60">
                                 No image available
                             </div>
                         )}
@@ -117,9 +134,9 @@ const ProjectDetailPage = () => {
                             <div
                                 key={image.public_id || index}
                                 onClick={() => setMainImageIndex(index)}
-                                className={`w-24 h-24 lg:w-full lg:h-32 flex-shrink-0 cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                                className={`w-24 h-24 lg:w-full lg:h-32 flex-shrink-0 cursor-pointer overflow-hidden border transition-all duration-200 ${
                                     index === mainImageIndex 
-                                        ? 'border-primary shadow-lg' 
+                                        ? 'border-secondary shadow-md' 
                                         : 'border-transparent opacity-70 hover:opacity-100 hover:border-gray-300'
                                 }`}
                             >
@@ -136,47 +153,50 @@ const ProjectDetailPage = () => {
                 {/* --- Project Info & Description Section --- */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                     {/* Details Box */}
-                    <div className="lg:col-span-1 p-6 bg-base-200 rounded-lg shadow-inner h-fit">
-                        <h3 className="text-2xl font-bold mb-4 text-primary">Project Overview</h3>
+                    <SlideIn direction="left" className="lg:col-span-1">
+                    <div className="p-8 bg-base-200/50 border border-base-300 h-fit">
+                        <h3 className="text-xl font-heading font-semibold mb-6 text-neutral">Project Overview</h3>
                         
                         <div className="space-y-3">
                             {/* Location */}
-                            <div className="flex items-center text-gray-700">
-                                <MapPin className="h-5 w-5 mr-3 text-info flex-shrink-0" />
+                            <div className="flex items-center text-neutral/70">
+                                <MapPin className="h-5 w-5 mr-3 text-secondary flex-shrink-0" />
                                 <span className="font-semibold">Location:</span>
                                 <span className="ml-2 truncate">{project.location}</span>
                             </div>
 
                             {/* Category */}
-                            <div className="flex items-center text-gray-700">
-                                <Tag className="h-5 w-5 mr-3 text-warning flex-shrink-0" />
+                            <div className="flex items-center text-neutral/70">
+                                <Tag className="h-5 w-5 mr-3 text-secondary flex-shrink-0" />
                                 <span className="font-semibold">Category:</span>
                                 <span className="ml-2 truncate">{project.category}</span>
                             </div>
 
                             {/* Price / Budget */}
-                            <div className="flex items-center text-gray-700 border-t pt-3 mt-3 border-gray-300">
-                                <DollarSign className="h-5 w-5 mr-3 text-success flex-shrink-0" />
+                            <div className="flex items-center text-neutral/70 border-t pt-3 mt-3 border-gray-300">
+                                <DollarSign className="h-5 w-5 mr-3 text-secondary flex-shrink-0" />
                                 <span className="font-semibold">Budget:</span>
-                                <span className="ml-2 text-xl font-bold text-success">
+                                <span className="ml-2 text-xl font-bold text-secondary">
                                     ₦{Number(project.price).toLocaleString()}
                                 </span>
                             </div>
                         </div>
                     </div>
+                    </SlideIn>
 
                     {/* Description */}
-                    <div className="lg:col-span-2">
-                        <h3 className="text-2xl font-bold mb-4 border-b pb-2 text-gray-800">Scope of Work</h3>
+                    <SlideIn direction="right" className="lg:col-span-2">
+                        <h3 className="text-xl font-heading font-semibold mb-4 border-b border-base-300 pb-2 text-neutral">Scope of Work</h3>
                         <div 
                             className="prose max-w-none"
                             // Dangerously set inner HTML for the rich text description
                             dangerouslySetInnerHTML={{ __html: project.description }}
                         />
-                    </div>
+                    </SlideIn>
                 </div>
             </div>
         </div>
+        </PageWrapper>
     );
 };
 

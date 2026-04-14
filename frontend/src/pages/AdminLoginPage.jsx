@@ -15,15 +15,15 @@ const AdminLoginPage = () => {
   const navigate = useNavigate();
 
   // Access authUser and isAdmin from the store to handle redirection if already logged in as admin
-  const { authUser, isAdmin, isLoading } = useAuthStore();
+  const { authUser, isAdmin, isLoading, isCheckingAuth } = useAuthStore();
   const { adminLogin } = useAdminStore();
   // Effect to redirect if an admin is already logged in
   // This handles cases where an admin manually navigates to /admin/login while already authenticated
   React.useEffect(() => {
-    if (!isLoading && authUser && isAdmin) {
+    if (!isCheckingAuth && authUser && isAdmin) {
       navigate('/admin/dashboard', { replace: true });
     }
-  }, [authUser, isAdmin, isLoading, navigate]);
+  }, [authUser, isAdmin, isCheckingAuth, navigate]);
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -31,20 +31,10 @@ const AdminLoginPage = () => {
     await adminLogin(formData);
   };
 
-  // If loading, show a simple loading message
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <span className="loading loading-spinner loading-lg"></span>
-        <Loader2 className="animate-spin" />
-      </div>
-    );
-  }
-
   // Render the login form
   return (
     <div className="p-4 flex justify-center items-center h-screen bg-base-300">
-      <div className="card w-md bg-base-100 shadow-xl rounded-xl">
+      <div className="card w-md bg-base-100 shadow-xl rounded-none">
         <div className="card-body p-8">
           <h2 className="card-title text-center text-3xl font-bold mb-6">
             Admin Login
@@ -141,7 +131,7 @@ const AdminLoginPage = () => {
             <div className="form-control">
               <button
                 type="submit"
-                className="btn btn-primary w-full border-0 font-semibold py-3 rounded-md shadow-md hover:shadow-lg transition duration-200 text-black text-sm font-['poppins']"
+                className="btn btn-primary w-full border-0 font-semibold py-3 rounded-none shadow-md hover:shadow-lg transition duration-200 text-sm font-['poppins']"
                 disabled={isLoading} // Disable button while loading
               >
                 {isLoading ? (

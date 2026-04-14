@@ -8,10 +8,10 @@ import { toast } from 'react-hot-toast';
 // NOTE: Assuming this store provides getProjectById and updateProject
 import { useProjectsStore } from '../store/useProjectsStore';
 import { useAdminStore } from '../store/useAdminStore';
+import AdminPageShell from '../components/admin/AdminPageShell';
 
 const AdminEditProjectPage = () => {
   const { projectId } = useParams();
-  console.log(projectId)
   // Assuming useProjectsStore provides the necessary actions
   const { updateProject, isUpdatingProject } =
     useAdminStore();
@@ -41,8 +41,6 @@ const AdminEditProjectPage = () => {
       if (projectId) {
         // Assuming getProjectById handles the fetching and returns the project object
         const projectData = await getProjectById(projectId);
-
-        console.log(projectData)
 
         if (projectData) {
           setFormData({
@@ -197,7 +195,7 @@ const AdminEditProjectPage = () => {
   // Show loading spinner while fetching initial data
   if (isGettingProject) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center py-20">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
         <p className="ml-2 text-lg">Loading project data...</p>
       </div>
@@ -205,14 +203,11 @@ const AdminEditProjectPage = () => {
   }
 
   return (
-    <div className="flex justify-center items-start min-h-screen py-8 bg-base-200">
-      <div className="px-4 py-12 bg-base-100 rounded-lg shadow-xl w-full max-w-3xl">
-        <h2 className="text-3xl font-bold mb-6 text-primary font-[poppins]">
-          Edit Project
-        </h2>
+    <AdminPageShell title="Edit Project">
+      <div className="bg-base-100 border border-base-200 p-6 w-full max-w-3xl">
 
         {error && (
-          <div role="alert" className="alert alert-error mb-4 rounded-md">
+          <div role="alert" className="alert alert-error mb-4 rounded-none">
             <span>{error}</span>
           </div>
         )}
@@ -239,7 +234,7 @@ const AdminEditProjectPage = () => {
             <label className="label">
               <span className="label-text">Description</span>
             </label>
-            <div className="border border-base-300 rounded-md overflow-hidden">
+            <div className="border border-base-300 rounded-none overflow-hidden">
               <Editor
                 onInit={handleEditorInit}
                 apiKey="esh5bav8bmcm4mdbribpsniybxdqty6jszu5ctwihsw35a5y" // <--- IMPORTANT: Replace with your TinyMCE API key
@@ -330,7 +325,7 @@ const AdminEditProjectPage = () => {
               className="file-input file-input-bordered w-full rounded-full"
               onChange={handleImageChange}
             />
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-neutral/60 mt-1">
               Select one or more images.
             </p>
 
@@ -339,7 +334,7 @@ const AdminEditProjectPage = () => {
                 {imagePreviews.map((previewUrl, index) => (
                   <div
                     key={index}
-                    className="relative group w-full h-24 sm:h-32 rounded-md overflow-hidden shadow-sm border border-gray-200"
+                    className="relative group w-full h-24 sm:h-32 rounded-none overflow-hidden shadow-sm border border-gray-200"
                   >
                     <img
                       src={previewUrl}
@@ -364,7 +359,7 @@ const AdminEditProjectPage = () => {
           <div className="form-control mt-6">
             <button
               type="submit"
-              className="btn btn-primary w-full text-lg font-semibold py-3 rounded-full shadow-md hover:shadow-lg transition duration-200 text-white font-[poppins]"
+              className="btn btn-primary w-full text-lg font-semibold py-3 rounded-full shadow-md hover:shadow-lg transition duration-200 text-white font-heading"
               disabled={isUpdatingProject}
             >
               {isUpdatingProject ? (
@@ -388,7 +383,7 @@ const AdminEditProjectPage = () => {
           </div>
         </form>
       </div>
-    </div>
+    </AdminPageShell>
   );
 };
 

@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { Loader2, XCircle } from 'lucide-react';
 import { useCollectionStore } from '../store/useCollectionStore';
 import { useAdminStore } from '../store/useAdminStore';
+import AdminPageShell from '../components/admin/AdminPageShell';
 
 const AdminAddProductPage = () => {
   const { addProduct, isAddingProduct } = useAdminStore();
@@ -20,6 +21,9 @@ const AdminAddProductPage = () => {
     description: '', // This will be set from TinyMCE's content on submit
     items: '',
     price: '',
+    leadTimeDays: '',
+    shippingMinDays: '',
+    shippingMaxDays: '',
     category: '',
     style: '',
     collectionId: '',
@@ -29,6 +33,10 @@ const AdminAddProductPage = () => {
     discountedPrice: '',
     isForeign: false,
     origin: '',
+    seoTitle: '',
+    seoDescription: '',
+    seoKeywords: '',
+    seoSchemaJsonLd: '',
   });
 
   const [error, setError] = useState(null);
@@ -130,11 +138,26 @@ const AdminAddProductPage = () => {
       setError('Origin is required if product is marked as foreign.');
       return;
     }
+    if (
+      formData.shippingMinDays !== '' &&
+      formData.shippingMaxDays !== '' &&
+      parseInt(formData.shippingMaxDays, 10) <
+        parseInt(formData.shippingMinDays, 10)
+    ) {
+      setError('Shipping max days must be greater than or equal to min days.');
+      return;
+    }
 
     // Prepare formData for submission, including the HTML description
+    const cleanedSeoKeywords = formData.seoKeywords
+      .split(',')
+      .map((keyword) => keyword.trim())
+      .filter((keyword) => keyword);
+
     const productData = {
       ...formData,
       description: htmlDescription, // Set the HTML string here
+      seoKeywords: cleanedSeoKeywords,
     };
 
     const success = await addProduct(productData);
@@ -145,14 +168,11 @@ const AdminAddProductPage = () => {
   };
 
   return (
-    <div className="flex justify-center items-start min-h-screen py-8 bg-base-200">
-      <div className="p-4 py-12 bg-base-100 rounded-lg shadow-xl w-full max-w-3xl">
-        <h2 className="text-3xl font-bold mb-6 text-primary font-[poppins]">
-          Add New Product
-        </h2>
+    <AdminPageShell title="Add New Product">
+      <div className="bg-base-100 border border-base-200 p-6 w-full max-w-3xl">
 
         {error && (
-          <div role="alert" className="alert alert-error mb-4 rounded-md">
+          <div role="alert" className="alert alert-error mb-4 rounded-none">
             <span>{error}</span>
           </div>
         )}
@@ -166,7 +186,7 @@ const AdminAddProductPage = () => {
               type="text"
               name="name"
               placeholder="e.g., Modern Sofa"
-              className="input input-bordered w-full rounded-md"
+              className="input input-bordered w-full rounded-none"
               value={formData.name}
               onChange={handleChange}
               required
@@ -178,7 +198,7 @@ const AdminAddProductPage = () => {
             <label className="label">
               <span className="label-text">Description</span>
             </label>
-            <div className="border border-base-300 rounded-md overflow-hidden"> {/* Container for TinyMCE */}
+            <div className="border border-base-300 rounded-none overflow-hidden"> {/* Container for TinyMCE */}
               <Editor
                 onInit={handleEditorInit}
                 apiKey="esh5bav8bmcm4mdbribpsniybxdqty6jszu5ctwihsw35a5y" // <--- IMPORTANT: Replace with your TinyMCE API key
@@ -208,7 +228,7 @@ const AdminAddProductPage = () => {
             <textarea
               name="items"
               placeholder="(3+3+1+1) or Bed+Wardrobe+mirror..."
-              className="textarea textarea-bordered h-24 w-full rounded-md"
+              className="textarea textarea-bordered h-24 w-full rounded-none"
               value={formData.items}
               onChange={handleChange}
               required
@@ -224,11 +244,56 @@ const AdminAddProductPage = () => {
               name="price"
               placeholder="999.99"
               step="0.01"
-              className="input input-bordered w-full rounded-md"
+              className="input input-bordered w-full rounded-none"
               value={Number(formData.price).toFixed(2)}
               onChange={handleChange}
               required
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Lead Time (days)</span>
+              </label>
+              <input
+                type="number"
+                name="leadTimeDays"
+                placeholder="0"
+                min="0"
+                className="input input-bordered w-full rounded-none"
+                value={formData.leadTimeDays}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Shipping Min (days)</span>
+              </label>
+              <input
+                type="number"
+                name="shippingMinDays"
+                placeholder="0"
+                min="0"
+                className="input input-bordered w-full rounded-none"
+                value={formData.shippingMinDays}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Shipping Max (days)</span>
+              </label>
+              <input
+                type="number"
+                name="shippingMaxDays"
+                placeholder="0"
+                min="0"
+                className="input input-bordered w-full rounded-none"
+                value={formData.shippingMaxDays}
+                onChange={handleChange}
+              />
+            </div>
           </div>
 
           <div className="form-control">
@@ -237,7 +302,7 @@ const AdminAddProductPage = () => {
             </label>
             <select
               name="category"
-              className="select select-bordered w-full rounded-md"
+              className="select select-bordered w-full rounded-none"
               value={formData.category}
               onChange={handleChange}
               required
@@ -260,7 +325,7 @@ const AdminAddProductPage = () => {
             </label>
             <select
               name="style"
-              className="select select-bordered w-full rounded-md"
+              className="select select-bordered w-full rounded-none"
               value={formData.style}
               onChange={handleChange}
               required
@@ -281,7 +346,7 @@ const AdminAddProductPage = () => {
             </label>
             <select
               name="collectionId"
-              className="select select-bordered w-full rounded-md"
+              className="select select-bordered w-full rounded-none"
               value={formData.collectionId}
               onChange={handleChange}
             >
@@ -309,10 +374,10 @@ const AdminAddProductPage = () => {
               type="file"
               name="images"
               accept="image/*"
-              className="file-input file-input-bordered w-full rounded-md"
+              className="file-input file-input-bordered w-full rounded-none"
               onChange={handleImageChange}
             />
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-neutral/60 mt-1">
               Select an image file. You can add multiple images one by one.
             </p>
 
@@ -323,7 +388,7 @@ const AdminAddProductPage = () => {
                     <img
                       src={src}
                       alt={`Product preview ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-md shadow-sm border border-gray-200"
+                      className="w-full h-24 object-cover rounded-none shadow-sm border border-gray-200"
                     />
                     <button
                       type="button"
@@ -375,7 +440,7 @@ const AdminAddProductPage = () => {
                 name="discountedPrice"
                 placeholder="e.g., 799.99"
                 step="0.01"
-                className="input input-bordered w-full rounded-md"
+                className="input input-bordered w-full rounded-none"
                 value={Number(formData.discountedPrice).toFixed(2)}
                 onChange={handleChange}
                 required={formData.isPromo}
@@ -407,7 +472,7 @@ const AdminAddProductPage = () => {
                 type="text"
                 name="origin"
                 placeholder="e.g., Italy, China"
-                className="input input-bordered w-full rounded-md"
+                className="input input-bordered w-full rounded-none"
                 value={formData.origin}
                 onChange={handleChange}
                 required={formData.isForeign}
@@ -415,10 +480,69 @@ const AdminAddProductPage = () => {
             </div>
           )}
 
+          <div className="divider">SEO</div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">SEO Title</span>
+            </label>
+            <input
+              type="text"
+              name="seoTitle"
+              placeholder="Short, descriptive title for search"
+              className="input input-bordered w-full rounded-none"
+              value={formData.seoTitle}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">SEO Description</span>
+            </label>
+            <textarea
+              name="seoDescription"
+              placeholder="Meta description for search results"
+              className="textarea textarea-bordered h-24 w-full rounded-none"
+              value={formData.seoDescription}
+              onChange={handleChange}
+            ></textarea>
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">SEO Keywords</span>
+            </label>
+            <input
+              type="text"
+              name="seoKeywords"
+              placeholder="e.g., modern sofa, luxury seating"
+              className="input input-bordered w-full rounded-none"
+              value={formData.seoKeywords}
+              onChange={handleChange}
+            />
+            <p className="text-sm text-neutral/60 mt-1">
+              Separate keywords with commas.
+            </p>
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">SEO Schema (JSON-LD)</span>
+            </label>
+            <textarea
+              name="seoSchemaJsonLd"
+              placeholder='{"@context":"https://schema.org","@type":"Product"}'
+              className="textarea textarea-bordered h-28 w-full rounded-none"
+              value={formData.seoSchemaJsonLd}
+              onChange={handleChange}
+            ></textarea>
+          </div>
+
           <div className="form-control mt-6">
             <button
               type="submit"
-              className="btn btn-primary w-full text-lg font-semibold py-3 rounded-md shadow-md hover:shadow-lg transition duration-200 text-black font-[poppins]"
+              className="btn btn-primary w-full text-lg font-semibold py-3 rounded-none shadow-md hover:shadow-lg transition duration-200 font-heading"
               disabled={isAddingProduct}
             >
               {isAddingProduct ? (
@@ -432,7 +556,7 @@ const AdminAddProductPage = () => {
           <div className="form-control mt-4">
             <button
               type="button"
-              className="btn btn-ghost w-full text-lg font-semibold py-3 rounded-md"
+              className="btn btn-ghost w-full text-lg font-semibold py-3 rounded-none"
               onClick={() => navigate('/admin/dashboard?section=products')}
               disabled={isAddingProduct}
             >
@@ -441,7 +565,7 @@ const AdminAddProductPage = () => {
           </div>
         </form>
       </div>
-    </div>
+    </AdminPageShell>
   );
 };
 

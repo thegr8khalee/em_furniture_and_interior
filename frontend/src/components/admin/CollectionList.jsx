@@ -1,171 +1,219 @@
-// src/components/AdminCollectionListCard.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Star, Tag, DollarSign, Gift } from 'lucide-react';
+import { Eye, Pencil, Trash2, Star, Gift, Tag } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-
-// NOTE: Assuming these stores exist and provide the necessary collection functions
 import { useAdminStore } from '../../store/useAdminStore';
 import { useCollectionStore } from '../../store/useCollectionStore';
+import Modal from '../ui/Modal';
+import Badge from '../ui/Badge';
 
-const AdminCollectionListCard = ({ item }) => {
-  // item is a Collection object
-  const [isDropDownOpen, setIsDropDownOpen] = React.useState(null);
-  const [dropdownHeight, setDropdownHeight] = React.useState(0);
-  const dropdownRef = React.useRef(null);
+const formatPrice = (val) =>
+  '₦' + Number(val).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  // Assuming delCollection and getCollections are defined in your stores
+const AdminCollectionListCard = ({ item, viewMode = 'grid' }) => {
+  const [showDetail, setShowDetail] = useState(false);
   const { delCollection } = useAdminStore();
   const { getCollections } = useCollectionStore();
-
-  React.useEffect(() => {
-    if (dropdownRef.current) {
-      // Recalculate height whenever the dropdown is opened/closed
-      setDropdownHeight(dropdownRef.current.scrollHeight);
-    }
-  }, [isDropDownOpen]);
-
-  const handleDropDownClick = (itemId) => {
-    // Toggle dropdown open/close state based on collection ID
-    setIsDropDownOpen(itemId === isDropDownOpen ? null : itemId);
-  };
-
   const navigate = useNavigate();
 
-  // Route for editing a collection
-  const handleEdit = (id) => {
-    // Assuming the route structure is /admin/collections/edit/:id
-    navigate(`/admin/collections/edit/${id}`);
-  };
+  const handleEdit = () => navigate(`/admin/collections/edit/${item._id}`);
 
-  const handleDelete = (id) => {
-    // Delete Collection logic
-    window.confirm(
-      'Are you sure you want to delete this collection and unassign its products?'
-    ) &&
-      delCollection(id) // Assuming delCollection is available in useAdminStore
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this collection and unassign its products?')) {
+      delCollection(item._id)
         .then(() => {
           toast.success('Collection deleted successfully!');
-          getCollections({ page: 1, limit: 10 }); // Re-fetch list
+          getCollections(1, 12, {}, false);
         })
-        .catch((error) => {
-          toast.error('Failed to delete collection.');
-          console.error('Delete collection failed:', error);
-        });
+        .catch(() => toast.error('Failed to delete collection.'));
+    }
   };
 
-  // Use item._id for unique key and dropdown toggle
-  const itemId = item._id;
+  const isDiscounted = item.isPromo && item.discountedPrice && item.discountedPrice < item.price;
+  const displayPrice = isDiscounted ? item.discountedPrice : item.price;
+  const imgSrc = item.coverImage?.url || '';
 
-  const displayPrice =
-    item.isPromo && item.discountedPrice ? item.discountedPrice : item.price;
-
-  const isDiscounted =
-    item.isPromo && item.discountedPrice && item.discountedPrice < item.price;
-
-  return (
-    <div className="rounded-xl bg-base-100 shadow-lg border border-base-200">
-      <div className="w-full flex items-center justify-between p-3">
-        {/* Cover Image */}
-        <figure className="flex-shrink-0 relative">
-          <img
-            src={item.coverImage?.url || 'placeholder-collection.jpg'}
-            alt={item.name}
-            className="w-24 h-20 object-cover rounded-lg shadow-sm"
-          />
-          {item.isBestSeller && (
-            <span className="absolute top-0 left-0 bg-yellow-500 text-xs font-bold text-white px-2 py-0.5 rounded-br-lg">
-              BEST SELLER
-            </span>
-          )}
-        </figure>
-
-        {/* Collection Details */}
-        <div className="h-full flex flex-col space-y-1 p-1 w-full ml-3 flex-grow min-w-0">
-          {/* Name */}
-          <h2 className="font-semibold text-sm sm:text-lg font-[poppins] truncate">
-            {item.name}
-          </h2>
-
-          {/* Style & Origin */}
-          <p className="text-xs font-[inter] text-gray-500 flex items-center">
-            <Tag className="size-3 mr-1 text-info" />
-            {item.style}
-            {item.isForeign && item.origin && ` (${item.origin})`}
-          </p>
-
-          {/* Rating */}
-          <p className="text-xs font-[inter] text-gray-700 flex items-center">
-            <Star className="size-3 mr-1 text-yellow-500 fill-yellow-500" />
-            {item.averageRating || 0} ({item.reviews.length} Reviews)
-          </p>
-
-          {/* Price/Budget */}
-          <div className="flex items-center mt-1">
-            <p
-              className={`text-sm font-bold font-[inter] ${
-                isDiscounted ? 'text-red-500' : 'text-green-600'
-              }`}
-            >
-              ₦{Number(displayPrice).toLocaleString()}
-            </p>
-            {isDiscounted && (
-              <p className="text-xs font-[inter] text-gray-400 ml-2 line-through">
-                ₦{Number(item.price).toLocaleString()}
-              </p>
+  /* ─── Grid card ─── */
+  if (viewMode === 'grid') {
+    return (
+      <>
+        <div className="group relative flex flex-col border border-base-300 bg-white transition-shadow hover:shadow-lg">
+          {/* Badges */}
+          <div className="absolute left-2 top-2 z-10 flex flex-col gap-1">
+            {item.isBestSeller && (
+              <span className="bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">Best Seller</span>
             )}
+            {item.isPromo && (
+              <span className="bg-error px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">Promo</span>
+            )}
+          </div>
+          {/* Product count */}
+          <div className="absolute right-2 top-2 z-10">
+            <span className="bg-primary/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+              {item.productIds?.length || 0} Items
+            </span>
+          </div>
+          {/* Image */}
+          <div className="relative aspect-[4/3] overflow-hidden bg-base-200">
+            {imgSrc ? (
+              <img src={imgSrc} alt={item.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
+            ) : (
+              <div className="flex h-full items-center justify-center text-neutral/20">No image</div>
+            )}
+            {/* Hover overlay */}
+            <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
+              <button onClick={() => setShowDetail(true)} className="flex h-9 w-9 items-center justify-center bg-white text-primary transition-colors hover:bg-secondary hover:text-white" title="View">
+                <Eye size={16} />
+              </button>
+              <button onClick={handleEdit} className="flex h-9 w-9 items-center justify-center bg-white text-primary transition-colors hover:bg-secondary hover:text-white" title="Edit">
+                <Pencil size={16} />
+              </button>
+              <button onClick={handleDelete} className="flex h-9 w-9 items-center justify-center bg-white text-error transition-colors hover:bg-error hover:text-white" title="Delete">
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+          {/* Info */}
+          <div className="flex flex-1 flex-col p-3">
+            <div className="flex items-center gap-2">
+              <Tag size={10} className="text-neutral/30" />
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-neutral/40">{item.style || 'No style'}</p>
+            </div>
+            <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-neutral">{item.name}</h3>
+            {/* Rating */}
+            <div className="mt-1 flex items-center gap-1">
+              <Star size={12} className="fill-yellow-500 text-yellow-500" />
+              <span className="text-xs text-neutral/50">{item.averageRating || 0} ({item.reviews?.length || 0})</span>
+            </div>
+            <div className="mt-auto pt-2">
+              {isDiscounted ? (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-base font-bold text-error">{formatPrice(displayPrice)}</span>
+                  <span className="text-xs text-neutral/40 line-through">{formatPrice(item.price)}</span>
+                </div>
+              ) : (
+                <span className="text-base font-bold text-neutral">{formatPrice(item.price)}</span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Status/Promo Badge */}
-        <div className="flex flex-col items-end flex-shrink-0 mr-2">
-          {item.isPromo && (
-            <p className="text-xs font-semibold font-[montserrat] mb-2 px-2 py-0.5 rounded-full bg-red-100 text-red-600 flex items-center">
-              <Gift className="size-3 mr-1" />
-              PROMO
-            </p>
-          )}
-          <span className="text-xs text-gray-500">
-            {item.productIds.length} Products
-          </span>
-        </div>
+        <Modal isOpen={showDetail} onClose={() => setShowDetail(false)} title={item.name}>
+          <CollectionDetailView item={item} onClose={() => setShowDetail(false)} onEdit={handleEdit} />
+        </Modal>
+      </>
+    );
+  }
 
-        {/* Dropdown Toggle Button */}
-        <button
-          onClick={() => handleDropDownClick(itemId)}
-          className="btn btn-circle btn-ghost btn-sm flex-shrink-0"
-        >
-          <ChevronDown
-            className={`size-5 text-gray-500 transition-transform duration-300 ease-in-out ${
-              isDropDownOpen === itemId ? 'rotate-180' : 'rotate-0'
-            }`}
-          />
-        </button>
+  /* ─── List row ─── */
+  return (
+    <>
+      <div className="group flex items-center gap-4 border border-base-300 bg-white p-3 transition-shadow hover:shadow-md">
+        <div className="relative h-16 w-20 flex-shrink-0 overflow-hidden bg-base-200">
+          {imgSrc ? (
+            <img src={imgSrc} alt={item.name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full items-center justify-center text-xs text-neutral/20">No img</div>
+          )}
+          {item.isBestSeller && (
+            <span className="absolute left-0 top-0 bg-secondary px-1 py-px text-[8px] font-bold text-white">BS</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="truncate text-sm font-semibold text-neutral">{item.name}</h3>
+          <div className="flex items-center gap-3 text-xs text-neutral/50">
+            <span>{item.style}</span>
+            <span>{item.productIds?.length || 0} products</span>
+            <span className="flex items-center gap-0.5"><Star size={10} className="fill-yellow-500 text-yellow-500" />{item.averageRating || 0}</span>
+          </div>
+        </div>
+        <div className="hidden sm:block">
+          {isDiscounted ? (
+            <div className="text-right">
+              <span className="text-sm font-bold text-error">{formatPrice(displayPrice)}</span>
+              <span className="ml-2 text-xs text-neutral/40 line-through">{formatPrice(item.price)}</span>
+            </div>
+          ) : (
+            <span className="text-sm font-bold text-neutral">{formatPrice(item.price)}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setShowDetail(true)} className="p-2 text-neutral/40 transition-colors hover:text-primary" title="View"><Eye size={16} /></button>
+          <button onClick={handleEdit} className="p-2 text-neutral/40 transition-colors hover:text-secondary" title="Edit"><Pencil size={16} /></button>
+          <button onClick={handleDelete} className="p-2 text-neutral/40 transition-colors hover:text-error" title="Delete"><Trash2 size={16} /></button>
+        </div>
       </div>
 
-      {/* Dropdown Content */}
-      <div
-        ref={dropdownRef}
-        className="transition-all duration-300 ease-in-out overflow-hidden"
-        style={{
-          maxHeight: isDropDownOpen === itemId ? `${dropdownHeight}px` : '0px',
-          opacity: isDropDownOpen === itemId ? 1 : 0,
-        }}
-      >
-        <div className="flex p-3 pt-0 border-t border-base-200">
-          <button
-            onClick={() => handleEdit(itemId)}
-            className="btn-primary btn m-1 p-2 flex-1 rounded-full text-white font-semibold"
-          >
-            Edit Collection
-          </button>
-          <button
-            onClick={() => handleDelete(itemId)}
-            className="btn-outline border-red-500 border-2 text-red-500 hover:bg-red-500 hover:text-white btn m-1 p-2 flex-1 rounded-full font-semibold"
-          >
-            Delete Collection
-          </button>
+      <Modal isOpen={showDetail} onClose={() => setShowDetail(false)} title={item.name}>
+        <CollectionDetailView item={item} onClose={() => setShowDetail(false)} onEdit={handleEdit} />
+      </Modal>
+    </>
+  );
+};
+
+/* ─── Collection Detail View inside Modal ─── */
+const CollectionDetailView = ({ item, onClose, onEdit }) => {
+  const imgSrc = item.coverImage?.url || '';
+  const isDiscounted = item.isPromo && item.discountedPrice && item.discountedPrice < item.price;
+
+  return (
+    <div className="space-y-5">
+      {/* Cover image */}
+      {imgSrc && (
+        <div className="aspect-video w-full overflow-hidden bg-base-200">
+          <img src={imgSrc} alt={item.name} className="h-full w-full object-cover" />
         </div>
+      )}
+
+      {/* Badges row */}
+      <div className="flex flex-wrap gap-2">
+        {item.style && <Badge variant="secondary">{item.style}</Badge>}
+        {item.isBestSeller && <Badge variant="warning">Best Seller</Badge>}
+        {item.isPromo && <Badge variant="error">Promo</Badge>}
+        <Badge variant="info">{item.productIds?.length || 0} Products</Badge>
+      </div>
+
+      {/* Rating */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star
+              key={star}
+              size={16}
+              className={star <= Math.round(item.averageRating || 0) ? 'fill-yellow-500 text-yellow-500' : 'text-neutral/20'}
+            />
+          ))}
+        </div>
+        <span className="text-sm text-neutral/50">{item.averageRating || 0} ({item.reviews?.length || 0} reviews)</span>
+      </div>
+
+      {/* Price */}
+      <div>
+        {isDiscounted ? (
+          <div className="flex items-baseline gap-3">
+            <span className="text-xl font-bold text-error">{formatPrice(item.discountedPrice)}</span>
+            <span className="text-sm text-neutral/40 line-through">{formatPrice(item.price)}</span>
+            <span className="text-xs font-semibold text-success">
+              {(((item.price - item.discountedPrice) / item.price) * 100).toFixed(0)}% OFF
+            </span>
+          </div>
+        ) : (
+          <span className="text-xl font-bold text-neutral">{formatPrice(item.price)}</span>
+        )}
+      </div>
+
+      {/* Description */}
+      {item.description && (
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-neutral/40">Description</p>
+          <div className="prose prose-sm max-h-40 overflow-y-auto text-neutral/70" dangerouslySetInnerHTML={{ __html: item.description }} />
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-3 border-t border-base-300 pt-4">
+        <button onClick={onEdit} className="btn btn-primary flex-1 rounded-none text-sm">Edit Collection</button>
+        <button onClick={onClose} className="btn btn-ghost flex-1 rounded-none border border-base-300 text-sm">Close</button>
       </div>
     </div>
   );

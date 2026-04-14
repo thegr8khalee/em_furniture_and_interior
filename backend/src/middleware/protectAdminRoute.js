@@ -1,6 +1,7 @@
 // middleware/adminAuthMiddleware.js
 import jwt from 'jsonwebtoken';
 import Admin from '../models/admin.model.js'; // Ensure correct path to your Admin model
+import { resolvePermissions } from '../lib/permissions.js';
 
 /**
  * @desc Middleware to protect admin routes
@@ -40,8 +41,19 @@ export const protectAdminRoute = async (req, res, next) => {
       return res.status(404).json({ message: 'Admin user not found.' });
     }
 
+    // Backfill legacy admins with a super_admin role.
+    if (!admin.role) {
+      admin.role = 'super_admin';
+      admin.permissions = resolvePermissions('super_admin');
+      await admin.save();
+    }
+
+    const adminPermissions = resolvePermissions(admin.role, admin.permissions);
+
     // Attach the admin object to the request for subsequent middleware/controllers
     req.admin = admin;
+    req.adminPermissions = adminPermissions;
+    req.adminRole = admin.role;
     next(); // Proceed to the next middleware or route handler
   } catch (error) {
     console.error('Error in protectAdminRoute middleware: ', error.message);

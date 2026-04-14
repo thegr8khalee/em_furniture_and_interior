@@ -4,27 +4,30 @@ import toast from 'react-hot-toast';
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
-  isLoading: true,
+  isCheckingAuth: true,
+  isLoading: false,
   isAdmin: false,
   isAuthReady: false,
   isRequestingReset: false,
   isResettingPassword: false,
   isChangingPassword: false,
+  permissions: [],
 
   checkAuth: async () => {
-    set({ isLoading: true });
+    set({ isCheckingAuth: true });
     try {
       const res = await axiosInstance.get('/auth/check');
 
       set({
-        authUser: res.data, // Assuming backend returns { user: { _id, username, email, role } }
-        isAdmin: res.data.role === 'admin', // Set isAdmin based on backend response
+        authUser: res.data,
+        isAdmin: res.data.role === 'admin',
+        permissions: res.data.permissions || [],
       });
     } catch (error) {
       console.log('Error in checkAuth:', error);
       set({ authUser: null });
     } finally {
-      set({ isLoading: false, isAuthReady: true });
+      set({ isCheckingAuth: false, isAuthReady: true });
     }
   },
 
@@ -57,12 +60,17 @@ export const useAuthStore = create((set, get) => ({
   logout: async () => {
     try {
       await axiosInstance.post('/auth/logout');
-      set({ authUser: null });
+      set({ authUser: null, permissions: [], isAdmin: false });
       toast.success('Logged out successfully');
       get().disconnectSocket();
     } catch (error) {
       toast.error(error.response.data.message);
     }
+  },
+
+  hasPermission: (permission) => {
+    const permissions = get().permissions || [];
+    return permissions.includes(permission);
   },
 
   updateProfile: async (data) => {

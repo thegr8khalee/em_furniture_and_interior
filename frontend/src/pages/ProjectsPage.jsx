@@ -2,6 +2,9 @@ import React, { useEffect } from 'react';
 import { useProjectsStore } from '../store/useProjectsStore';
 import { Loader2 } from 'lucide-react';
 import ProjectCard from '../components/ProjectCard';
+import { motion } from 'framer-motion';
+import { luxuryEase, elegantEase } from '../lib/animations';
+import { PageWrapper, SectionReveal } from '../components/animations';
 
 const Projects = () => {
   const {
@@ -25,22 +28,27 @@ const Projects = () => {
     );
   }
   return (
-    <div className="py-16">
-      <div className="relative">
-        <img
+    <PageWrapper>
+    <div className="min-h-screen bg-base-200 pt-16">
+      <div className="relative h-48 sm:h-64 overflow-hidden">
+        <motion.img
           src={
             'https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png'
           }
           alt=""
-          className="object-cover h-40 w-full"
+          className="object-cover h-full w-full"
+          initial={{ scale: 1.15, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 1.4, ease: luxuryEase }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
-          <h1 className="absolute bottom-10 left-1/2 -translate-x-1/2 mt-0 w-full mb-6 text-3xl font-bold text-center text-base-100 font-[poppins]">
+        <div className="absolute inset-0 bg-primary/80 flex flex-col items-center justify-center">
+          <motion.h1 className="font-heading text-3xl sm:text-4xl font-medium text-white text-center" initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 0.8, delay: 0.5, ease: elegantEase }}>
             Projects
-          </h1>
+          </motion.h1>
         </div>
       </div>
-      <section className="my-8 px-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-w-6xl mx-auto">
+      <SectionReveal>
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {projects.length > 0 ? ( // Correct conditional check: use ? instead of (
           <>
             {' '}
@@ -55,7 +63,9 @@ const Projects = () => {
           </>
         ) : null}
       </section>
+      </SectionReveal>
     </div>
+    </PageWrapper>
   );
 };
 

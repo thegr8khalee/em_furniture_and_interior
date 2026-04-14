@@ -1,5 +1,8 @@
 // src/pages/Showroom.jsx
 import React from 'react';
+import { motion } from 'framer-motion';
+import { luxuryEase, elegantEase } from '../lib/animations';
+import { PageWrapper, SlideIn } from '../components/animations';
 // import Hero1 from '../images/Hero1.png';
 
 const Showroom = () => {
@@ -21,50 +24,54 @@ const Showroom = () => {
     const googleMapsEmbedUrl = `https://www.google.com/maps/embed/v1/place?key=${googleMapsApiKey}&q=${showroomLatitude},${showroomLongitude}&center=${showroomLatitude},${showroomLongitude}&zoom=17`;
 
     return (
-        <div className="pt-16">
-            <div className="relative">
-                <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="Showroom Hero" className="object-cover h-40 w-full" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end justify-center pb-14">
-                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-center text-base-100 font-[poppins]">
+        <PageWrapper>
+        <div className="min-h-screen bg-base-200 pt-16 pb-12">
+            <div className="relative h-48 sm:h-64 overflow-hidden">
+                <motion.img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="Showroom Hero" className="object-cover h-full w-full" initial={{ scale: 1.15, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.4, ease: luxuryEase }} />
+                <div className="absolute inset-0 bg-primary/80 flex items-center justify-center">
+                    <motion.h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-semibold text-white text-center" initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 0.8, delay: 0.5, ease: elegantEase }}>
                         Showroom
-                    </h1>
+                    </motion.h1>
                 </div>
             </div>
 
-            <div className="container mx-auto p-4 sm:p-6 lg:p-8 my-4">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
                     {/* Showroom Information Section */}
-                    <div className="bg-base-100 p-6 rounded-lg shadow-xl">
-                        <h2 className="text-2xl font-semibold font-[poppins] mb-6">Visit Our Showroom</h2>
-                        <div className="space-y-4 text-base-content font-[montserrat]">
+                    <SlideIn direction="left">
+                    <div className="bg-white p-8 border border-base-300 shadow-xl">
+                        <h2 className="text-2xl font-heading font-semibold text-neutral mb-6">Visit Our Showroom</h2>
+                        <div className="space-y-6 text-neutral/70 leading-relaxed font-body">
                             <div>
-                                <h3 className="font-bold text-lg font-[poppins]">Address:</h3>
+                                <h3 className="font-heading font-medium text-secondary text-lg mb-1">Address:</h3>
                                 <p>{descriptiveAddress}</p> {/* Display the descriptive address */}
                             </div>
                             <div>
-                                <h3 className="font-bold text-lg font-[poppins]">Phone:</h3>
+                                <h3 className="font-heading font-medium text-secondary text-lg mb-1">Phone:</h3>
                                 <p><a href="tel:+2349037691860" className=" hover:underline">+2349037691860</a></p>
                             </div>
                             <div>
-                                <h3 className="font-bold text-lg font-[poppins]">Email:</h3>
+                                <h3 className="font-heading font-medium text-secondary text-lg mb-1">Email:</h3>
                                 <p><a href="mailto:emfurnitreandinterior@gmail.com" className=" hover:underline">emfurnitureandinterior@gmail.com</a></p>
                             </div>
                             <div>
-                                <h3 className="font-bold text-lg font-[poppins]">Business Hours:</h3>
+                                <h3 className="font-heading font-medium text-secondary text-lg mb-1">Business Hours:</h3>
                                 <p>Monday - Friday: 9:00 AM - 6:00 PM</p>
                                 <p>Saturday: 10:00 AM - 4:00 PM</p>
                                 <p>Sunday: Closed</p>
                             </div>
-                            <p className="mt-6 text-sm text-gray-600">
+                            <p className="mt-6 text-sm text-neutral/70">
                                 We invite you to visit our showroom to experience the quality and craftsmanship of our furniture firsthand. Our team will be happy to assist you in finding the perfect pieces for your home.
                             </p>
                         </div>
                     </div>
+                    </SlideIn>
 
                     {/* Google Map Embed Section */}
-                    <div className="bg-base-100 p-6 rounded-lg shadow-xl flex flex-col items-center justify-center">
-                        <h2 className="text-2xl font-semibold font-[poppins] mb-6">Find Us on the Map</h2>
-                        <div className="w-full h-80 rounded-lg overflow-hidden border border-base-300">
+                    <SlideIn direction="right">
+                    <div className="bg-white h-full p-8 border border-base-300 shadow-xl flex flex-col items-center justify-center">
+                        <h2 className="text-2xl font-heading font-semibold text-neutral mb-6">Find Us on the Map</h2>
+                        <div className="w-full h-96 overflow-hidden border border-secondary/20 shadow-inner">
                             {googleMapsApiKey ? (
                                 <iframe
                                     src={googleMapsEmbedUrl}
@@ -82,13 +89,15 @@ const Showroom = () => {
                                 </div>
                             )}
                         </div>
-                        <p className="mt-4 text-sm text-gray-600 text-center">
+                        <p className="mt-4 text-sm text-neutral/70 text-center">
                             Click on the map for directions.
                         </p>
                     </div>
+                    </SlideIn>
                 </div>
             </div>
         </div>
+        </PageWrapper>
     );
 };
 

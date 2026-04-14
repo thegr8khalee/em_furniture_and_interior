@@ -81,35 +81,36 @@ const FilterModal = ({
 
   return (
     <div className="px-2 modal modal-open flex items-center justify-center z-50">
-      <div className="modal-box relative w-full max-w-md p-6 rounded-lg shadow-2xl bg-base-100">
+      <div className="modal-box relative w-full max-w-md p-8 bg-white border rounded-none border-base-300 shadow-xl">
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-3 right-3 text-gray-500 hover:text-gray-700"
+          className="absolute top-4 right-4 text-neutral/40 hover:text-neutral transition-colors"
           aria-label="Close filters"
         >
           <X size={24} />
         </button>
-        <h2 className="text-2xl font-bold mb-6 text-center">Filter Options</h2>
+        <h2 className="font-heading text-xl font-semibold mb-1 text-center text-neutral">Filter Options</h2>
+        <div className="divider-gold mx-auto mb-6" />
 
         <div className="space-y-4">
           {/* Price Range Filter */}
           <div>
-            <label className="block text-lg font-semibold mb-2">
+            <label className="block text-sm font-heading font-semibold text-neutral mb-2 tracking-wide">
               Price Range (₦)
             </label>
             <div className="flex gap-2">
               <input
                 type="number"
                 placeholder="Min Price"
-                className="input input-bordered w-1/2 rounded-md"
+                className="input input-bordered w-1/2 text-sm focus:border-secondary focus:outline-none"
                 value={tempMinPrice}
                 onChange={(e) => setTempMinPrice(e.target.value)}
               />
               <input
                 type="number"
                 placeholder="Max Price"
-                className="input input-bordered w-1/2 rounded-md"
+                className="input input-bordered w-1/2 text-sm focus:border-secondary focus:outline-none"
                 value={tempMaxPrice}
                 onChange={(e) => setTempMaxPrice(e.target.value)}
               />
@@ -121,11 +122,11 @@ const FilterModal = ({
             <label className="label cursor-pointer justify-start gap-3">
               <input
                 type="checkbox"
-                className="checkbox checkbox-primary"
+                className="checkbox checkbox-sm border-secondary checked:bg-secondary checked:border-secondary"
                 checked={tempIsBestSellerFilter}
                 onChange={(e) => setTempIsBestSellerFilter(e.target.checked)}
               />
-              <span className="label-text text-lg">Best Seller</span>
+              <span className="label-text text-sm text-neutral">Best Seller</span>
             </label>
           </div>
 
@@ -134,11 +135,11 @@ const FilterModal = ({
             <label className="label cursor-pointer justify-start gap-3">
               <input
                 type="checkbox"
-                className="checkbox checkbox-primary"
+                className="checkbox checkbox-sm border-secondary checked:bg-secondary checked:border-secondary"
                 checked={tempIsPromoFilter}
                 onChange={(e) => setTempIsPromoFilter(e.target.checked)}
               />
-              <span className="label-text text-lg">On Promotion</span>
+              <span className="label-text text-sm text-neutral">On Promotion</span>
             </label>
           </div>
 
@@ -148,11 +149,11 @@ const FilterModal = ({
               <label className="label cursor-pointer justify-start gap-3">
                 <input
                   type="checkbox"
-                  className="checkbox checkbox-primary"
+                className="checkbox checkbox-sm border-secondary checked:bg-secondary checked:border-secondary"
                   checked={tempIsForeignFilter}
                   onChange={(e) => setTempIsForeignFilter(e.target.checked)}
                 />
-                <span className="label-text text-lg">Foreign</span>
+                <span className="label-text text-sm text-neutral">Foreign</span>
               </label>
             </div>
           )}
@@ -162,14 +163,14 @@ const FilterModal = ({
           <button
             type="button"
             onClick={handleClear}
-            className="btn btn-ghost rounded-xl flex-1"
+            className="btn-elegant-outline flex-1 text-sm"
           >
             Clear Filters
           </button>
           <button
             type="button"
             onClick={handleApply}
-            className="btn btn-primary flex-1 rounded-xl text-black"
+            className="btn-elegant flex-1 text-sm"
           >
             Apply Filters
           </button>

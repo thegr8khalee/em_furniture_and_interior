@@ -4,7 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Editor } from '@tinymce/tinymce-react';
 import { ChevronDown, ChevronUp, Loader2, Search, XCircle } from 'lucide-react';
 import { useCollectionStore } from '../store/useCollectionStore'; // Assuming this provides collections
-import { useAdminStore } from '../store/useAdminStore'; // Assuming this provides updateProduct
+import { useAdminStore } from '../store/useAdminStore';
+import AdminPageShell from '../components/admin/AdminPageShell'; // Assuming this provides updateProduct
 import { useProductsStore } from '../store/useProductsStore'; // Assuming this provides getProductById
 
 const AdminEditProductPage = () => {
@@ -24,6 +25,9 @@ const AdminEditProductPage = () => {
     description: '',
     items: '',
     price: '',
+    leadTimeDays: '',
+    shippingMinDays: '',
+    shippingMaxDays: '',
     category: '',
     style: '',
     collectionId: '',
@@ -33,6 +37,10 @@ const AdminEditProductPage = () => {
     discountedPrice: '',
     isForeign: false,
     origin: '',
+    seoTitle: '',
+    seoDescription: '',
+    seoKeywords: '',
+    seoSchemaJsonLd: '',
   });
   const [error, setError] = useState(null);
   const [imagePreviews, setImagePreviews] = useState([]); // Stores URLs for display
@@ -62,6 +70,18 @@ const AdminEditProductPage = () => {
             description: productData.description || '',
             items: productData.items || '',
             price: productData.price || '',
+            leadTimeDays:
+              productData.leadTimeDays !== undefined
+                ? productData.leadTimeDays
+                : '',
+            shippingMinDays:
+              productData.shippingMinDays !== undefined
+                ? productData.shippingMinDays
+                : '',
+            shippingMaxDays:
+              productData.shippingMaxDays !== undefined
+                ? productData.shippingMaxDays
+                : '',
             category: productData.category || '',
             style: productData.style || '',
             collectionId: productData.collectionId?._id || '',
@@ -71,6 +91,10 @@ const AdminEditProductPage = () => {
             discountedPrice: productData.discountedPrice || '',
             isForeign: productData.isForeign || false,
             origin: productData.origin || '',
+            seoTitle: productData.seoTitle || '',
+            seoDescription: productData.seoDescription || '',
+            seoKeywords: (productData.seoKeywords || []).join(', '),
+            seoSchemaJsonLd: productData.seoSchemaJsonLd || '',
           });
           // Set image previews from existing image URLs
           setImagePreviews(productData.images?.map((img) => img.url) || []);
@@ -196,7 +220,16 @@ const AdminEditProductPage = () => {
 
     // IMPORTANT: Only update the description field in dataToSubmit.
     // All other fields and their processing remain exactly as they were.
-    const dataToSubmit = { ...formData, description: htmlDescription };
+    const cleanedSeoKeywords = formData.seoKeywords
+      .split(',')
+      .map((keyword) => keyword.trim())
+      .filter((keyword) => keyword);
+
+    const dataToSubmit = {
+      ...formData,
+      description: htmlDescription,
+      seoKeywords: cleanedSeoKeywords,
+    };
 
     // const dataToSubmit = { ...formData };
 
@@ -235,6 +268,16 @@ const AdminEditProductPage = () => {
       dataToSubmit.origin = undefined; // Set to undefined if not foreign
     }
 
+    if (
+      dataToSubmit.shippingMinDays !== '' &&
+      dataToSubmit.shippingMaxDays !== '' &&
+      parseInt(dataToSubmit.shippingMaxDays, 10) <
+        parseInt(dataToSubmit.shippingMinDays, 10)
+    ) {
+      setError('Shipping max days must be greater than or equal to min days.');
+      return;
+    }
+
     if (dataToSubmit.collectionId === '') {
       dataToSubmit.collectionId = null;
     }
@@ -269,7 +312,7 @@ const AdminEditProductPage = () => {
 
   if (isGettingProducts || isGettingCollections) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex justify-center items-center py-20">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
         <p className="ml-2 text-lg">Loading product data...</p>
       </div>
@@ -277,14 +320,11 @@ const AdminEditProductPage = () => {
   }
 
   return (
-    <div className="flex justify-center items-start min-h-screen py-8 bg-base-200">
-      <div className="px-4 py-12 bg-base-100 rounded-lg shadow-xl w-full max-w-3xl">
-        <h2 className="text-3xl font-bold mb-6 text-primary font-[poppins]">
-          Edit Product
-        </h2>
+    <AdminPageShell title="Edit Product">
+      <div className="bg-base-100 border border-base-200 p-6 w-full max-w-3xl">
 
         {error && (
-          <div role="alert" className="alert alert-error mb-4 rounded-md">
+          <div role="alert" className="alert alert-error mb-4 rounded-none">
             <span>{error}</span>
           </div>
         )}
@@ -298,7 +338,7 @@ const AdminEditProductPage = () => {
               type="text"
               name="name"
               placeholder="e.g., Modern Sofa"
-              className="input input-bordered w-full rounded-md"
+              className="input input-bordered w-full rounded-none"
               value={formData.name}
               onChange={handleChange}
               required
@@ -339,7 +379,7 @@ const AdminEditProductPage = () => {
             <textarea
               name="items"
               placeholder="(3+3+1+1) with Center Table Or Bed+Wardrobe..."
-              className="textarea textarea-bordered h-24 w-full rounded-md"
+              className="textarea textarea-bordered h-24 w-full rounded-none"
               value={formData.items}
               onChange={handleChange}
               required
@@ -355,11 +395,56 @@ const AdminEditProductPage = () => {
               name="price"
               placeholder="999.99"
               step="0.01"
-              className="input input-bordered w-full rounded-md"
+              className="input input-bordered w-full rounded-none"
               value={Number(formData.price).toFixed(2)}
               onChange={handleChange}
               required
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Lead Time (days)</span>
+              </label>
+              <input
+                type="number"
+                name="leadTimeDays"
+                placeholder="0"
+                min="0"
+                className="input input-bordered w-full rounded-none"
+                value={formData.leadTimeDays}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Shipping Min (days)</span>
+              </label>
+              <input
+                type="number"
+                name="shippingMinDays"
+                placeholder="0"
+                min="0"
+                className="input input-bordered w-full rounded-none"
+                value={formData.shippingMinDays}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Shipping Max (days)</span>
+              </label>
+              <input
+                type="number"
+                name="shippingMaxDays"
+                placeholder="0"
+                min="0"
+                className="input input-bordered w-full rounded-none"
+                value={formData.shippingMaxDays}
+                onChange={handleChange}
+              />
+            </div>
           </div>
 
           <div className="form-control">
@@ -368,7 +453,7 @@ const AdminEditProductPage = () => {
             </label>
             <select
               name="category"
-              className="select select-bordered w-full rounded-md"
+              className="select select-bordered w-full rounded-none"
               value={formData.category}
               onChange={handleChange}
               required
@@ -392,7 +477,7 @@ const AdminEditProductPage = () => {
             </label>
             <select
               name="style"
-              className="select select-bordered w-full rounded-md"
+              className="select select-bordered w-full rounded-none"
               value={formData.style}
               onChange={handleChange}
               required
@@ -416,7 +501,7 @@ const AdminEditProductPage = () => {
               </span>
             </label>
             <div
-              className="input input-bordered w-full rounded-md flex items-center justify-between cursor-pointer"
+              className="input input-bordered w-full rounded-none flex items-center justify-between cursor-pointer"
               onClick={() =>
                 setIsCollectionDropdownOpen(!isCollectionDropdownOpen)
               }
@@ -437,17 +522,17 @@ const AdminEditProductPage = () => {
             </div>
 
             {isCollectionDropdownOpen && (
-              <div className="absolute z-10 w-full bg-base-100 border border-base-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto">
+              <div className="absolute z-10 w-full bg-base-100 border border-base-300 rounded-none shadow-lg mt-1 max-h-60 overflow-y-auto">
                 <div className="p-2 sticky top-0 bg-base-100 border-b border-base-300 z-20">
                   <div className="relative">
                     <Search
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral/40"
                       size={18}
                     />
                     <input
                       type="text"
                       placeholder="Search collections..."
-                      className="input input-bordered w-full pl-10 pr-3 rounded-md"
+                      className="input input-bordered w-full pl-10 pr-3 rounded-none"
                       value={collectionSearchQuery}
                       onChange={(e) => setCollectionSearchQuery(e.target.value)}
                     />
@@ -502,7 +587,7 @@ const AdminEditProductPage = () => {
                     ))}
                   </ul>
                 ) : (
-                  <div className="p-4 text-center text-gray-500">
+                  <div className="p-4 text-center text-neutral/60">
                     No collections available
                   </div>
                 )}
@@ -511,7 +596,7 @@ const AdminEditProductPage = () => {
           </div>
 
           {formData.collectionId && (
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-neutral/60 mt-2">
               Selected: {selectedCollectionName}
             </p>
           )}
@@ -526,10 +611,10 @@ const AdminEditProductPage = () => {
               name="images"
               accept="image/*"
               multiple // Keep multiple attribute
-              className="file-input file-input-bordered w-full rounded-md"
+              className="file-input file-input-bordered w-full rounded-none"
               onChange={handleImageChange}
             />
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-neutral/60 mt-1">
               Select one or more images. New selections will replace previously
               added *new* images, but existing Cloudinary images will be
               retained.
@@ -540,7 +625,7 @@ const AdminEditProductPage = () => {
                 {imagePreviews.map((previewUrl, index) => (
                   <div
                     key={index}
-                    className="relative group w-full h-24 sm:h-32 rounded-md overflow-hidden shadow-sm border border-gray-200"
+                    className="relative group w-full h-24 sm:h-32 rounded-none overflow-hidden shadow-sm border border-gray-200"
                   >
                     <img
                       src={previewUrl}
@@ -597,7 +682,7 @@ const AdminEditProductPage = () => {
                 name="discountedPrice"
                 placeholder="e.g., 399.99"
                 step="0.01"
-                className="input input-bordered w-full rounded-md"
+                className="input input-bordered w-full rounded-none"
                 value={Number(formData.discountedPrice).toFixed(2)}
                 onChange={handleChange}
                 required={formData.isPromo}
@@ -627,7 +712,7 @@ const AdminEditProductPage = () => {
                 type="text"
                 name="origin"
                 placeholder="e.g., Italy, China"
-                className="input input-bordered w-full rounded-md"
+                className="input input-bordered w-full rounded-none"
                 value={formData.origin}
                 onChange={handleChange}
                 required={formData.isForeign}
@@ -635,10 +720,69 @@ const AdminEditProductPage = () => {
             </div>
           )}
 
+          <div className="divider">SEO</div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">SEO Title</span>
+            </label>
+            <input
+              type="text"
+              name="seoTitle"
+              placeholder="Short, descriptive title for search"
+              className="input input-bordered w-full rounded-none"
+              value={formData.seoTitle}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">SEO Description</span>
+            </label>
+            <textarea
+              name="seoDescription"
+              placeholder="Meta description for search results"
+              className="textarea textarea-bordered h-24 w-full rounded-none"
+              value={formData.seoDescription}
+              onChange={handleChange}
+            ></textarea>
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">SEO Keywords</span>
+            </label>
+            <input
+              type="text"
+              name="seoKeywords"
+              placeholder="e.g., modern sofa, luxury seating"
+              className="input input-bordered w-full rounded-none"
+              value={formData.seoKeywords}
+              onChange={handleChange}
+            />
+            <p className="text-sm text-neutral/60 mt-1">
+              Separate keywords with commas.
+            </p>
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">SEO Schema (JSON-LD)</span>
+            </label>
+            <textarea
+              name="seoSchemaJsonLd"
+              placeholder='{"@context":"https://schema.org","@type":"Product"}'
+              className="textarea textarea-bordered h-28 w-full rounded-none"
+              value={formData.seoSchemaJsonLd}
+              onChange={handleChange}
+            ></textarea>
+          </div>
+
           <div className="form-control mt-6">
             <button
               type="submit"
-              className="btn btn-primary w-full text-lg font-semibold py-3 rounded-md shadow-md hover:shadow-lg transition duration-200 text-black font-[poppins]"
+              className="btn btn-primary w-full text-lg font-semibold py-3 rounded-none shadow-md hover:shadow-lg transition duration-200 font-heading"
               disabled={isUpdatingProduct}
             >
               {isUpdatingProduct ? (
@@ -652,7 +796,7 @@ const AdminEditProductPage = () => {
           <div className="form-control mt-4">
             <button
               type="button"
-              className="btn btn-ghost w-full text-lg font-semibold py-3 rounded-md"
+              className="btn btn-ghost w-full text-lg font-semibold py-3 rounded-none"
               onClick={() => navigate('/admin/dashboard?section=products')}
               disabled={isUpdatingProduct}
             >
@@ -661,7 +805,7 @@ const AdminEditProductPage = () => {
           </div>
         </form>
       </div>
-    </div>
+    </AdminPageShell>
   );
 };
 

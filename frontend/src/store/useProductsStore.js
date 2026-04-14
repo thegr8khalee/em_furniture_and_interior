@@ -9,6 +9,7 @@ export const useProductsStore = create((set, get) => ({
   hasMoreProducts: true, // Flag to indicate if more products can be loaded
   currentFilters: {}, // Stores the filters currently applied to the fetched products
   productsCount: null,
+  isGettingProductsByIds: false,
 
   getProductsCount: async () => {
     set({ isGettingProducts: true });
@@ -107,6 +108,24 @@ export const useProductsStore = create((set, get) => ({
       console.log('Error in getProductbyID store:', error);
     } finally {
       set({ isGettingProducts: false });
+    }
+  },
+
+  getProductsByIds: async (ids = []) => {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return [];
+    }
+
+    set({ isGettingProductsByIds: true });
+    try {
+      const query = new URLSearchParams({ ids: ids.join(',') }).toString();
+      const res = await axiosInstance.get(`/products/by-ids?${query}`);
+      return res.data.products || [];
+    } catch (error) {
+      console.error('Error in getProductsByIds store:', error);
+      return [];
+    } finally {
+      set({ isGettingProductsByIds: false });
     }
   },
 }));

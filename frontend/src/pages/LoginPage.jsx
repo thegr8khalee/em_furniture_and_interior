@@ -1,10 +1,11 @@
-// src/pages/AdminLoginPage.jsx
+// src/pages/LoginPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; // Ensure Link is imported
 import { useAuthStore } from '../store/useAuthStore';
 // import { usePasswordStore } from '../store/usePasswordStore'; // NEW: Import usePasswordStore
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 // import toast from 'react-hot-toast'; // Ensure toast is imported for local messages
+import { PageWrapper } from '../components/animations';
 
 const LoginPage = () => {
   const navigate = useNavigate(); // Re-enabled useNavigate as it's useful
@@ -12,7 +13,6 @@ const LoginPage = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    // anonymousId: '', // Removed as guest users are no longer in use
   });
 
   // Access authUser and isAdmin from the store to handle redirection if already logged in as admin
@@ -57,25 +57,28 @@ const LoginPage = () => {
     setShowForgotPasswordForm(false);
   };
 
-  // If loading for initial auth check, show a simple loading message
-  // This check is for the overall app's auth loading, not just login form submission
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="ml-2 text-lg">Loading...</p>
-      </div>
-    );
-  }
-
   // Render the login form or forgot password form
   return (
-    <div className="p-4 flex justify-center items-center h-screen bg-base-300">
-      <div className="card w-md bg-base-100 shadow-xl rounded-xl">
-        <div className="card-body p-8">
-          <h2 className="card-title text-center text-3xl font-bold mb-6">
-            Welcome back!
-          </h2>
+    <PageWrapper>
+    <div className="min-h-screen flex">
+      {/* Left decorative panel - hidden on mobile */}
+      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden items-center justify-center">
+        <div className="text-center px-16">
+          <div className="divider-gold mb-8" style={{ background: '#c9a84c' }}></div>
+          <h2 className="font-heading text-4xl xl:text-5xl font-medium text-white leading-tight mb-4">Welcome Back</h2>
+          <p className="text-white/50 text-sm leading-relaxed max-w-sm mx-auto">Sign in to explore our curated furniture collections and manage your orders.</p>
+          {/* <div className="divider-gold mt-8" style={{ background: '#c9a84c' }}></div> */}
+        </div>
+        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'url(https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png)', backgroundSize: 'cover' }}></div>
+      </div>
+      {/* Right form panel */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-white">
+        <div className="w-full max-w-md">
+          <div className="mb-8">
+            <div className="w-10 h-0.5 bg-secondary mb-4"></div>
+            <h2 className="font-heading text-3xl font-medium text-neutral">Sign In</h2>
+            <p className="text-neutral/50 text-sm mt-2">Enter your credentials to continue</p>
+          </div>
 
           {/* Login Form */}
           {!showForgotPasswordForm ? (
@@ -148,7 +151,7 @@ const LoginPage = () => {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
-                      placeholder="••••••••"
+                      placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                       minLength="8"
                       pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
                       value={formData.password}
@@ -178,29 +181,26 @@ const LoginPage = () => {
                   </p>
                 </div>
               </div>
-              <div className="form-control">
+              <div className="form-control space-y-4">
                 <button
                   type="submit"
-                  className="btn btn-primary w-full border-0 font-semibold py-3 rounded-md shadow-md hover:shadow-lg transition duration-200 text-black text-sm font-['poppins']"
-                  disabled={isLoading} // Disable button while loading
+                  className="btn-elegant w-full py-3.5 text-center flex items-center justify-center"
+                  disabled={isLoading}
                 >
                   {isLoading ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    'Login'
+                    'Sign In'
                   )}
                 </button>
-                <div className="w-full text-center mt-2">
-                  <Link to="/signup" className="hover:underline">
-                    Sign Up
+                <div className="flex items-center justify-between text-sm">
+                  <Link to="/signup" className="text-secondary font-medium hover:underline">
+                    Create Account
                   </Link>
-                </div>
-                {/* NEW: Forgot Password Link */}
-                <div className="w-full text-center mt-2">
                   <button
-                    type="button" // Use type="button" to prevent form submission
+                    type="button"
                     onClick={() => setShowForgotPasswordForm(true)}
-                    className="btn btn-link text-sm text-info hover:underline"
+                    className="text-neutral/50 hover:text-secondary transition-colors"
                   >
                     Forgot Password?
                   </button>
@@ -213,7 +213,7 @@ const LoginPage = () => {
               <h3 className="text-xl font-semibold mb-4 text-center">
                 Reset Your Password
               </h3>
-              <p className="text-sm text-gray-600 mb-4 text-center">
+              <p className="text-sm text-neutral/70 mb-4 text-center">
                 Enter your email address and we'll send you a link to reset your
                 password.
               </p>
@@ -252,7 +252,7 @@ const LoginPage = () => {
               <div className="form-control">
                 <button
                   type="submit"
-                  className="btn btn-primary w-full border-0 font-semibold py-3 rounded-md shadow-md hover:shadow-lg transition duration-200 text-black text-sm font-['poppins']"
+                  className="btn-elegant w-full py-3.5 flex items-center justify-center"
                   disabled={isRequestingReset}
                 >
                   {isRequestingReset ? (
@@ -261,14 +261,14 @@ const LoginPage = () => {
                     'Send Reset Link'
                   )}
                 </button>
-                <div className="w-full text-center mt-2">
+                <div className="w-full text-center mt-3">
                   <button
                     type="button"
                     onClick={() => setShowForgotPasswordForm(false)}
-                    className="btn btn-link text-sm text-gray-600 hover:underline"
+                    className="text-sm text-neutral/50 hover:text-secondary transition-colors"
                     disabled={isRequestingReset}
                   >
-                    Cancel
+                    Back to Sign In
                   </button>
                 </div>
               </div>
@@ -277,6 +277,7 @@ const LoginPage = () => {
         </div>
       </div>
     </div>
+    </PageWrapper>
   );
 };
 

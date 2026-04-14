@@ -30,6 +30,7 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
+    loyaltyPoints: { type: Number, default: 0, min: 0 },
     passwordResetToken: String,
     passwordResetExpires: Date,
   },

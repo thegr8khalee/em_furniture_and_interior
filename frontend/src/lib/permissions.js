@@ -1,0 +1,16 @@
+export const PERMISSIONS = {
+  ADMIN_DASHBOARD_VIEW: 'admin.dashboard.view',
+  PRODUCTS_MANAGE: 'products.manage',
+  COLLECTIONS_MANAGE: 'collections.manage',
+  PROJECTS_MANAGE: 'projects.manage',
+  BLOG_MANAGE: 'blog.manage',
+  FAQ_MANAGE: 'faq.manage',
+  MARKETING_MANAGE: 'marketing.manage',
+  ORDERS_VIEW: 'orders.view',
+  ORDERS_MANAGE: 'orders.manage',
+  REVIEWS_MANAGE: 'reviews.manage',
+  CONSULTATIONS_MANAGE: 'consultations.manage',
+  DESIGNERS_MANAGE: 'designers.manage',
+  INVENTORY_MANAGE: 'inventory.manage',
+  FINANCE_VIEW: 'finance.view',
+};

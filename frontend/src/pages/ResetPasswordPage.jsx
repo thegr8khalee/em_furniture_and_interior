@@ -1,16 +1,16 @@
 // src/pages/ResetPasswordPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-// import { usePasswordStore } from '../store/usePasswordStore';
 import { Eye, EyeOff, Loader2, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
+import { PageWrapper } from '../components/animations';
 
 const ResetPasswordPage = () => {
   const { token } = useParams(); // Get the token from the URL
   const navigate = useNavigate();
   const { resetPassword, isResettingPassword } = useAuthStore();
-    const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
 
@@ -37,6 +37,7 @@ const ResetPasswordPage = () => {
       return;
     }
 
+    // Basic length check (the input also has pattern matching, but good to have explicit check)
     if (newPassword.length < 6) {
       toast.error('New password must be at least 6 characters long.');
       return;
@@ -45,124 +46,97 @@ const ResetPasswordPage = () => {
     // Call the resetPassword action from the store
     await resetPassword(token, newPassword);
 
-    // After attempting reset, redirect to login regardless of success/failure,
-    // as toast will provide feedback.
+    // After attempting reset, redirect to logic handle by component logic or user expectation.
+    // existing logic was navigate('/profile'), preserving that.
     navigate('/profile');
   };
 
   return (
-    <div className="p-4 flex justify-center items-center h-screen bg-base-300">
-      <div className="card w-md bg-base-100 shadow-xl rounded-xl">
-        <div className="card-body p-8">
-          <h2 className="card-title text-center text-3xl font-bold mb-6">
-            Reset Your Password
+    <PageWrapper>
+    <div className="min-h-screen bg-base-200 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-base-100 shadow-xl border border-base-200 p-8">
+        
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-heading font-bold text-primary">
+            Reset Password
           </h2>
-          <p className="text-sm text-gray-600 mb-4 text-center">
-            Enter your new password below.
+          <p className="text-neutral/70 mt-2 font-body text-sm">
+            Enter your new password below to secure your account.
           </p>
+        </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="form-control mb-4">
-              <label className="label">
-                <span className="label-text text-lg font-medium">
-                  New Password
-                </span>
-              </label>
-              {/* New Password Input with Validation */}
-              <label className="input validator w-full">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={newPassword}
-                  placeholder="••••••••"
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full"
-                  required
-                  disabled={isResettingPassword}
-                  minLength="8"
-                  pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-                  title="Must be at least 8 characters long, including at least one number, one lowercase letter, and one uppercase letter."
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="size-5 text-base-content/40" />
-                  ) : (
-                    <Eye   className="size-5 text-base-content/40" />
-                  )}
-                </button>
-              </label>
-              <p className="validator-hint hidden">
-                Must be at least 8 characters long, including:
-                <br />
-                At least one number <br />
-                At least one lowercase letter <br />
-                At least one uppercase letter
-              </p>
-            </div>
-
-            <div className="form-control mb-6">
-              <label className="label">
-                <span className="label-text text-lg font-medium">
-                  Confirm New Password
-                </span>
-              </label>
-              {/* Confirm New Password Input with Validation */}
-              <label className="input validator w-full">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={confirmNewPassword}
-                  placeholder="••••••••"
-                  onChange={(e) => setConfirmNewPassword(e.target.value)}
-                  className="w-full"
-                  required
-                  disabled={isResettingPassword}
-                  minLength="8"
-                  pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-                  title="Must be at least 8 characters long, including at least one number, one lowercase letter, and one uppercase letter."
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="size-5 text-base-content/40" />
-                  ) : (
-                    <Eye   className="size-5 text-base-content/40" />
-                  )}
-                </button>
-              </label>
-              <p className="validator-hint hidden">
-                Must be at least 8 characters long, including:
-                <br />
-                At least one number <br />
-                At least one lowercase letter <br />
-                At least one uppercase letter
-              </p>
-            </div>
-
-            <div className="form-control">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* New Password */}
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text font-medium font-body text-neutral">New Password</span>
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock className="size-5 text-neutral/40" />
+              </div>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="input input-bordered w-full pl-10 rounded-none focus:outline-none focus:border-primary font-body"
+                placeholder="••••••••"
+                required
+                minLength="8"
+              />
               <button
-                type="submit"
-                className="btn btn-primary w-full border-0 font-semibold py-3 rounded-md shadow-md hover:shadow-lg transition duration-200 text-black text-sm font-['poppins']"
-                disabled={isResettingPassword}
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                onClick={() => setShowPassword(!showPassword)}
               >
-                {isResettingPassword ? (
-                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                {showPassword ? (
+                  <EyeOff className="size-5 text-neutral/40" />
                 ) : (
-                  <>
-                    <Lock className="h-5 w-5 mr-2" /> Reset Password
-                  </>
+                  <Eye className="size-5 text-neutral/40" />
                 )}
               </button>
             </div>
-          </form>
-        </div>
+          </div>
+
+          {/* Confirm Password */}
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text font-medium font-body text-neutral">Confirm Password</span>
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock className="size-5 text-neutral/40" />
+              </div>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                className="input input-bordered w-full pl-10 rounded-none focus:outline-none focus:border-primary font-body"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="btn btn-primary w-full rounded-none text-white font-heading font-medium"
+            disabled={isResettingPassword}
+          >
+            {isResettingPassword ? (
+              <>
+                <Loader2 className="size-5 animate-spin mr-2" />
+                Resetting...
+              </>
+            ) : (
+              'Reset Password'
+            )}
+          </button>
+        </form>
       </div>
     </div>
+    </PageWrapper>
   );
 };
 

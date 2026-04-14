@@ -1,43 +1,48 @@
 import React from 'react';
+import { motion } from 'framer-motion';
+import { luxuryEase, elegantEase } from '../lib/animations';
+import { PageWrapper, FadeIn } from '../components/animations';
 // import Hero1 from '../images/Hero1.png';
 // import ME from '../images/ME.png';
 // import CEO from '../images/CEO.png';
 
 const Privacy = () => {
   return (
-    <div className="pt-16">
-      <div className="relative">
-        <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="" className="object-cover h-40 w-full" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
-          <h1 className="absolute bottom-10 left-1/2 -translate-x-1/2 mt-20 w-full mb-2 text-3xl font-bold text-center text-base-100 font-[poppins]">
-            Privacy Policy for EM Furnture & Interior
-          </h1>
-          <p className="absolute bottom-7 left-1/2 -translate-x-1/2 text-base-100 font-[montserrat] w-full text-center">
+    <PageWrapper>
+    <div className="min-h-screen bg-white pt-16 pb-12">
+      <div className="relative h-48 sm:h-64 overflow-hidden">
+        <motion.img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="" className="object-cover h-full w-full" initial={{ scale: 1.15, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.4, ease: luxuryEase }} />
+        <div className="absolute inset-0 bg-primary/80 flex flex-col items-center justify-center">
+          <motion.h1 className="w-full mb-2 text-3xl sm:text-4xl font-heading font-bold text-center text-white" initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 0.8, delay: 0.5, ease: elegantEase }}>
+            Privacy Policy
+          </motion.h1>
+          <motion.p className="text-white/70 text-sm tracking-widest uppercase text-center mt-2" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.8, ease: elegantEase }}>
             Effective Date: July 8, 2025
-          </p>
+          </motion.p>
         </div>
       </div>
-      <div className="w-full justify-center flex">
-        <div className="w-full space-y-2 flex flex-col p-4 max-w-7xl font-[montserrat]">
-          <p className="mb-6 text-base-content">
+      <FadeIn>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="space-y-6 text-neutral/70 leading-relaxed font-body">
+          <p className="mb-6 text-neutral/70">
             This Privacy Policy describes how EM Furniture and Interior
             collects, uses, and shares information when you use our website,
             emfurnitureandinterior.com .
           </p>
 
-          <h2 className="text-2xl font-[poppins] font-semibold mb-4">
+          <h2 className="text-xl font-heading font-semibold text-neutral mb-4 mt-8">
             1. Information We Collect
           </h2>
 
-          <h3 className="text-xl font-medium text-secondary mb-3">
+          <h3 className="text-lg font-heading font-medium text-secondary mb-2">
             a. Information You Provide Directly (for Authenticated Users)
           </h3>
-          <p className="mb-4 text-base-content">
+          <p className="mb-4 text-neutral/70">
             When you create an account, log in, update your profile, or use
             features like the cart and wishlist while logged in, you provide us
             with personal information. This may include:
           </p>
-          <ul className="list-disc list-inside ml-4 mb-4 text-base-content">
+          <ul className="list-disc list-inside ml-4 mb-4 text-neutral/70">
             <li>
               <strong>Account Information:</strong> Your username, email
               address, and password (hashed).
@@ -57,16 +62,16 @@ const Privacy = () => {
             </li>
           </ul>
 
-          <h3 className="text-xl font-medium text-secondary mb-3">
+          <h3 className="text-lg font-heading font-medium text-secondary mb-2">
             b. Information Stored Locally (for Unauthenticated Users)
           </h3>
-          <p className="mb-4 text-base-content">
+          <p className="mb-4 text-neutral/70">
             If you are not logged in or do not have an active guest session, we
             use your browser's local storage to save certain data directly on
             your device. This data is **not sent to or stored on our servers**.
             This may include:
           </p>
-          <ul className="list-disc list-inside ml-4 mb-4 text-base-content">
+          <ul className="list-disc list-inside ml-4 mb-4 text-neutral/70">
             <li>
               <strong>Local Cart Data:</strong> Product/collection IDs, item
               types, and quantities of items you've added to your shopping cart.
@@ -76,7 +81,7 @@ const Privacy = () => {
               item types of items you've added to your wishlist.
             </li>
           </ul>
-          <p className="mb-6 text-base-content">
+          <p className="mb-6 text-neutral/70">
             <strong>Important Note:</strong> This local storage data is only
             accessible by your browser on your device. If you clear your
             browser's local storage, switch devices, or use a different browser,
@@ -84,16 +89,16 @@ const Privacy = () => {
             you log in.
           </p>
 
-          <h3 className="text-xl font-medium text-secondary mb-3">
+          <h3 className="text-lg font-heading font-medium text-secondary mb-2">
             c. Automatically Collected Information (Standard Web Practices)
           </h3>
-          <p className="mb-6 text-base-content">
+          <p className="mb-6 text-neutral/70">
             Like most websites, we may automatically collect certain information
             about your device and usage patterns when you access our Service.
             This information is typically collected through standard web server
             logs and does not directly identify you. It may include:
           </p>
-          <ul className="list-disc list-inside ml-4 mb-6 text-base-content">
+          <ul className="list-disc list-inside ml-4 mb-6 text-neutral/70">
             <li>
               <strong>Device Information:</strong> IP address, browser type,
               operating system, device type.
@@ -103,7 +108,7 @@ const Privacy = () => {
               referral source, and interactions with the Service.
             </li>
           </ul>
-          <p className="mb-6 text-base-content">
+          <p className="mb-6 text-neutral/70">
             <strong>
               We do not use a server-side "guest system" or assign persistent
               anonymous identifiers to track unauthenticated users across
@@ -111,13 +116,13 @@ const Privacy = () => {
             </strong>
           </p>
 
-          <h2 className="text-2xl font-[poppins] font-semibold  mb-4">
+          <h2 className="text-2xl font-heading font-semibold  mb-4">
             2. How We Use Your Information
           </h2>
-          <p className="mb-6 text-base-content">
+          <p className="mb-6 text-neutral/70">
             We use the information we collect for the following purposes:
           </p>
-          <ul className="list-disc list-inside ml-4 mb-6 text-base-content">
+          <ul className="list-disc list-inside ml-4 mb-6 text-neutral/70">
             <li>
               <strong>To Provide and Maintain the Service:</strong> To operate
               our website, manage your account, process your cart and wishlist
@@ -144,15 +149,15 @@ const Privacy = () => {
             </li>
           </ul>
 
-          <h2 className="text-2xl font-[poppins] font-semibold mb-4">
+          <h2 className="text-xl font-heading font-semibold text-neutral mb-4 mt-8">
             3. Data Sharing and Disclosure
           </h2>
-          <p className="mb-6 text-base-content">
+          <p className="mb-6 text-neutral/70">
             We do not sell or rent your personal information to third parties.
             We may share your information in the following limited
             circumstances:
           </p>
-          <ul className="list-disc list-inside ml-4 mb-6 text-base-content">
+          <ul className="list-disc list-inside ml-4 mb-6 text-neutral/70">
             <li>
               <strong>With Service Providers:</strong> We may share your
               information with third-party vendors and service providers who
@@ -174,10 +179,10 @@ const Privacy = () => {
             </li>
           </ul>
 
-          <h2 className="text-2xl font-[poppins] font-semibold mb-4">
+          <h2 className="text-xl font-heading font-semibold text-neutral mb-4 mt-8">
             4. Data Storage and Security
           </h2>
-          <ul className="list-disc list-inside ml-4 mb-6 text-base-content">
+          <ul className="list-disc list-inside ml-4 mb-6 text-neutral/70">
             <li>
               <strong>Authenticated User Data:</strong> Your personal data
               (username, email, phone number, server-side cart/wishlist) is
@@ -192,15 +197,15 @@ const Privacy = () => {
             </li>
           </ul>
 
-          <h2 className="text-2xl font-[poppins] font-semibold mb-4">
+          <h2 className="text-xl font-heading font-semibold text-neutral mb-4 mt-8">
             5. Your Privacy Rights
           </h2>
 
-          <h3 className="text-xl font-medium text-secondary mb-3">
+          <h3 className="text-lg font-heading font-medium text-secondary mb-2">
             a. For Authenticated Users:
           </h3>
-          <p className="mb-4 text-base-content">You have the right to:</p>
-          <ul className="list-disc list-inside ml-4 mb-6 text-base-content">
+          <p className="mb-4 text-neutral/70">You have the right to:</p>
+          <ul className="list-disc list-inside ml-4 mb-6 text-neutral/70">
             <li>
               <strong>Access and Update:</strong> Access and update your profile
               information directly through your account settings.
@@ -216,10 +221,10 @@ const Privacy = () => {
             </li>
           </ul>
 
-          <h3 className="text-xl font-medium text-secondary mb-3">
+          <h3 className="text-lg font-heading font-medium text-secondary mb-2">
             b. For Unauthenticated Users:
           </h3>
-          <ul className="list-disc list-inside ml-4 mb-6 text-base-content">
+          <ul className="list-disc list-inside ml-4 mb-6 text-neutral/70">
             <li>
               <strong>Local Storage Management:</strong> You can manage or clear
               the data stored in your browser's local storage through your
@@ -229,20 +234,20 @@ const Privacy = () => {
             </li>
           </ul>
 
-          <h3 className="text-xl font-medium text-secondary mb-3">
+          <h3 className="text-lg font-heading font-medium text-secondary mb-2">
             c. Cookies:
           </h3>
-          <p className="mb-6 text-base-content">
+          <p className="mb-6 text-neutral/70">
             We use cookies for session management (e.g., to keep you logged in).
             You can configure your browser to accept or reject cookies, or to
             notify you when a cookie is being sent. However, some features of
             our Service may not function properly without cookies.
           </p>
 
-          <h2 className="text-2xl font-[poppins] font-semibold mb-4">
+          <h2 className="text-xl font-heading font-semibold text-neutral mb-4 mt-8">
             6. Changes to This Privacy Policy
           </h2>
-          <p className="mb-6 text-base-content">
+          <p className="mb-6 text-neutral/70">
             We may update this Privacy Policy from time to time to reflect
             changes in our practices or for other operational, legal, or
             regulatory reasons. We will notify you of any significant changes by
@@ -250,12 +255,12 @@ const Privacy = () => {
             "Effective Date" at the top.
           </p>
 
-          <h2 className="text-2xl font-semibold font-[poppins] mb-4">7. Contact Us</h2>
-          <p className="mb-6 text-base-content">
+          <h2 className="text-2xl font-semibold font-heading mb-4">7. Contact Us</h2>
+          <p className="mb-6 text-neutral/70">
             If you have any questions or concerns about this Privacy Policy or
             our data practices, please contact us at:
           </p>
-          <ul className="list-disc list-inside ml-4 mb-6 text-base-content">
+          <ul className="list-disc list-inside ml-4 mb-6 text-neutral/70">
             <li>
               Email:{' '}
               <a href="mailto:emfurnitureandinterior@gmail.com" className=" hover:underline">
@@ -272,7 +277,9 @@ const Privacy = () => {
           </ul>
         </div>
       </div>
+      </FadeIn>
     </div>
+    </PageWrapper>
   );
 };
 

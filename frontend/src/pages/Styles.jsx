@@ -19,6 +19,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { motion } from 'framer-motion';
+import { luxuryEase, elegantEase } from '../lib/animations';
+import { PageWrapper } from '../components/animations';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -387,16 +390,17 @@ const Styles = () => {
   }
 
   return (
-    <div className="">
-      <div className="relative">
-        <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="Shop Hero" className="object-cover h-50 w-full" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
-          <h1 className="absolute bottom-15 left-1/2 -translate-x-1/2 mt-20 mb-2 text-4xl font-bold text-center text-base-100 font-[poppins]">
+    <PageWrapper>
+    <div className="min-h-screen mt-16 bg-base-200">
+      <div className="relative h-56 sm:h-64 overflow-hidden">
+        <motion.img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="Shop Hero" className="object-cover h-full w-full" initial={{ scale: 1.15, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.4, ease: luxuryEase }} />
+        <div className="absolute inset-0 bg-primary/80 flex flex-col items-center justify-center">
+          <motion.h1 className="font-heading text-3xl sm:text-4xl font-semibold text-white text-center" initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 0.8, delay: 0.5, ease: elegantEase }}>
             {style
               ? style.charAt(0).toUpperCase() +
                 style.slice(1).replace(/%2F/g, '/')
               : ''}
-          </h1>
+          </motion.h1>
 
           {/* Filters Section: Category and Style Dropdown */}
           <div className="absolute bottom-1 flex flex-col justify-center items-center gap-4 w-full">
@@ -406,7 +410,7 @@ const Styles = () => {
                 ref={dropdownRef}
               >
                 <div
-                  className="input border-0 w-full bg-transparent rounded-md flex items-center justify-center cursor-pointer shadow-none"
+                  className="input border-0 w-full bg-transparent rounded-none flex items-center justify-center cursor-pointer shadow-none"
                   onClick={() =>
                     setIsCategoryDropdownOpen(!isCategoryDropdownOpen)
                   }
@@ -418,7 +422,7 @@ const Styles = () => {
                     }
                   }}
                 >
-                  <span className="font-[montserrat] text-base-100 font-bold">
+                  <span className="text-white/80 font-heading tracking-wider">
                     {selectedCategory === 'all'
                       ? 'All Products'
                       : selectedCategory}
@@ -431,17 +435,17 @@ const Styles = () => {
                 </div>
 
                 {isCategoryDropdownOpen && (
-                  <div className="absolute z-101 w-full bg-base-100 border border-base-300 rounded-md shadow-lg mt-1 top-full max-h-80 overflow-y-auto">
+                  <div className="absolute z-101 w-full bg-base-100 border border-base-300 rounded-none shadow-lg mt-1 top-full max-h-80 overflow-y-auto">
                     <div className="p-2 sticky top-0 bg-base-100 border-b border-base-300 z-20">
                       <div className="relative">
                         <Search
-                          className="absolute z-100 left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                          className="absolute z-100 left-3 top-1/2 -translate-y-1/2 text-neutral/40"
                           size={18}
                         />
                         <input
                           type="text"
                           placeholder="Search categories..."
-                          className="input input-bordered w-full pl-10 pr-3 rounded-md"
+                          className="input input-bordered w-full pl-10 pr-3 rounded-none"
                           value={categorySearchQuery}
                           onChange={(e) =>
                             setCategorySearchQuery(e.target.value)
@@ -451,7 +455,7 @@ const Styles = () => {
                     </div>
                     {uniqueCategories.length === 0 &&
                     filteredCategories.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500">
+                      <div className="p-4 text-center text-neutral/60">
                         No categories found.
                       </div>
                     ) : (
@@ -459,7 +463,7 @@ const Styles = () => {
                         <li>
                           <button
                             onClick={() => handleCategoryChange('all')}
-                            className={`font-[montserrat] btn border-0 shadow-0 w-full p-2 hover:bg-base-200 rounded-none
+                            className={`btn border-0 shadow-0 text-sm w-full p-2 hover:bg-base-200 rounded-none
                                                             ${
                                                               selectedCategory ===
                                                               'all'
@@ -474,7 +478,7 @@ const Styles = () => {
                           <li key={category}>
                             <button
                               onClick={() => handleCategoryChange(category)}
-                              className={`font-[montserrat] btn border-0 shadow-0 bg-base-100 w-full text-left p-2 hover:bg-base-200 rounded-none
+                              className={`btn border-0 shadow-0 text-sm bg-base-100 w-full text-left p-2 hover:bg-base-200 rounded-none
                                                                 ${
                                                                   selectedCategory ===
                                                                   category
@@ -502,7 +506,7 @@ const Styles = () => {
                 ref={StyledropdownRef}
               >
                 <div
-                  className="input border-0 w-full bg-transparent rounded-md flex items-center justify-center cursor-pointer shadow-none"
+                  className="input border-0 w-full bg-transparent rounded-none flex items-center justify-center cursor-pointer shadow-none"
                   onClick={() => setIsStyleDropdownOpen(!isStyleDropdownOpen)}
                   tabIndex="0"
                   onKeyDown={(e) => {
@@ -512,7 +516,7 @@ const Styles = () => {
                     }
                   }}
                 >
-                  <span className="font-[montserrat] text-base-100 font-bold">
+                  <span className="text-white/80 font-heading tracking-wider">
                     {style
                       ? style.charAt(0).toUpperCase() + style.slice(1)
                       : ''}
@@ -525,17 +529,17 @@ const Styles = () => {
                 </div>
 
                 {isStyleDropdownOpen && (
-                  <div className="absolute z-101 w-full bg-base-100 border border-base-300 rounded-md shadow-lg mt-1 top-full max-h-80 overflow-y-auto">
+                  <div className="absolute z-101 w-full bg-base-100 border border-base-300 rounded-none shadow-lg mt-1 top-full max-h-80 overflow-y-auto">
                     <div className="p-2 sticky top-0 bg-base-100 border-b border-base-300 z-20">
                       <div className="relative">
                         <Search
-                          className="absolute z-100 left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                          className="absolute z-100 left-3 top-1/2 -translate-y-1/2 text-neutral/40"
                           size={18}
                         />
                         <input
                           type="text"
                           placeholder="Search categories..."
-                          className="input input-bordered w-full pl-10 pr-3 rounded-md"
+                          className="input input-bordered w-full pl-10 pr-3 rounded-none"
                           value={styleSearchQuery}
                           onChange={(e) => setStyleSearchQuery(e.target.value)}
                         />
@@ -547,7 +551,7 @@ const Styles = () => {
                           <li key={category.id}>
                             <button
                               onClick={() => handleStyleChange(category.link)}
-                              className={`font-[montserrat] btn border-0 shadow-0 bg-base-100 w-full text-left p-2 hover:bg-base-200 rounded-none
+                              className={`btn border-0 shadow-0 text-sm bg-base-100 w-full text-left p-2 hover:bg-base-200 rounded-none
         ${selectedCategory?.id === category.id ? 'font-bold bg-base-200' : ''}`}
                             >
                               {category.name}
@@ -564,14 +568,14 @@ const Styles = () => {
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Products/Collections Switch */}
-        <div className="flex justify-center my-5">
-          <div className="tabs tabs-boxed space-x-4">
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex border border-base-300 overflow-hidden">
             <button
               type="button"
-              className={`btn tab rounded-xl ${
-                viewMode === 'products' ? 'tab-active bg-primary' : ''
+              className={`px-6 py-2.5 text-xs font-semibold tracking-[0.15em] uppercase transition-colors ${
+                viewMode === 'products' ? 'bg-primary text-white' : 'bg-white text-neutral hover:bg-base-200'
               }`}
               onClick={() => setViewMode('products')}
             >
@@ -579,8 +583,8 @@ const Styles = () => {
             </button>
             <button
               type="button"
-              className={`btn tab rounded-xl ${
-                viewMode === 'collections' ? 'tab-active bg-primary' : ''
+              className={`px-6 py-2.5 text-xs font-semibold tracking-[0.15em] uppercase transition-colors ${
+                viewMode === 'collections' ? 'bg-primary text-white' : 'bg-white text-neutral hover:bg-base-200'
               }`}
               onClick={() => setViewMode('collections')}
             >
@@ -600,7 +604,7 @@ const Styles = () => {
                   <input
                     type="text"
                     placeholder="Search products by name or description..."
-                    className="input input-bordered w-full pl-10 pr-3 rounded-xl"
+                    className="input input-bordered w-full pl-10 pr-3"
                     value={productSearchQuery}
                     onChange={(e) => setProductSearchQuery(e.target.value)}
                   />
@@ -610,7 +614,7 @@ const Styles = () => {
               <div className="form-control w-full sm:ml-2 sm:mt-0 mt-2 sm:w-auto">
                 <button
                   type="button"
-                  className="btn text-secondary btn-primary rounded-xl w-full"
+                  className="btn-elegant-outline text-sm w-full"
                   onClick={handleOpenProductFilterModal}
                 >
                   <Filter size={20} /> Filters
@@ -625,17 +629,22 @@ const Styles = () => {
                 <p className="ml-2 text-lg">Loading products...</p>
               </div>
             ) : products.length === 0 && !isGettingProducts ? (
-              <div className="text-center text-xl text-gray-600 my-16">
+              <div className="text-center text-xl text-neutral/70 my-16">
                 No products found for the selected filters.
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {products.map((product) => (
-                  <div
+                {products.map((product, index) => (
+                  <motion.div
                     key={product._id}
-                    className=" rounded-xl overflow-hidden"
+                    className="overflow-hidden"
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.1, ease: luxuryEase }}
+                    whileHover={{ y: -5, boxShadow: '0 16px 32px rgba(0,0,0,0.1)' }}
                   >
-                    <figure className="relative h-60 w-full overflow-hidden rounded-xl">
+                    <figure className="relative h-60 w-full img-zoom">
                       <button
                         type="button"
                         className="w-full h-full"
@@ -648,7 +657,7 @@ const Styles = () => {
                               : 'https://placehold.co/400x300/E0E0E0/333333?text=No+Image'
                           }
                           alt={product.name}
-                          className="w-full h-full rounded-xl object-cover transform transition-transform duration-300 hover:scale-105"
+                          className="w-full h-full object-cover transform transition-transform duration-300 hover:scale-105"
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src =
@@ -686,10 +695,10 @@ const Styles = () => {
                           </button>
                         )
                       ) : null}
-                      <span className="absolute bottom-3 left-3 text-base text-shadow-lg truncate text-base-100 font-[montserrat]">
+                      <span className="absolute bottom-3 left-3 text-shadow-lg truncate text-xs tracking-wider uppercase text-white/80">
                         {product.style}{' '}
                         {product.collectionId && product.collectionId.name && (
-                          <span className="text-sm mb-1">
+                          <span className="text-xs mb-1">
                             | {product.collectionId.name}
                           </span>
                         )}
@@ -700,7 +709,7 @@ const Styles = () => {
                       <div className="flex items-center justify-between">
                         <div className="w-full">
                           <div>
-                            <h2 className="text truncate whitespace-nowrap">
+                            <h2 className="text-sm font-heading font-semibold text-neutral truncate whitespace-nowrap">
                               {product.name}
                             </h2>
                           </div>
@@ -709,7 +718,7 @@ const Styles = () => {
                               {product.isPromo &&
                               product.discountedPrice !== undefined ? (
                                 <div className="flex flex-col">
-                                  <span className="text-red-600 font-bold text-lg">
+                                  <span className="text-secondary font-bold text-lg">
                                     ₦
                                     {Number(
                                       product.discountedPrice
@@ -718,7 +727,7 @@ const Styles = () => {
                                       maximumFractionDigits: 2,
                                     })}
                                   </span>
-                                  <span className="text-gray-500 line-through text-sm">
+                                  <span className="text-neutral/60 line-through text-sm">
                                     ₦
                                     {Number(product.price).toLocaleString(
                                       'en-NG',
@@ -747,7 +756,7 @@ const Styles = () => {
                                 <div className="space-x-1">
                                   <a
                                     href={whatsappHref(product)}
-                                    className="btn rounded-xl bg-green-400"
+                                    className="btn btn-sm bg-green-600 hover:bg-green-700 text-white border-0"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                   >
@@ -759,7 +768,7 @@ const Styles = () => {
                                   </a>
                                   <button
                                     type="button"
-                                    className="btn rounded-xl bg-primary"
+                                    className="btn btn-sm bg-primary text-white border-0"
                                     onClick={() =>
                                       handleAddToCart(product._id, 1, 'Product')
                                     }
@@ -774,7 +783,7 @@ const Styles = () => {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}
@@ -784,7 +793,7 @@ const Styles = () => {
                 <button
                   type="button"
                   onClick={handleLoadMoreProducts}
-                  className="mb-4 btn bg-primary px-8 py-3 rounded-xl font-semibold"
+                  className="btn-elegant mb-4"
                 >
                   {!isGettingProducts ? (
                     'Load More'
@@ -796,7 +805,7 @@ const Styles = () => {
             )}
 
             {!hasMoreProducts && products.length > 0 && !isGettingProducts && (
-              <p className="text-center text-gray-600 my-8">
+              <p className="text-center text-neutral/70 my-8">
                 You've reached the end of the products!
               </p>
             )}
@@ -831,7 +840,7 @@ const Styles = () => {
                   <input
                     type="text"
                     placeholder="Search collections by name or description..."
-                    className="rounded-xl input input-bordered w-full pl-10 pr-3"
+                    className="input input-bordered w-full pl-10 pr-3"
                     value={collectionSearchQuery}
                     onChange={(e) => setCollectionSearchQuery(e.target.value)}
                   />
@@ -841,7 +850,7 @@ const Styles = () => {
               <div className="form-control w-full sm:ml-2 sm:mt-0 mt-2 sm:w-auto">
                 <button
                   type="button"
-                  className="btn text-secondary btn-primary rounded-xl w-full"
+                  className="btn-elegant-outline text-sm w-full"
                   onClick={handleOpenCollectionFilterModal}
                 >
                   <Filter size={20} /> Filters
@@ -856,7 +865,7 @@ const Styles = () => {
                 <p className="ml-2 text-lg">Loading collections...</p>
               </div>
             ) : collections.length === 0 && !isGettingCollections ? (
-              <div className="text-center text-xl text-gray-600 my-16">
+              <div className="text-center text-xl text-neutral/70 my-16">
                 No collections found for the selected filters.
               </div>
             ) : (
@@ -864,9 +873,9 @@ const Styles = () => {
                 {collections.map((collection) => (
                   <div
                     key={collection._id}
-                    className="rounded-xl overflow-hidden"
+                    className="overflow-hidden"
                   >
-                    <figure className="relative h-60 w-full overflow-hidden rounded-xl">
+                    <figure className="relative h-60 w-full img-zoom">
                       <button
                         type="button"
                         className="w-full h-full"
@@ -878,7 +887,7 @@ const Styles = () => {
                             'https://placehold.co/400x300/E0E0E0/333333?text=No+Image'
                           }
                           alt={collection.name}
-                          className="w-full h-full rounded-xl object-cover transform transition-transform duration-300 hover:scale-105"
+                          className="w-full h-full object-cover transform transition-transform duration-300 hover:scale-105"
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src =
@@ -918,7 +927,7 @@ const Styles = () => {
                           </button>
                         )
                       ) : null}
-                      <span className="absolute bottom-3 left-3 text-base text-shadow-lg truncate text-base-100 font-[montserrat]">
+                      <span className="absolute bottom-3 left-3 text-shadow-lg truncate text-xs tracking-wider uppercase text-white/80">
                         {collection.style}
                       </span>
                     </figure>
@@ -926,7 +935,7 @@ const Styles = () => {
                       <div className="flex items-center justify-between">
                         <div className="w-full">
                           <div>
-                            <h2 className="text truncate whitespace-nowrap">
+                            <h2 className="text-sm font-heading font-semibold text-neutral truncate whitespace-nowrap">
                               {collection.name}
                             </h2>
                           </div>
@@ -935,7 +944,7 @@ const Styles = () => {
                               {collection.isPromo &&
                               collection.discountedPrice !== undefined ? (
                                 <div className="flex flex-col">
-                                  <span className="text-red-600 font-bold text-lg">
+                                  <span className="text-secondary font-bold text-lg">
                                     ₦
                                     {Number(
                                       collection.discountedPrice
@@ -944,7 +953,7 @@ const Styles = () => {
                                       maximumFractionDigits: 2,
                                     })}
                                   </span>
-                                  <span className="text-gray-500 line-through text-sm">
+                                  <span className="text-neutral/60 line-through text-sm">
                                     ₦
                                     {Number(collection.price).toLocaleString(
                                       'en-NG',
@@ -973,7 +982,7 @@ const Styles = () => {
                                 <div className="space-x-1">
                                   <a
                                     href={whatsappHref(collection)}
-                                    className="btn rounded-xl bg-green-400"
+                                    className="btn btn-sm bg-green-600 hover:bg-green-700 text-white border-0"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                   >
@@ -985,7 +994,7 @@ const Styles = () => {
                                   </a>
                                   <button
                                     type="button"
-                                    className="btn rounded-xl bg-primary"
+                                    className="btn btn-sm bg-primary text-white border-0"
                                     onClick={() =>
                                       handleAddToCart(
                                         collection._id,
@@ -1021,7 +1030,7 @@ const Styles = () => {
                 <button
                   type="button"
                   onClick={handleLoadMoreCollections}
-                  className="mb-4 btn bg-primary px-8 py-3 rounded-xl font-semibold"
+                  className="btn-elegant mb-4"
                 >
                   {!isGettingCollections ? (
                     'Load More'
@@ -1035,7 +1044,7 @@ const Styles = () => {
             {!hasMoreCollections &&
               collections.length > 0 &&
               !isGettingCollections && (
-                <p className="text-center text-gray-600 my-8">
+                <p className="text-center text-neutral/70 my-8">
                   You've reached the end of the collections!
                 </p>
               )}
@@ -1062,6 +1071,7 @@ const Styles = () => {
         )}
       </div>
     </div>
+    </PageWrapper>
   );
 };
 

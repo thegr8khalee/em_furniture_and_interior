@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
 import Collection from '../models/collection.model.js';
 
+const filterApprovedReviews = (collectionDoc) => {
+  const collection = collectionDoc.toObject();
+  collection.reviews = (collection.reviews || []).filter((review) => review.isApproved);
+  return collection;
+};
+
 export const getCollections = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1; // Default to page 1
@@ -100,7 +106,7 @@ export const getCollectionById = async (req, res) => {
 
     // console.log(collection)
 
-    res.status(200).json(collection);
+    res.status(200).json(filterApprovedReviews(collection));
   } catch (error) {
     console.error('Error in getCollectionById controller: ', error.message);
     res.status(500).json({ message: 'Internal Server Error' });

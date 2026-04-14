@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quotation Preview — EM Furniture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    @page { size: A4; margin: 0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 14px; color: #1a1a1a; width: 794px; margin: 0 auto;
+      background: #fff;
+    }
+
+    /* ── Page Container ── */
+    .q-page {
+      position: relative; min-height: 100vh; background: #fff;
+      page-break-after: always;
+    }
+    .q-page:last-child { page-break-after: avoid; }
+    .q-page-bg {
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background-repeat: no-repeat; background-size: cover; background-position: center; z-index: 0;
+    }
+    .q-content {
+      position: relative; z-index: 1; padding: 50px 60px 40px;
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+
+    /* ── Logo & Brand ── */
+    .q-logo { text-align: center; margin-bottom: 8px; }
+    .q-logo img { width: 90px; height: auto; }
+    .q-company-name {
+      text-align: center; font-size: 17px; letter-spacing: 1.5px;
+      margin-bottom: 16px; color: #222;
+    }
+    .q-company-name .brand { font-weight: 700; font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; }
+    .q-company-name .fancy { font-style: italic; font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; }
+
+    /* ── Header Row ── */
+    .q-header-row {
+      display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;
+    }
+    .q-company-info { font-size: 12px; color: #333; line-height: 1.8; }
+    .q-title-block { text-align: right; }
+    .q-title {
+      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+      font-size: 36px; color: #222; margin-bottom: 6px;
+    }
+    .q-ref { font-size: 13px; color: #222; line-height: 2; }
+    .q-ref .label { font-weight: 700; }
+
+    /* ── Client Box ── */
+    .q-client-box { background: #fafafa; padding: 16px 20px; margin-bottom: 30px; }
+    .q-client-box h4 { font-size: 12px; font-weight: 700; margin-bottom: 8px; color: #222; }
+    .q-client-box p { font-size: 13px; color: #333; line-height: 1.8; }
+    .q-client-box .lbl { font-weight: 700; }
+
+    /* ── Section Titles ── */
+    .q-section-title {
+      font-size: 26px; font-weight: 700; letter-spacing: 4px;
+      text-transform: uppercase; color: #222; margin: 30px 0 12px;
+      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    }
+
+    /* ── Items Tables ── */
+    .q-items-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+    .q-items-table thead th {
+      background: #d9d9d9; color: #000000; font-size: 12px; font-weight: 700;
+      padding: 10px 20px; text-align: left;
+    }
+    .q-items-table thead th.right { text-align: right; }
+    .q-items-table tbody td {
+      padding: 12px 20px; font-size: 14px; border-bottom: 1px solid #eee; color: #333;
+      background-color: #fafafa;
+    }
+    .q-items-table tbody td.right { text-align: right; }
+    .q-items-table tbody tr:last-child td { border-bottom: none; }
+    .q-subtotal-row {
+      display: flex; justify-content: flex-end; padding: 10px 20px;
+      background: #d9d9d9; margin-bottom: 10px;
+    }
+    .q-subtotal-row span { font-size: 14px; font-weight: 700; color: #000000; }
+
+    /* ── Summary ── */
+    .q-summary-title {
+      font-size: 28px; font-weight: 700; letter-spacing: 4px;
+      text-transform: uppercase; color: #222; margin-bottom: 16px;
+      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    }
+    .q-summary-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    .q-summary-table thead th {
+      background: #d9d9d9; color: #000000; font-size: 12px; font-weight: 700;
+      padding: 10px 20px; text-align: left;
+    }
+    .q-summary-table thead th.right { text-align: right; }
+    .q-summary-table tbody td {
+      padding: 12px 20px; font-size: 14px; border-bottom: 1px solid #eee; color: #333;
+      background-color: #fafafa;
+    }
+    .q-summary-table tbody td.right { text-align: right; }
+    .q-summary-table tbody tr.total-row td {
+      font-weight: 700; background: #d9d9d9; color: #000000;
+      border-top: 2px solid #ccc; border-bottom: none;
+    }
+    .q-deposit-row {
+      padding: 10px 20px; font-size: 14px; color: #222;
+      display: flex; justify-content: space-between;
+    }
+    .q-deposit-row .lbl { font-weight: 700; }
+
+    /* ── Terms ── */
+    .q-terms-title {
+      font-size: 28px; font-weight: 700; letter-spacing: 3px;
+      text-transform: uppercase; color: #222; margin-bottom: 20px;
+      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    }
+    .q-terms-title .amp { font-style: italic; }
+    .q-term h5 { font-size: 13px; font-weight: 700; color: #222; margin-bottom: 4px; }
+    .q-term p { font-size: 12px; color: #333; line-height: 1.7; margin-bottom: 16px; }
+
+    /* ── Footer ── */
+    .q-footer {
+      display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto;
+      padding-top: 50px;
+    }
+    .q-bank h4 {
+      font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; margin-bottom: 8px; color: #222;
+    }
+    .q-bank p { font-size: 11px; line-height: 1.9; color: #333; text-transform: uppercase; }
+    .q-sig { text-align: right; }
+    .q-sig p {
+      font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #222; line-height: 2;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ PAGE 1: Sections ═══════════════ -->
+<div class="q-page">
+  <div class="q-page-bg" style="background-image: url('document-bg.png');"></div>
+  <div class="q-content">
+
+    <div class="q-logo">
+      <img src="em_logo.png" alt="EM Furniture">
+    </div>
+
+    <div class="q-company-name">
+      <span class="brand">EM</span> <span class="fancy">Furniture &amp; interior</span>&copy;
+    </div>
+
+    <div class="q-header-row">
+      <div class="q-company-info">
+        C15 Bamaiyi Road, Kaduna<br>
+        +2349037691860<br>
+        www.emfurnitureandinterior.com
+      </div>
+      <div class="q-title-block">
+        <div class="q-title">Quotation</div>
+        <div class="q-ref">
+          <span class="label">Reference Number:</span>&nbsp;&nbsp;012<br>
+          <span class="label">Date:</span>&nbsp;&nbsp;10/5/2025
+        </div>
+      </div>
+    </div>
+
+    <div class="q-client-box">
+      <h4>Client Information:</h4>
+      <p>
+        <span class="lbl">Name:</span> Engr Sodiq Badmus<br>
+        <span class="lbl">Phone Number:</span> +39 331 414 2266
+      </p>
+    </div>
+
+    <!-- ═══════════════ SECTION: Ante Room ═══════════════ -->
+    <h2 class="q-section-title">Ante Room</h2>
+    <table class="q-items-table">
+      <thead><tr><th>Items Description</th><th class="right">Total Cost</th></tr></thead>
+      <tbody>
+        <tr><td>2-Seater + 1 Single Seater (Accent Chairs)</td><td class="right">550,000</td></tr>
+        <tr><td>1 Center Table + 1 Stool</td><td class="right">150,000</td></tr>
+      </tbody>
+    </table>
+    <div class="q-subtotal-row"><span>Subtotal : 700,000</span></div>
+
+    <!-- ═══════════════ SECTION: Living Room ═══════════════ -->
+    <h2 class="q-section-title">Living Room</h2>
+    <table class="q-items-table">
+      <thead><tr><th>Items Description</th><th class="right">Total Cost</th></tr></thead>
+      <tbody>
+        <tr><td>(2) 3-Seaters + (2) Single Seaters</td><td class="right">1,500,000</td></tr>
+        <tr><td>1 Center Table + 4 Stools</td><td class="right">350,000</td></tr>
+        <tr><td>6-Seater Dining Set</td><td class="right">700,000</td></tr>
+      </tbody>
+    </table>
+    <div class="q-subtotal-row"><span>Subtotal : 2,550,000</span></div>
+
+    <!-- ═══════════════ SECTION: Family Lounge ═══════════════ -->
+    <h2 class="q-section-title">Family Lounge</h2>
+    <table class="q-items-table">
+      <thead><tr><th>Items Description</th><th class="right">Total Cost</th></tr></thead>
+      <tbody>
+        <tr><td>L-Shaped Sectional Chair</td><td class="right">800,000</td></tr>
+        <tr><td>1 Center Table + 2 Stools</td><td class="right">200,000</td></tr>
+      </tbody>
+    </table>
+    <div class="q-subtotal-row"><span>Subtotal : 1,000,000</span></div>
+
+    <!-- ═══════════════ SECTION: Master Bedroom ═══════════════ -->
+    <h2 class="q-section-title">Master Bedroom (Sitting Area)</h2>
+    <table class="q-items-table">
+      <thead><tr><th>Items Description</th><th class="right">Total Cost</th></tr></thead>
+      <tbody>
+        <tr><td>1 Two-Seater + 1 Stool</td><td class="right">350,000</td></tr>
+      </tbody>
+    </table>
+    <div class="q-subtotal-row"><span>Subtotal : 350,000</span></div>
+
+    <!-- ═══════════════ SECTION: Gazebo ═══════════════ -->
+    <h2 class="q-section-title">Gazebo</h2>
+    <table class="q-items-table">
+      <thead><tr><th>Items Description</th><th class="right">Total Cost</th></tr></thead>
+      <tbody>
+        <tr><td>L-Shaped Sectional Chair</td><td class="right">850,000</td></tr>
+        <tr><td>1 Center Table + 2 Stools</td><td class="right">250,000</td></tr>
+      </tbody>
+    </table>
+    <div class="q-subtotal-row"><span>Subtotal : 1,100,000</span></div>
+
+    <!-- ═══════════════ SECTION: Bed Frames ═══════════════ -->
+    <h2 class="q-section-title">Bed Frames</h2>
+    <table class="q-items-table">
+      <thead><tr><th>Items Description</th><th class="right">Total Cost</th></tr></thead>
+      <tbody>
+        <tr><td>5 by 6 bed frames with single bed x3</td><td class="right">1,140,000</td></tr>
+        <tr><td>6 by 7 bed frame with 2 bedside drawers</td><td class="right">460,000</td></tr>
+      </tbody>
+    </table>
+    <div class="q-subtotal-row"><span>Subtotal : 1,600,000</span></div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE 2: Summary ═══════════════ -->
+<div class="q-page">
+  <div class="q-page-bg" style="background-image: url('document-bg.png');"></div>
+  <div class="q-content">
+
+    <h2 class="q-summary-title">Summary</h2>
+    <table class="q-summary-table">
+      <thead><tr><th>Description</th><th class="right">Cost</th></tr></thead>
+      <tbody>
+        <tr><td>Ante Room</td><td class="right">700,000</td></tr>
+        <tr><td>Living Room</td><td class="right">2,550,000</td></tr>
+        <tr><td>Family Lounge</td><td class="right">1,000,000</td></tr>
+        <tr><td>Master Bedroom (Sitting Area)</td><td class="right">350,000</td></tr>
+        <tr><td>Gazebo</td><td class="right">1,100,000</td></tr>
+        <tr><td>Bed Frames</td><td class="right">1,600,000</td></tr>
+        <tr class="total-row"><td><strong>Total</strong></td><td class="right">7,300,000</td></tr>
+      </tbody>
+    </table>
+    <div class="q-deposit-row"><span class="lbl">Deposit (80%):</span><span>5,840,000</span></div>
+    <div class="q-deposit-row"><span class="lbl">Balance (20%):</span><span>1,460,000</span></div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE 3: Terms & Conditions ═══════════════ -->
+<div class="q-page">
+  <div class="q-page-bg" style="background-image: url('document-bg.png');"></div>
+  <div class="q-content">
+
+    <h2 class="q-terms-title">Terms <span class="amp">&amp;</span> Conditions</h2>
+
+    <div class="q-term">
+      <h5>Price Review</h5>
+      <p>A price review shall be conducted five (5) days after submission of this estimate if payment is not made within that period due to unstable market rates.</p>
+    </div>
+    <div class="q-term">
+      <h5>Estimated Cost</h5>
+      <p>The above prices are estimates based on current market surveys. A final price review will be carried out at the end of the project to determine the actual cost. Items may be purchased at higher or lower prices than estimated. Any remaining balance will be reimbursed to the client.</p>
+    </div>
+    <div class="q-term">
+      <h5>Scope of Work</h5>
+      <p>The above cost covers only the items listed in this quotation. Any additional major work or materials not included will attract extra charges.</p>
+    </div>
+    <div class="q-term">
+      <h5>Non-Returnable Items</h5>
+      <p>Once purchased, most items cannot be returned or cancelled. Therefore, any request for return or cancellation will be handled without guarantee. Custom-made items are strictly non-refundable and non-cancellable.</p>
+    </div>
+    <div class="q-term">
+      <h5>Third-Party Procurement</h5>
+      <p>The interior design team shall not be held accountable for the procurement of any items not paid for directly through the design team.</p>
+    </div>
+    <div class="q-term">
+      <h5>Unavailable Items</h5>
+      <p>In cases where any item specified in the mood board is unavailable, a suitable alternative within the same price range will be presented to the client for approval before purchase.</p>
+    </div>
+    <div class="q-term">
+      <h5>Project Management Fee</h5>
+      <p>The interior designer is entitled to: 50% of the project management fee at the start of the project, 30% when the project is 60% completed, and the remaining 20% at the end of the agreed project duration, prior to handover, as stated in the agreement.</p>
+    </div>
+    <div class="q-term">
+      <h5>Site Management</h5>
+      <p>The interior design team shall include a professional site manager, available on-site from 9:00 AM to 5:00 PM throughout the project duration.</p>
+    </div>
+    <div class="q-term">
+      <h5>Vendor and Artisan Contacts</h5>
+      <p>The interior designer is not obligated to provide contact information of vendors or artisans sourced by the design team. Clients are not permitted to accompany the interior designer to purchase items or visit artisans&#8217; workshops.</p>
+    </div>
+    <div class="q-term">
+      <h5>Payments and Purchases</h5>
+      <p>The interior designer shall be responsible for paying directly for all materials and works quoted in this estimate. Payments are not to be made directly by the client to vendors or artisans.</p>
+    </div>
+    <div class="q-term">
+      <h5>Working Hours</h5>
+      <p>The official on-site working hours are 9:00 AM to 5:00 PM.</p>
+    </div>
+    <div class="q-term">
+      <h5>Photography Rights</h5>
+      <p>The interior designer shall be allowed to take photographs of the work progress and completed project for documentation and portfolio purposes.</p>
+    </div>
+
+    <!-- ═══════════════ FOOTER ═══════════════ -->
+    <div class="q-footer">
+      <div class="q-bank">
+        <h4>Account Details</h4>
+        <p>
+          TAJ BANK<br>
+          Account Number: 0012353692<br>
+          Account Name: EM MODERN FURNITURE AND INTERIOR LTD
+        </p>
+      </div>
+      <div class="q-sig">
+        <p>Signed</p>
+        <p>Management</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

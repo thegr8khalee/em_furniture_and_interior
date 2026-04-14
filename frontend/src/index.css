@@ -5,12 +5,266 @@
 @plugin "daisyui/theme" {
   name: 'light';
   default: true;
-  --color-primary: #ffd700;
-  --color-secondary: black;
-  --color-accent: #dbc735;
-
+  --color-primary: #151f19;
+  --color-primary-content: #ffffff;
+  --color-secondary: #c9a84c;
+  --color-secondary-content: #151f19;
+  --color-accent: #e8d5a3;
+  --color-accent-content: #151f19;
+  --color-neutral: #2d2d44;
+  --color-neutral-content: #f5f0e8;
+  --color-base-100: #fdfbf7;
+  --color-base-200: #f5f0e6;
+  --color-base-300: #ebe3d5;
+  --color-base-content: #2d2d44;
+  --color-info: #3b82f6;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --radius-box: 0rem;
+  --radius-field: 0rem;
+  --radius-selector: 0rem;
+  --rounded-btn: 0rem;
+  --rounded-box: 0rem;
+  --rounded-badge: 0rem;
 }
 
+:root {
+  --section-x: clamp(1.5rem, 4vw, 5rem);
+  --section-y: clamp(4rem, 7vw, 5.5rem);
+  --container-max: 80rem;
+  --shadow-soft: 0 10px 30px rgba(21, 31, 25, 0.06);
+  --shadow-elevated: 0 16px 40px rgba(21, 31, 25, 0.1);
+  --shadow-luxury: 0 22px 60px rgba(21, 31, 25, 0.14);
+}
+
+/* ===== Form Label Override ===== */
+/* Force DaisyUI .label to stack vertically (label above input) */
+.label:not(.cursor-pointer) {
+  display: block;
+  padding: 0;
+  margin-bottom: 0.5rem;
+  user-select: none;
+}
+
+.label:not(.cursor-pointer) .label-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: oklch(var(--color-neutral) / 0.65);
+}
+
+/* ===== Global Resets & Base ===== */
+html {
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'Montserrat', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #2d2d44;
+  background: #fdfbf7;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+img {
+  display: block;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition: color 0.25s ease, background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Playfair Display', serif;
+}
+
+/* ===== Utility Classes ===== */
 .text-xxs {
-  font-size: 0.6rem; /* 10px */
+  font-size: 0.6rem;
+}
+
+.font-heading {
+  font-family: 'Playfair Display', serif;
+}
+
+.font-body {
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* ===== Elegant Scrollbar ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f9f6f0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c9a84c;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #f9e971;
+}
+
+/* ===== Section Transitions ===== */
+section {
+  transition: opacity 0.3s ease;
+}
+
+/* ===== Elegant Link Underline Effect ===== */
+.link-elegant {
+  position: relative;
+  text-decoration: none;
+}
+
+.link-elegant::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 1.5px;
+  bottom: -2px;
+  left: 0;
+  background-color: #c9a84c;
+  transition: width 0.3s ease;
+}
+
+.link-elegant:hover::after {
+  width: 100%;
+}
+
+/* ===== Card Hover Lift ===== */
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== Gold Gradient Text ===== */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #c9a84c, #e8d5a3, #c9a84c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== Elegant Button Styles ===== */
+.btn-elegant,
+.btn-elegant-outline {
+  min-height: 2.75rem;
+  gap: 0.5rem;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  transition: all 0.3s ease;
+}
+
+.btn-elegant {
+  background: #151f19;
+  color: #ffffff;
+  border: 1px solid #151f19;
+  padding: 0.75rem 2rem;
+  border-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-elegant:hover {
+  background: #c9a84c;
+  border-color: #c9a84c;
+  color: #151f19;
+}
+
+.btn-elegant-outline {
+  background: transparent;
+  color: #151f19;
+  border: 1.5px solid #151f19;
+  padding: 0.75rem 2rem;
+  border-radius: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-elegant-outline:hover {
+  background: #151f19;
+  color: #ffffff;
+}
+
+.btn-elegant:focus-visible,
+.btn-elegant-outline:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(201, 168, 76, 0.28);
+}
+
+/* ===== Divider ===== */
+.divider-gold {
+  width: 60px;
+  height: 2px;
+  background: #c9a84c;
+  margin: 0 auto;
+}
+
+/* ===== Hide Scrollbar (for horizontal scroll sections) ===== */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ===== Layout Helpers ===== */
+.section-shell {
+  padding-inline: var(--section-x);
+  padding-block: var(--section-y);
+}
+
+.content-shell {
+  width: min(100%, var(--container-max));
+  margin-inline: auto;
+}
+
+.surface-elevated {
+  box-shadow: var(--shadow-soft);
+}
+
+.surface-luxury {
+  box-shadow: var(--shadow-elevated);
+}
+
+/* ===== Smooth Image Zoom ===== */
+.img-zoom {
+  overflow: hidden;
+}
+
+.img-zoom img {
+  transition: transform 0.6s ease;
+}
+
+.img-zoom:hover img {
+  transform: scale(1.05);
 }

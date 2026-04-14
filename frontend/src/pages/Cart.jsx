@@ -2,12 +2,17 @@
 // src/pages/CartPage.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { useCartStore } from '../store/useCartStore';
-import { Loader2, Trash2, Minus, Plus, ShoppingCart, X } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useCouponStore } from '../store/useCouponStore';
+import { Loader2, Trash2, Minus, Plus, ShoppingCart, X, Tag } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { axiosInstance } from '../lib/axios.js';
 // import whatsapp from '../images/whatsapp.png';
 // import Hero1 from '../images/Hero1.png';
 import { useAuthStore } from '../store/useAuthStore.js';
+import { motion } from 'framer-motion';
+import { luxuryEase } from '../lib/animations';
+import { PageWrapper } from '../components/animations';
+import { Button, Card, EmptyState, Input, ListItemSkeleton, PageHeader } from '../components/ui';
 
 const CartPage = () => {
   const {
@@ -24,6 +29,18 @@ const CartPage = () => {
   } = useCartStore();
 
   const { isAuthReady } = useAuthStore();
+
+  const {
+    appliedCoupon,
+    couponCode,
+    discount,
+    isValidating,
+    couponError,
+    setCouponCode,
+    validateCoupon,
+    removeCoupon,
+    clearCouponError
+  } = useCouponStore();
 
   const [detailedCartItems, setDetailedCartItems] = useState([]);
   const [isFetchingDetails, setIsFetchingDetails] = useState(false);
@@ -48,9 +65,6 @@ const CartPage = () => {
       // IMPORTANT: Only clear detailed items if cart is empty AND we are NOT currently fetching it.
       // This prevents momentary clearing while data is still loading.
       if (!hasInitialCartLoaded) {
-        console.log(
-          'Initial cart data not loaded yet, deferring detailed items fetch.'
-        );
         return;
       }
 
@@ -59,9 +73,6 @@ const CartPage = () => {
       if (!cart || cart.length === 0) {
         setDetailedCartItems([]);
         setIsFetchingDetails(false);
-        console.log(
-          'Cart is empty after initial load, clearing detailedCartItems.'
-        );
         return;
       }
 
@@ -188,7 +199,6 @@ const CartPage = () => {
     currentQuantity,
     change
   ) => {
-    console.log('yes');
     const newQuantity = currentQuantity + change;
     if (newQuantity < 1) {
       // If quantity drops to 0 or less, confirm removal
@@ -207,6 +217,9 @@ const CartPage = () => {
       return total + itemPrice * item.quantity;
     }, 0);
   };
+
+  const subtotal = calculateOverallTotal();
+  const finalTotal = subtotal - discount;
 
   const totalItemsInCart = detailedCartItems.reduce(
     (total, item) => total + item.quantity,
@@ -259,7 +272,11 @@ const CartPage = () => {
       message += `\n\n`; // Add an extra newline for better spacing between items
     });
 
-    message += `Total Price: N${calculateOverallTotal().toFixed(2)}\n`;
+    message += `Subtotal: N${subtotal.toFixed(2)}\n`;
+    if (discount > 0) {
+      message += `Discount (${appliedCoupon?.code}): -N${discount.toFixed(2)}\n`;
+    }
+    message += `Total Price: N${finalTotal.toFixed(2)}\n`;
     message += `\nThank you!`;
 
     return encodeURIComponent(message);
@@ -287,26 +304,23 @@ const CartPage = () => {
 
   if (isGettingCart) {
     return (
-      <div className="pt-16">
-        <div className="container mx-auto p-6">
-          <div className="animate-pulse space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex gap-4">
-                <div className="w-24 h-24 bg-gray-200 rounded"></div>
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  <div className="flex gap-2 pt-2">
-                    <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
-                    <div className="h-8 w-8 bg-gray-200 rounded"></div>
-                    <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
-                  </div>
-                </div>
-              </div>
+      <PageWrapper className="min-h-screen bg-white">
+        <section className="content-shell section-shell pt-24">
+          <div className="mb-6 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-secondary">
+              Preparing your cart
+            </p>
+            <h2 className="mt-2 font-heading text-3xl font-semibold text-primary">
+              Reviewing your selections
+            </h2>
+          </div>
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <ListItemSkeleton key={index} />
             ))}
           </div>
-        </div>
-      </div>
+        </section>
+      </PageWrapper>
     );
   }
 
@@ -315,10 +329,10 @@ const CartPage = () => {
   // if (!cart || cart.length === 0) {
   //   return (
   //     <div className="py-16 overflow-x-hidden">
-  //       <div className="text-center text-xl text-gray-600 mt-16">
+  //       <div className="text-center text-xl text-neutral/70 mt-16">
   //         Your cart is empty.{' '}
   //         <button
-  //           className="btn bg-primary rounded-xl"
+  //           className="btn bg-primary rounded-none"
   //           onClick={() => handleShopClick()}
   //         >
   //           Start shopping!
@@ -329,29 +343,33 @@ const CartPage = () => {
   // }
 
   return (
-    <div className="pt-12 w-screen">
-      <div className="relative">
-        <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="" className="object-cover h-40 w-full" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
-          <h1 className="absolute bottom-10 left-1/2 -translate-x-1/2 mt-20 w-full mb-2 text-3xl font-bold text-center text-base-100 font-[poppins]">
-            Your Shopping Cart
-          </h1>
-        </div>
-      </div>
-      <div className="container mx-auto p-2 sm:p-6 lg:p-8 w-full">
+    <PageWrapper>
+    <div className="min-h-screen mt-16 bg-white">
+      {/* Hero Banner */}
+      <PageHeader
+        title="Shopping Cart"
+        subtitle={`${totalItemsInCart} item${totalItemsInCart === 1 ? '' : 's'}`}
+        image="https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"
+        alt="Shopping cart"
+      />
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Cart Items List */}
-          <div className="flex-1 bg-base-100 p-2 rounded-lg shadow-xl">
-            <h2 className="text-2xl font-semibold mb-6">
+          <Card className="flex-1 surface-elevated" padding="p-4 sm:p-6">
+            <h2 className="mb-6 font-heading text-xl font-bold text-neutral">
               Items ({totalItemsInCart})
             </h2>
             <div className="space-y-4">
               {detailedCartItems.map(
                 (
-                  item // 'item' here is the detailed item
+                  item, index // 'item' here is the detailed item
                 ) => (
-                  <div
+                  <motion.div
                     key={item._id} // Use the unique ID of the cart entry for the key
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: index * 0.08, ease: luxuryEase }}
                     className="flex border-b border-base-200 pb-4 last:border-b-0 overflow-x-auto"
                   >
                     <div className="w-35 h-24">
@@ -361,7 +379,7 @@ const CartPage = () => {
                           'https://placehold.co/100x100/E0E0E0/333333?text=N/A'
                         }
                         alt={item.name}
-                        className="h-full w-full object-cover rounded-lg mr-4"
+                        className="h-full w-full object-cover rounded-none mr-4"
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src =
@@ -370,26 +388,26 @@ const CartPage = () => {
                       />
                     </div>
                     <div className="flex flex-col w-full px-2">
-                      <div className="flex justify-between w-full items-center font-[poppins]">
-                        <h3 className="text-lg font-medium">{item.name}</h3>
-                        <button
+                      <div className="flex justify-between w-full items-center">
+                        <h3 className="font-heading text-base font-semibold text-neutral">{item.name}</h3>
+                        <Button
                           type="button"
-                          className="btn btn-xs btn-circle"
-                          onClick={() =>
-                            handleRemoveItem(item._id, item.itemType)
-                          }
+                          variant="icon"
+                          size="icon"
+                          onClick={() => handleRemoveItem(item._id, item.itemType)}
+                          ariaLabel={`Remove ${item.name} from cart`}
                         >
                           <X className="size-4" />
-                        </button>
+                        </Button>
                       </div>
-                      {/* <div className="items-center  font-[montserrat]">
+                      {/* <div className="items-center  font-body">
                         {item.itemType}
                       </div> */}
                       <div className=" flex justify-between w-full items-center">
                         {/* <span className="font-light">Price:</span> */}
                       </div>{' '}
                       <div className="flex items-end space-x-1 justify-between w-full">
-                        <div className="text font-[montserrat]">
+                        <div className="text-sm text-neutral/70">
                           ₦
                           {item.displayPrice !== undefined &&
                           item.displayPrice !== null
@@ -404,8 +422,10 @@ const CartPage = () => {
                         </div>
                       </div>
                       <div className="space-x-2 flex items-center w-full justify-end">
-                        <button
+                        <Button
                           type="button"
+                          variant="icon"
+                          size="icon"
                           onClick={() =>
                             handleUpdateQuantity(
                               item.item,
@@ -413,18 +433,20 @@ const CartPage = () => {
                               item.quantity,
                               -1
                             )
-                          } // Pass item.item (original ID)
-                          className="btn btn-circle btn-sm  btn-outline btn-primary"
+                          }
                           disabled={item.quantity <= 1}
+                          ariaLabel={`Decrease quantity for ${item.name}`}
                         >
                           <Minus size={16} />
-                        </button>
+                        </Button>
 
                         <span className="font-semibold text-lg w-8 text-center">
                           {item.quantity}
                         </span>
-                        <button
+                        <Button
                           type="button"
+                          variant="icon"
+                          size="icon"
                           onClick={() =>
                             handleUpdateQuantity(
                               item.item,
@@ -432,83 +454,147 @@ const CartPage = () => {
                               item.quantity,
                               1
                             )
-                          } // Pass item.item (original ID)
-                          className="btn btn-circle btn-sm btn-outline btn-primary"
-                          // disabled={isUpdatingCartItem}
+                          }
+                          ariaLabel={`Increase quantity for ${item.name}`}
                         >
                           <Plus size={16} />
-                        </button>
+                        </Button>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 )
               )}
             </div>
             {!cart || cart.length === 0 ? (
-              <div className="text-center text-xl text-gray-600 mt-16">
-                Your cart is empty.{' '}
-                <button
-                  className="btn bg-primary rounded-xl"
-                  onClick={() => handleShopClick()}
-                >
-                  Start shopping!
-                </button>
-              </div>
+              <EmptyState
+                icon={ShoppingCart}
+                title="Your cart is empty"
+                description="Add a few beautiful pieces to continue with your order."
+                actionLabel="Start shopping"
+                onAction={handleShopClick}
+                className="mt-10"
+              />
             ) : null}
             <div className="mt-6 flex justify-end">
-              <button
+              <Button
                 type="button"
+                variant="danger"
                 onClick={handleClearCart}
-                className="btn btn-error rounded-xl"
-                disabled={isRemovingFromCart || !cart || cart.length === 0}
+                isLoading={isRemovingFromCart}
+                leftIcon={Trash2}
+                disabled={!cart || cart.length === 0}
               >
-                {isRemovingFromCart ? (
-                  <Loader2 className="animate-spin mr-2" />
-                ) : (
-                  <Trash2 size={20} className="mr-2" />
-                )}
                 Clear Cart
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
 
           {/* Order Summary */}
-          <div className="lg:w-1/3 bg-base-100 p-6 rounded-lg shadow-xl">
-            <h2 className="text-2xl font-semibold mb-6">Order Summary</h2>
+          <Card className="h-fit lg:w-1/3 surface-elevated bg-base-200" padding="p-6">
+            <h2 className="font-heading text-xl font-bold text-neutral mb-6">Order Summary</h2>
+
+            {/* Coupon Code Input */}
+            <div className="mb-6">
+              <label className="label">
+                <span className="label-text font-medium">Have a coupon code?</span>
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="Enter coupon code"
+                  className="flex-1 uppercase"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  disabled={isValidating || appliedCoupon}
+                />
+                {appliedCoupon ? (
+                  <Button
+                    type="button"
+                    variant="danger"
+                    onClick={removeCoupon}
+                    disabled={isValidating}
+                  >
+                    Remove
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => validateCoupon(cart, subtotal)}
+                    disabled={isValidating || !couponCode.trim()}
+                    isLoading={isValidating}
+                  >
+                    Apply
+                  </Button>
+                )}
+              </div>
+              {couponError && (
+                <p className="text-error text-sm mt-2">{couponError}</p>
+              )}
+              {appliedCoupon && (
+                <div className="alert alert-success mt-2 py-2">
+                  <Tag size={16} />
+                  <span className="text-sm">Coupon "{appliedCoupon.code}" applied!</span>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-3">
               <div className="flex justify-between text-lg">
                 <span>Subtotal ({totalItemsInCart} items)</span>
                 <span className="font-medium">
                   ₦
-                  {Number(calculateOverallTotal()).toLocaleString('en-NG', {
+                  {Number(subtotal).toLocaleString('en-NG', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
                 </span>
               </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount ({appliedCoupon?.code})</span>
+                  <span className="font-medium">
+                    -₦
+                    {Number(discount).toLocaleString('en-NG', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+              )}
               <div className="border-t border-base-200 my-4"></div>
               <div className="flex justify-between text-xl font-bold text-red-500">
                 <span>Total</span>
                 <span>
                   ₦
-                  {Number(calculateOverallTotal()).toLocaleString('en-NG', {
+                  {Number(finalTotal).toLocaleString('en-NG', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
                 </span>
               </div>
             </div>
-            <a
-              className="btn bg-green-500 text-white border-0 shadow-none w-full mt-8 rounded-xl"
+            <Button
               href={whatsappCartHref(detailedCartItems)}
+              className="mt-8 w-full border-0 bg-green-600 text-white hover:bg-green-700 hover:text-white"
               disabled={isRemovingFromCart || !cart || cart.length === 0}
             >
-              <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png"} alt="" className="size-8" /> Order On WhatsApp
-            </a>
-          </div>
+              Order On WhatsApp
+            </Button>
+            <Button
+              onClick={() => navigate('/checkout')}
+              variant="primary"
+              fullWidth
+              className="mt-2"
+              disabled={isRemovingFromCart || !cart || cart.length === 0}
+            >
+              Proceed to Checkout
+            </Button>
+          </Card>
         </div>
       </div>
     </div>
+    </PageWrapper>
   );
 };
 

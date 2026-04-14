@@ -1,36 +1,42 @@
-import React from 'react';
+﻿import React from 'react';
+import { motion } from 'framer-motion';
+import { luxuryEase, elegantEase } from '../lib/animations';
+import { PageWrapper, FadeIn } from '../components/animations';
 // import Hero1 from '../images/Hero1.png';
 // import ME from '../images/ME.png';
 // import CEO from '../images/CEO.png';
 
 const Terms = () => {
   return (
-    <div className="pt-16">
-      <div className="relative">
-        <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="" className="object-cover h-40 w-full" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent">
-          <h1 className="absolute bottom-10 left-1/2 -translate-x-1/2 mt-20 w-full mb-2 text-3xl font-bold text-center text-base-100 font-[poppins]">
-            Terms and Conditions for EM Furnture & Interior
-          </h1>
-          <p className="absolute bottom-7 left-1/2 -translate-x-1/2 text-base-100 font-[montserrat] w-full text-center">
+    <PageWrapper>
+    <div className="min-h-screen bg-base-200 pt-16">
+      <div className="relative h-48 sm:h-56 overflow-hidden">
+        <motion.img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="" className="object-cover h-full w-full" initial={{ scale: 1.15, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.4, ease: luxuryEase }} />
+        <div className="absolute inset-0 bg-primary/80 flex flex-col items-center justify-center">
+          <motion.h1 className="font-heading text-3xl sm:text-4xl font-semibold text-white text-center" initial={{ opacity: 0, y: 20, filter: 'blur(8px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ duration: 0.8, delay: 0.5, ease: elegantEase }}>
+            Terms &amp; Conditions
+          </motion.h1>
+          <div className="divider-gold mt-3" />
+          <motion.p className="text-white/70 text-sm mt-2 tracking-wider" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.8, ease: elegantEase }}>
             Effective Date: July 8, 2025
-          </p>
+          </motion.p>
         </div>
       </div>
-      <div className="w-full justify-center flex p-4">
-        <div className="w-full space-y-2 flex flex-col max-w-7xl font-[montserrat]">
+      <FadeIn>
+      <div className="w-full flex justify-center px-4 py-10">
+        <div className="w-full max-w-4xl space-y-6 text-neutral/70 text-sm leading-relaxed">
           {/* ORDER & PAYMENT */}
           <div className="border-b border-base-200 pb-4">
-            <h3 className="text-xl font-bold font-[poppins] mb-2">
+            <h3 className="text-lg font-heading font-semibold text-neutral mb-2">
               Order & Payment
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
-              <li>50–80% deposit to confirm order</li>
+              <li>50â€“80% deposit to confirm order</li>
               <li>For foreign products, only full deposits are accepted.</li>
               <li>Balance must be paid before delivery</li>
               <li>Production starts after payment & design confirmation</li>
             </ul>
-            <h4 className="font-semibold font-[poppins] mt-4 mb-2">PAYMENT DETAILS</h4>
+            <h4 className="font-heading font-semibold text-neutral mt-4 mb-2">PAYMENT DETAILS</h4>
             <ul className="list-disc list-inside ml-4 text-sm">
               <li>Bank Name: Taj Bank</li>
               <li>Account Name: Amina Musa Abdullahi</li>
@@ -44,11 +50,11 @@ const Terms = () => {
 
           {/* CUSTOM ORDERS */}
           <div className="border-b border-base-200 pb-4">
-            <h3 className="text-xl font-bold font-[poppins] mb-2">
+            <h3 className="text-lg font-heading font-semibold text-neutral mb-2">
               Custom Furniture
             </h3>
             <p className="mb-2 text-sm">
-              All items are custom-built based on the client’s preferences and
+              All items are custom-built based on the clientâ€™s preferences and
               measurements.
             </p>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
@@ -65,19 +71,19 @@ const Terms = () => {
 
           {/* PRODUCTION TIMELINE */}
           <div className="border-b border-base-200 pb-4">
-            <h3 className="text-xl font-bold font-[poppins] mb-2">
+            <h3 className="text-lg font-heading font-semibold text-neutral mb-2">
               Production Time
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
-              <li>Production timeline: 3–6 weeks depending on the product</li>
-              <li>Shipping takes 5–6 weeks</li>
+              <li>Production timeline: 3â€“6 weeks depending on the product</li>
+              <li>Shipping takes 5â€“6 weeks</li>
               <li>Urgent jobs may attract extra charges</li>
             </ul>
           </div>
 
           {/* REFUND POLICY */}
           <div className="border-b border-base-200 pb-4">
-            <h3 className="text-xl font-bold font-[poppins] mb-2">
+            <h3 className="text-lg font-heading font-semibold text-neutral mb-2">
               Refund Policy
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
@@ -92,7 +98,7 @@ const Terms = () => {
 
           {/* WARRANTY */}
           <div className="border-b border-base-200 pb-4">
-            <h3 className="text-xl font-bold font-[poppins] mb-2">Warranty</h3>
+            <h3 className="text-lg font-heading font-semibold text-neutral mb-2">Warranty</h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
               <li>3 months on manufacturing defects only</li>
               <li>Does NOT cover:</li>
@@ -107,13 +113,13 @@ const Terms = () => {
 
           {/* DELIVERY POLICY */}
           <div className="border-b border-base-200 pb-4">
-            <h3 className="text-xl font-bold font-[poppins] mb-2">
+            <h3 className="text-lg font-heading font-semibold text-neutral mb-2">
               Delivery Policy
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
               <li>Delivery through suggested 3rd party drivers</li>
               <li>Shipping fee is to be discussed on order</li>
-              <li>Optional insured delivery available — extra charges apply</li>
+              <li>Optional insured delivery available â€” extra charges apply</li>
               <li>
                 We are not responsible for any damage that occurs during
                 delivery
@@ -124,7 +130,7 @@ const Terms = () => {
 
           {/* INTERNATIONAL DELIVERY */}
           <div className="border-b border-base-200 pb-4">
-            <h3 className="text-xl font-bold font-[poppins] mb-2">
+            <h3 className="text-lg font-heading font-semibold text-neutral mb-2">
               Outside Nigeria (International Delivery)
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
@@ -136,7 +142,7 @@ const Terms = () => {
 
           {/* AFTER PRODUCTION */}
           <div className="border-b border-base-200 pb-4">
-            <h3 className="text-xl font-bold font-[poppins] mb-2">
+            <h3 className="text-lg font-heading font-semibold text-neutral mb-2">
               After Production
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
@@ -147,7 +153,7 @@ const Terms = () => {
 
           {/* INSTALLATIONS */}
           <div className="border-b border-base-200 pb-4">
-            <h3 className="text-xl font-bold font-[poppins] mb-2">
+            <h3 className="text-lg font-heading font-semibold text-neutral mb-2">
               Installations
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
@@ -164,7 +170,7 @@ const Terms = () => {
 
           {/* SITE MEASUREMENTS */}
           <div className="border-b border-base-200 pb-4">
-            <h3 className="text-xl font-bold font-[poppins] mb-2">
+            <h3 className="text-lg font-heading font-semibold text-neutral mb-2">
               Measurements (Site Measurements)
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
@@ -176,7 +182,7 @@ const Terms = () => {
 
           {/* COMPLAINTS */}
           <div>
-            <h3 className="text-xl font-bold font-[poppins] mb-2">Complaints</h3>
+            <h3 className="text-lg font-heading font-semibold text-neutral mb-2">Complaints</h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
               <li>Must be reported within 24 hours of delivery</li>
               <li>Send complaints via WhatsApp or DM</li>
@@ -186,7 +192,9 @@ const Terms = () => {
           </div>
         </div>
       </div>
+      </FadeIn>
     </div>
+    </PageWrapper>
   );
 };
 

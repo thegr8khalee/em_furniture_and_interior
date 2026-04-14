@@ -5,6 +5,7 @@ import { Editor } from '@tinymce/tinymce-react';
 import { toast } from 'react-hot-toast';
 import { Loader2, XCircle } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
+import AdminPageShell from '../components/admin/AdminPageShell';
 
 const AdminAddProjectPage = () => {
   // Assuming useProjectsStore provides the addProject action and loading state
@@ -135,14 +136,11 @@ const AdminAddProjectPage = () => {
   };
 
   return (
-    <div className="flex justify-center items-start min-h-screen py-8 bg-base-200">
-      <div className="p-4 py-12 bg-base-100 rounded-lg shadow-xl w-full max-w-3xl">
-        <h2 className="text-3xl font-bold mb-6 text-primary font-[poppins]">
-          Add New Project
-        </h2>
+    <AdminPageShell title="Add New Project">
+      <div className="bg-base-100 border border-base-200 p-6 w-full max-w-3xl">
 
         {error && (
-          <div role="alert" className="alert alert-error mb-4 rounded-md">
+          <div role="alert" className="alert alert-error mb-4 rounded-none">
             <span>{error}</span>
           </div>
         )}
@@ -169,7 +167,7 @@ const AdminAddProjectPage = () => {
             <label className="label">
               <span className="label-text">Description</span>
             </label>
-            <div className="border border-base-300 rounded-md overflow-hidden">
+            <div className="border border-base-300 rounded-none overflow-hidden">
               <Editor
                 onInit={handleEditorInit}
                 apiKey="esh5bav8bmcm4mdbribpsniybxdqty6jszu5ctwihsw35a5y" // <--- IMPORTANT: Replace with your TinyMCE API key
@@ -258,7 +256,7 @@ const AdminAddProjectPage = () => {
               className="file-input file-input-bordered w-full rounded-full"
               onChange={handleImageChange}
             />
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-neutral/60 mt-1">
               Select an image file. Add multiple images one by one.
             </p>
 
@@ -269,7 +267,7 @@ const AdminAddProjectPage = () => {
                     <img
                       src={src}
                       alt={`Project preview ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-md shadow-sm border border-gray-200"
+                      className="w-full h-24 object-cover rounded-none shadow-sm border border-gray-200"
                     />
                     <button
                       type="button"
@@ -289,7 +287,7 @@ const AdminAddProjectPage = () => {
           <div className="form-control mt-6">
             <button
               type="submit"
-              className="btn btn-primary w-full text-lg text-white font-semibold py-3 rounded-full shadow-md hover:shadow-lg transition duration-200  font-[poppins]"
+              className="btn btn-primary w-full text-lg text-white font-semibold py-3 rounded-full shadow-md hover:shadow-lg transition duration-200 Â font-heading"
               disabled={isAddingProject}
             >
               {isAddingProject ? (
@@ -313,7 +311,7 @@ const AdminAddProjectPage = () => {
           </div>
         </form>
       </div>
-    </div>
+    </AdminPageShell>
   );
 };
 

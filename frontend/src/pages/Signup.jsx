@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore'; // Import your Zustand auth store
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { PageWrapper } from '../components/animations';
 
 const SignupPage = () => {
   const [formData, setFormData] = useState({
@@ -11,7 +12,6 @@ const SignupPage = () => {
     email: '',
     phoneNumber: '',
     password: '',
-    anonymousId: '',
   });
   const [showPassword, setShowPassword] = useState(false);
 
@@ -29,24 +29,28 @@ const SignupPage = () => {
     await signup(formData);
   };
 
-  // If loading, show a simple loading message
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <span className="loading loading-spinner loading-lg"></span>
-        <Loader2 className="animate-spin" />
-      </div>
-    );
-  }
-
   // Render the login form
   return (
-    <div className="p-4 flex justify-center items-center h-screen bg-base-300">
-      <div className="card w-md bg-base-100 shadow-xl rounded-xl">
-        <div className="card-body p-8">
-          <h2 className="card-title text-center text-3xl font-bold mb-6">
-            Welcome!
-          </h2>
+    <PageWrapper>
+    <div className="min-h-screen flex">
+      {/* Left decorative panel */}
+      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden items-center justify-center">
+        <div className="text-center px-16">
+          <div className="divider-gold mb-8" style={{ background: '#c9a84c' }}></div>
+          <h2 className="font-heading text-4xl xl:text-5xl font-medium text-white leading-tight mb-4">Join Us</h2>
+          <p className="text-white/50 text-sm leading-relaxed max-w-sm mx-auto">Create your account and discover our curated luxury furniture & interior collections.</p>
+          {/* <div className="divider-gold mt-8" style={{ background: '#c9a84c' }}></div> */}
+        </div>
+        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'url(https://res.cloudinary.com/dnwppcwec/image/upload/v1753787006/Hero2_mnsyx3.png)', backgroundSize: 'cover' }}></div>
+      </div>
+      {/* Right form panel */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 bg-white">
+        <div className="w-full max-w-md">
+          <div className="mb-8">
+            <div className="w-10 h-0.5 bg-secondary mb-4"></div>
+            <h2 className="font-heading text-3xl font-medium text-neutral">Create Account</h2>
+            <p className="text-neutral/50 text-sm mt-2">Fill in your details to get started</p>
+          </div>
 
           <form onSubmit={handleSubmit}>
             <div className="form-control mb-4">
@@ -56,7 +60,7 @@ const SignupPage = () => {
               <input
                 type="name"
                 placeholder="Name Surname"
-                className="input input-bordered w-full rounded-md"
+                className="input input-bordered w-full rounded-none"
                 value={formData.fullName}
                 onChange={(e) =>
                   setFormData({ ...formData, fullName: e.target.value })
@@ -172,7 +176,7 @@ const SignupPage = () => {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
-                  placeholder="••••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                   minlength="8"
                   pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
                   value={formData.password}
@@ -215,18 +219,19 @@ const SignupPage = () => {
               </div>
               <button
                 type="submit"
-                className="btn btn-primary w-full border-0 font-semibold py-3 rounded-md shadow-md hover:shadow-lg transition duration-200 text-black text-sm font-['poppins']"
-                disabled={isLoading} // Disable button while loading
+                className="btn-elegant w-full py-3.5 flex items-center justify-center"
+                disabled={isLoading}
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  'Sign Up'
+                  'Create Account'
                 )}
               </button>
-              <div className="w-full text-center mt-2">
-                <Link to="/profile" className="hover:underline">
-                  Login
+              <div className="w-full text-center mt-4">
+                <span className="text-neutral/40 text-sm">Already have an account? </span>
+                <Link to="/profile" className="text-secondary font-medium text-sm hover:underline">
+                  Sign In
                 </Link>
               </div>
             </div>
@@ -234,6 +239,8 @@ const SignupPage = () => {
         </div>
       </div>
     </div>
+    </PageWrapper>
+    // </div>
   );
 };
 
