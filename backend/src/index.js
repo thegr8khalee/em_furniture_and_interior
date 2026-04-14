@@ -48,7 +48,20 @@ const PORT = process.env.PORT || 5000;
 const __dirname = path.resolve();
 
 // Security & compression
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com", "https://placehold.co"],
+        connectSrc: ["'self'"],
+      },
+    },
+  })
+);
 app.use(compression());
 app.use(cookieParser());
 
