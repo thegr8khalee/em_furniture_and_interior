@@ -416,11 +416,20 @@ const Navbar = () => {
             <div className="px-2 pt-4 pb-2 space-y-0.5">
               <li>
                 <Link
-                  to="/e-catalog"
+                  to="/shop"
                   className="font-medium text-sm tracking-wide py-3 px-4 rounded-none hover:bg-base-200 transition-colors"
                   onClick={closeDrawer}
                 >
-                  E-Catalogs
+                  Shop
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/projects"
+                  className="font-medium text-sm tracking-wide py-3 px-4 rounded-none hover:bg-base-200 transition-colors"
+                  onClick={closeDrawer}
+                >
+                  Projects
                 </Link>
               </li>
               <li>
@@ -432,13 +441,22 @@ const Navbar = () => {
                   Showroom
                 </Link>
               </li>
-               <li>
+              <li>
                 <Link
-                  to="/projects"
+                  to="/e-catalog"
                   className="font-medium text-sm tracking-wide py-3 px-4 rounded-none hover:bg-base-200 transition-colors"
                   onClick={closeDrawer}
                 >
-                  Projects
+                  E-Catalog
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/consultation"
+                  className="font-medium text-sm tracking-wide py-3 px-4 rounded-none hover:bg-base-200 transition-colors"
+                  onClick={closeDrawer}
+                >
+                  Consultation
                 </Link>
               </li>
               <li>
@@ -461,11 +479,11 @@ const Navbar = () => {
               </li>
               <li>
                 <Link
-                  to="/consultation"
+                  to="/aboutUs"
                   className="font-medium text-sm tracking-wide py-3 px-4 rounded-none hover:bg-base-200 transition-colors"
                   onClick={closeDrawer}
                 >
-                  Consultation
+                  About
                 </Link>
               </li>
             </div>
@@ -550,14 +568,14 @@ const Navbar = () => {
           <Link to="/shop" className={getNavLinkClass(isActivePath('/shop'))}>
             Shop
           </Link>
-          <Link to="/e-catalog" className={getNavLinkClass(isActivePath('/e-catalog'))}>
-            E-Catalog
+          <Link to="/projects" className={getNavLinkClass(isActivePath('/projects'))}>
+            Projects
           </Link>
           <Link to="/showroom" className={getNavLinkClass(isActivePath('/showroom'))}>
             Showroom
           </Link>
-          <Link to="/projects" className={getNavLinkClass(isActivePath('/projects'))}>
-            Projects
+          <Link to="/e-catalog" className={getNavLinkClass(isActivePath('/e-catalog'))}>
+            E-Catalog
           </Link>
           <Link to="/blog" className={getNavLinkClass(isActivePath('/blog'))}>
             Blog
