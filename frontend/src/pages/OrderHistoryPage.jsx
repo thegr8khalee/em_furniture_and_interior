@@ -5,6 +5,7 @@ import { Package, Truck, CheckCircle, XCircle, Clock, Loader2, ShoppingBag, Down
 import { axiosInstance } from '../lib/axios';
 import { toast } from 'react-hot-toast';
 import { PageWrapper } from '../components/animations';
+import SEO from '../components/SEO';
 
 const OrderHistoryPage = () => {
   const { orders, getMyOrders, isLoading } = useOrderStore();
@@ -107,6 +108,7 @@ const OrderHistoryPage = () => {
 
   return (
     <PageWrapper>
+    <SEO title="Order History" description="Your past orders." canonical="/orders" noindex />
     <div className="min-h-screen bg-base-100 pt-20">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex items-center justify-between mb-8">

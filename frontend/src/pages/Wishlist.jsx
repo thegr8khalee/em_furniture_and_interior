@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { luxuryEase } from '../lib/animations';
 import { PageWrapper } from '../components/animations';
 import { Button, Card, EmptyState, ListItemSkeleton, PageHeader } from '../components/ui';
+import SEO from '../components/SEO';
 
 const WishlistPage = () => {
   const {
@@ -246,6 +247,7 @@ const WishlistPage = () => {
 
   return (
     <PageWrapper>
+    <SEO title="Your Wishlist" description="Your saved items." canonical="/wishlist" noindex />
     <div className="min-h-screen mt-16 bg-white">
       {/* Hero Banner */}
       <PageHeader

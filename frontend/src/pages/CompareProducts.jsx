@@ -4,6 +4,7 @@ import { Trash2 } from 'lucide-react';
 import { useCompareStore } from '../store/useCompareStore';
 import { useProductsStore } from '../store/useProductsStore';
 import { PageWrapper } from '../components/animations';
+import SEO from '../components/SEO';
 
 const formatPrice = (value) => {
   if (value === undefined || value === null || Number.isNaN(Number(value))) {
@@ -121,6 +122,7 @@ const CompareProducts = () => {
 
   return (
     <PageWrapper>
+    <SEO title="Compare Products" description="Compare your selected products." canonical="/compare" noindex />
     <div className="min-h-screen bg-white pt-20">
       <div className="max-w-6xl mx-auto px-6 py-10">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">

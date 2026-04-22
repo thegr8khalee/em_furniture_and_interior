@@ -10,6 +10,8 @@ import { useAuthStore } from '../store/useAuthStore.js';
 import { PageWrapper, FadeIn, SlideIn } from '../components/animations';
 import { luxuryEase } from '../lib/animations';
 import { Button, Card, Input, PageHeader, Textarea } from '../components/ui';
+import SEO from '../components/SEO';
+import { localBusinessJsonLd, breadcrumbJsonLd } from '../lib/seo';
 
 const contactItems = [
   {
@@ -111,6 +113,18 @@ const Contact = () => {
 
   return (
     <PageWrapper className="min-h-screen mt-16 bg-white">
+      <SEO
+        title="Contact Us"
+        description="Contact EM Furniture & Interior at C16 Bamaiyi Road, Kaduna, Nigeria. Call +234 903 769 1860 or email emfurnitureandinterior@gmail.com. Open 24/7 for inquiries and bespoke design consultations."
+        canonical="/contact"
+        jsonLd={[
+          localBusinessJsonLd(),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Contact', path: '/contact' },
+          ]),
+        ]}
+      />
       <PageHeader
         title="Contact Us"
         subtitle="We'd love to hear from you"

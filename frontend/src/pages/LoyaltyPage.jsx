@@ -4,6 +4,7 @@ import { useLoyaltyStore } from '../store/useLoyaltyStore';
 import { Trophy, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { PageWrapper } from '../components/animations';
+import SEO from '../components/SEO';
 
 const LoyaltyPage = () => {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ const LoyaltyPage = () => {
 
   return (
     <PageWrapper>
+    <SEO title="Loyalty Rewards" description="Your loyalty rewards and points." canonical="/loyalty" noindex />
     <div className="min-h-screen bg-base-100 pt-20">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex items-center gap-3 mb-8">

@@ -5,6 +5,8 @@ import ProjectCard from '../components/ProjectCard';
 import { motion } from 'framer-motion';
 import { luxuryEase, elegantEase } from '../lib/animations';
 import { PageWrapper, SectionReveal } from '../components/animations';
+import SEO from '../components/SEO';
+import { breadcrumbJsonLd } from '../lib/seo';
 
 const Projects = () => {
   const {
@@ -29,6 +31,15 @@ const Projects = () => {
   }
   return (
     <PageWrapper>
+    <SEO
+      title="Our Projects & Portfolio"
+      description="Explore completed interior design and furniture projects by EM Furniture & Interior — living rooms, bedrooms, dining rooms, and full-home transformations across Nigeria."
+      canonical="/projects"
+      jsonLd={breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'Projects', path: '/projects' },
+      ])}
+    />
     <div className="min-h-screen bg-base-200 pt-16">
       <div className="relative h-48 sm:h-64 overflow-hidden">
         <motion.img

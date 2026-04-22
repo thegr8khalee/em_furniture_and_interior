@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/useAuthStore'; // Import your Zustand aut
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageWrapper } from '../components/animations';
+import SEO from '../components/SEO';
 
 const SignupPage = () => {
   const [formData, setFormData] = useState({
@@ -32,6 +33,7 @@ const SignupPage = () => {
   // Render the login form
   return (
     <PageWrapper>
+    <SEO title="Create Account" description="Create an EM Furniture & Interior account." canonical="/signup" noindex />
     <div className="min-h-screen flex">
       {/* Left decorative panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden items-center justify-center">

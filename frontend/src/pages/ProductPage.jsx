@@ -28,6 +28,12 @@ import { useAdminStore } from '../store/useAdminStore';
 import { useCompareStore } from '../store/useCompareStore';
 import { useMarketingStore } from '../store/useMarketingStore';
 import { axiosInstance } from '../lib/axios.js';
+import SEO from '../components/SEO';
+import {
+  productJsonLd,
+  breadcrumbJsonLd,
+  truncate,
+} from '../lib/seo';
 
 const LOCAL_STORAGE_RECENT_KEY = 'recentlyViewedProducts';
 const SESSION_STORAGE_RECENT_KEY = 'recentlyViewedProductsSession';
@@ -384,8 +390,52 @@ const ProductPage = () => {
   }
 
   // Main Product Display
+  const productImage = product?.images?.[0]?.url;
+  const productSeoTitle = product?.seoTitle || product?.name;
+  const productSeoDescription =
+    product?.seoDescription ||
+    truncate(product?.description || product?.name || '', 160);
+  const productSeoKeywords =
+    product?.seoKeywords?.join(', ') ||
+    [product?.name, product?.category, product?.style, 'EM Furniture']
+      .filter(Boolean)
+      .join(', ');
+  let customProductSchema = null;
+  if (product?.seoSchemaJsonLd) {
+    try {
+      customProductSchema = JSON.parse(product.seoSchemaJsonLd);
+    } catch {
+      customProductSchema = null;
+    }
+  }
+
   return (
     <PageWrapper>
+    <SEO
+      title={productSeoTitle}
+      description={productSeoDescription}
+      keywords={productSeoKeywords}
+      image={productImage}
+      imageAlt={product?.name}
+      type="product"
+      canonical={`/product/${product?._id}`}
+      jsonLd={[
+        customProductSchema || productJsonLd(product),
+        breadcrumbJsonLd([
+          { name: 'Home', path: '/' },
+          { name: 'Shop', path: '/shop' },
+          ...(product?.category
+            ? [
+                {
+                  name: product.category,
+                  path: `/shop?category=${encodeURIComponent(product.category)}`,
+                },
+              ]
+            : []),
+          { name: product?.name || 'Product', path: `/product/${product?._id}` },
+        ]),
+      ]}
+    />
     <div className="min-h-screen bg-white pt-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex justify-between mb-4">

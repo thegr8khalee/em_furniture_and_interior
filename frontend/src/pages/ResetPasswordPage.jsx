@@ -5,6 +5,7 @@ import { Eye, EyeOff, Loader2, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
 import { PageWrapper } from '../components/animations';
+import SEO from '../components/SEO';
 
 const ResetPasswordPage = () => {
   const { token } = useParams(); // Get the token from the URL
@@ -53,6 +54,7 @@ const ResetPasswordPage = () => {
 
   return (
     <PageWrapper>
+    <SEO title="Reset Password" description="Reset your account password." noindex />
     <div className="min-h-screen bg-base-200 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-base-100 shadow-xl border border-base-200 p-8">
         

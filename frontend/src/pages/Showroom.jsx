@@ -3,7 +3,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { luxuryEase, elegantEase } from '../lib/animations';
 import { PageWrapper, SlideIn } from '../components/animations';
-// import Hero1 from '../images/Hero1.png';
+import SEO from '../components/SEO';
+import { localBusinessJsonLd, breadcrumbJsonLd } from '../lib/seo';
 
 const Showroom = () => {
     // REPLACE THESE WITH YOUR ACTUAL SHOWROOM'S LATITUDE AND LONGITUDE
@@ -25,6 +26,18 @@ const Showroom = () => {
 
     return (
         <PageWrapper>
+        <SEO
+          title="Visit Our Showroom"
+          description="Visit the EM Furniture & Interior showroom at C16 Bamaiyi Road, Kaduna, Nigeria. Explore our luxury furniture collection in person — open 24/7."
+          canonical="/showroom"
+          jsonLd={[
+            localBusinessJsonLd(),
+            breadcrumbJsonLd([
+              { name: 'Home', path: '/' },
+              { name: 'Showroom', path: '/showroom' },
+            ]),
+          ]}
+        />
         <div className="min-h-screen bg-base-200 pt-16 pb-12">
             <div className="relative h-48 sm:h-64 overflow-hidden">
                 <motion.img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="Showroom Hero" className="object-cover h-full w-full" initial={{ scale: 1.15, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.4, ease: luxuryEase }} />

@@ -4,6 +4,7 @@ import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { axiosInstance } from '../lib/axios';
 import { useCartStore } from '../store/useCartStore';
 import { PageWrapper } from '../components/animations';
+import SEO from '../components/SEO';
 
 const PaymentVerify = () => {
   const location = useLocation();
@@ -66,6 +67,7 @@ const PaymentVerify = () => {
 
   return (
     <PageWrapper>
+    <SEO title="Payment Verification" description="Verifying your payment." noindex />
     <div className="min-h-screen flex items-center justify-center bg-base-100 pt-20">
       <div className="text-center p-8 bg-white rounded-lg shadow-md max-w-md">
         {status === 'verifying' && (

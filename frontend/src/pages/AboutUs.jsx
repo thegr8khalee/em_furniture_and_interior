@@ -2,6 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { PageWrapper, FadeIn, SectionReveal, SlideIn, GoldDivider, StaggerContainer, StaggerItem } from '../components/animations';
 import { luxuryEase, elegantEase } from '../lib/animations';
+import SEO from '../components/SEO';
+import { organizationJsonLd, breadcrumbJsonLd } from '../lib/seo';
 
 const AboutUs = () => {
   const departments = [
@@ -18,6 +20,18 @@ const AboutUs = () => {
 
   return (
     <PageWrapper className="min-h-screen bg-white">
+      <SEO
+        title="About Us"
+        description="EM Furniture & Interior (EM Group Limited) is a luxury furniture and bespoke interior design company based in Kaduna, Nigeria. Meet the team blending craftsmanship, timeless design, and finest materials."
+        canonical="/aboutUs"
+        jsonLd={[
+          organizationJsonLd(),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'About Us', path: '/aboutUs' },
+          ]),
+        ]}
+      />
       {/* Hero Banner */}
       <div className="relative mt-16 h-48 sm:h-56 lg:h-64 overflow-hidden">
         <motion.img

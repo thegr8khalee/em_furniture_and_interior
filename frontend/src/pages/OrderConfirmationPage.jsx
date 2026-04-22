@@ -5,6 +5,7 @@ import { CheckCircle, Package, Truck, MapPin, CreditCard, Loader2, Download } fr
 import { axiosInstance } from '../lib/axios';
 import { toast } from 'react-hot-toast';
 import { PageWrapper } from '../components/animations';
+import SEO from '../components/SEO';
 
 const OrderConfirmationPage = () => {
   const { orderId } = useParams();
@@ -139,6 +140,7 @@ const OrderConfirmationPage = () => {
 
   return (
     <PageWrapper>
+    <SEO title="Order Confirmation" description="Your order has been confirmed." noindex />
     <div className="min-h-screen bg-base-100 pt-20">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Success Header */}

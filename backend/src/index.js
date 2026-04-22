@@ -41,6 +41,7 @@ import analyticsRoutes from './routes/analytics.routes.js';
 import logsRoutes from './routes/logs.routes.js';
 import paymentRoutes from './routes/payments.routes.js';
 import taxRoutes from './routes/tax.routes.js';
+import sitemapRoutes from './routes/sitemap.routes.js';
 import { setupSwagger } from './swagger.js';
 
 const app = express();
@@ -119,6 +120,9 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/taxes', taxRoutes);
+
+// SEO: dynamic sitemap.xml and robots.txt (served at site root, not under /api)
+app.use('/', sitemapRoutes);
 
 // Swagger API Docs
 setupSwagger(app);

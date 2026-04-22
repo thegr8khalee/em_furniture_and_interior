@@ -8,6 +8,7 @@ import { Loader2, ShoppingBag, Truck, CreditCard, CheckCircle } from 'lucide-rea
 import { toast } from 'react-hot-toast';
 import { axiosInstance } from '../lib/axios';
 import { PageWrapper } from '../components/animations';
+import SEO from '../components/SEO';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
@@ -283,6 +284,7 @@ const CheckoutPage = () => {
 
   return (
     <PageWrapper>
+    <SEO title="Checkout" description="Complete your order." canonical="/checkout" noindex />
     <div className="min-h-screen bg-base-100 pt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <h1 className="text-3xl font-bold text-neutral mb-8">Checkout</h1>

@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 // import toast from 'react-hot-toast'; // Ensure toast is imported for local messages
 import { PageWrapper } from '../components/animations';
+import SEO from '../components/SEO';
 
 const LoginPage = () => {
   const navigate = useNavigate(); // Re-enabled useNavigate as it's useful
@@ -60,6 +61,7 @@ const LoginPage = () => {
   // Render the login form or forgot password form
   return (
     <PageWrapper>
+    <SEO title="Log In" description="Log in to your EM Furniture & Interior account." canonical="/login" noindex />
     <div className="min-h-screen flex">
       {/* Left decorative panel - hidden on mobile */}
       <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden items-center justify-center">

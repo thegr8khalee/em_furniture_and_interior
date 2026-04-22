@@ -22,6 +22,8 @@ import { useAuthStore } from '../store/useAuthStore';
 import { motion } from 'framer-motion';
 import { luxuryEase, elegantEase } from '../lib/animations';
 import { PageWrapper } from '../components/animations';
+import SEO from '../components/SEO';
+import { breadcrumbJsonLd } from '../lib/seo';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -389,8 +391,23 @@ const Styles = () => {
     );
   }
 
+  const styleLabel = style
+    ? decodeURIComponent(style).replace(/\b\w/g, (c) => c.toUpperCase())
+    : 'Style';
+
   return (
     <PageWrapper>
+    <SEO
+      title={`${styleLabel} Furniture & Interior`}
+      description={`Shop ${styleLabel.toLowerCase()} style furniture and curated collections from EM Furniture & Interior — handpicked sofas, bedrooms, dining sets, and decor.`}
+      keywords={`${styleLabel} furniture, ${styleLabel} interior design, Nigerian furniture`}
+      canonical={`/styles/${style}`}
+      jsonLd={breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'Styles', path: '/shop' },
+        { name: styleLabel, path: `/styles/${style}` },
+      ])}
+    />
     <div className="min-h-screen mt-16 bg-base-200">
       <div className="relative h-56 sm:h-64 overflow-hidden">
         <motion.img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="Shop Hero" className="object-cover h-full w-full" initial={{ scale: 1.15, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.4, ease: luxuryEase }} />

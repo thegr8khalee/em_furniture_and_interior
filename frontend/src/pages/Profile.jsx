@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast'; // Ensure toast is imported for local messages
 import { PageWrapper } from '../components/animations';
+import SEO from '../components/SEO';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -121,6 +122,7 @@ const ProfilePage = () => {
 
   return (
     <PageWrapper>
+    <SEO title="My Profile" description="Your account profile." canonical="/profile" noindex />
     <div className="min-h-screen bg-base-200">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         <div className="text-center mb-8">

@@ -3,6 +3,8 @@ import { useFaqStore } from '../store/useFaqStore';
 import { motion } from 'framer-motion';
 import { luxuryEase } from '../lib/animations';
 import { PageWrapper, FadeIn } from '../components/animations';
+import SEO from '../components/SEO';
+import { faqJsonLd, breadcrumbJsonLd } from '../lib/seo';
 
 const FAQ = () => {
   const { faqs, isLoading, getFAQs } = useFaqStore();
@@ -13,6 +15,18 @@ const FAQ = () => {
 
   return (
     <PageWrapper>
+    <SEO
+      title="Frequently Asked Questions"
+      description="Answers to common questions about EM Furniture & Interior — ordering, shipping, installation, returns, and bespoke design."
+      canonical="/faqs"
+      jsonLd={[
+        faqs.length > 0 ? faqJsonLd(faqs) : null,
+        breadcrumbJsonLd([
+          { name: 'Home', path: '/' },
+          { name: 'FAQs', path: '/faqs' },
+        ]),
+      ]}
+    />
     <div className="bg-base-100 min-h-screen pt-28 lg:pt-32 pb-16">
       <div className="max-w-4xl mx-auto px-5">
         <FadeIn>

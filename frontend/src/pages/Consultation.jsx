@@ -3,6 +3,8 @@ import { Palette, Upload } from 'lucide-react';
 import { axiosInstance } from '../lib/axios.js';
 import { PageWrapper, FadeIn, SectionReveal } from '../components/animations';
 import { Button, Card, Input, PageHeader, Select, Textarea } from '../components/ui';
+import SEO from '../components/SEO';
+import { breadcrumbJsonLd } from '../lib/seo';
 
 const styleOptions = ['Modern', 'Contemporary', 'Antique/Royal', 'Bespoke', 'Minimalist', 'Glam'];
 
@@ -119,6 +121,15 @@ const Consultation = () => {
 
   return (
     <PageWrapper>
+      <SEO
+        title="Book a Design Consultation"
+        description="Schedule a bespoke interior design consultation with EM Furniture & Interior. Share your space, budget, and style — our designers will bring it to life."
+        canonical="/consultation"
+        jsonLd={breadcrumbJsonLd([
+          { name: 'Home', path: '/' },
+          { name: 'Consultation', path: '/consultation' },
+        ])}
+      />
       <div className="min-h-screen mt-16 bg-base-100">
         <PageHeader
           title="Book a Consultation"

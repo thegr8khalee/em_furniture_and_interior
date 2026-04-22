@@ -2,13 +2,21 @@
 import { motion } from 'framer-motion';
 import { luxuryEase, elegantEase } from '../lib/animations';
 import { PageWrapper, FadeIn } from '../components/animations';
-// import Hero1 from '../images/Hero1.png';
-// import ME from '../images/ME.png';
-// import CEO from '../images/CEO.png';
+import SEO from '../components/SEO';
+import { breadcrumbJsonLd } from '../lib/seo';
 
 const Terms = () => {
   return (
     <PageWrapper>
+    <SEO
+      title="Terms & Conditions"
+      description="Terms and conditions for purchasing furniture and interior design services from EM Furniture & Interior. Effective July 8, 2025."
+      canonical="/terms"
+      jsonLd={breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'Terms', path: '/terms' },
+      ])}
+    />
     <div className="min-h-screen bg-base-200 pt-16">
       <div className="relative h-48 sm:h-56 overflow-hidden">
         <motion.img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="" className="object-cover h-full w-full" initial={{ scale: 1.15, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.4, ease: luxuryEase }} />

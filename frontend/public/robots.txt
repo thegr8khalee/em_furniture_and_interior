@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /cart
+Disallow: /checkout
+Disallow: /profile
+Disallow: /wishlist
+Disallow: /orders
+Disallow: /order-confirmation
+Disallow: /payment/verify
+Disallow: /notifications
+Disallow: /loyalty
+Disallow: /track-order
+Disallow: /reset-password
+Disallow: /signup
+Disallow: /compare
+Disallow: /api/
+
+Sitemap: https://emfurnitureandinterior.com/sitemap.xml

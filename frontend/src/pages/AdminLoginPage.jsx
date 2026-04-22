@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore'; // Import your Zustand auth store
 import { Loader2 } from 'lucide-react';
 import { useAdminStore } from '../store/useAdminStore';
+import SEO from '../components/SEO';
 
 const AdminLoginPage = () => {
   const [formData, setFormData] = useState({
@@ -33,6 +34,8 @@ const AdminLoginPage = () => {
 
   // Render the login form
   return (
+    <>
+    <SEO title="Admin Login" description="Administrator access." noindex />
     <div className="p-4 flex justify-center items-center h-screen bg-base-300">
       <div className="card w-md bg-base-100 shadow-xl rounded-none">
         <div className="card-body p-8">
@@ -145,6 +148,7 @@ const AdminLoginPage = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

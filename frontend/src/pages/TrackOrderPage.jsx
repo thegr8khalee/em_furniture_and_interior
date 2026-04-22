@@ -3,6 +3,7 @@ import { useOrderStore } from '../store/useOrderStore';
 import { Search, Package, Truck, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { PageWrapper } from '../components/animations';
+import SEO from '../components/SEO';
 
 const TrackOrderPage = () => {
   const { trackOrder, isLoading } = useOrderStore();
@@ -37,6 +38,7 @@ const TrackOrderPage = () => {
 
   return (
     <PageWrapper>
+    <SEO title="Track Your Order" description="Track the status of your order." canonical="/track-order" noindex />
     <div className="min-h-screen bg-base-100 pt-20">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="text-center mb-8">

@@ -4,6 +4,8 @@ import { useBlogStore } from '../store/useBlogStore';
 import { motion } from 'framer-motion';
 import { elegantEase } from '../lib/animations';
 import { PageWrapper, FadeIn } from '../components/animations';
+import SEO from '../components/SEO';
+import { articleJsonLd, breadcrumbJsonLd, truncate } from '../lib/seo';
 
 const BlogPost = () => {
   const { slug } = useParams();
@@ -30,6 +32,23 @@ const BlogPost = () => {
 
   return (
     <PageWrapper>
+    <SEO
+      title={activePost.title}
+      description={truncate(activePost.excerpt || activePost.content || '', 160)}
+      image={activePost.coverImage?.url}
+      imageAlt={activePost.title}
+      type="article"
+      canonical={`/blog/${activePost.slug}`}
+      keywords={(activePost.tags || []).join(', ')}
+      jsonLd={[
+        articleJsonLd(activePost),
+        breadcrumbJsonLd([
+          { name: 'Home', path: '/' },
+          { name: 'Blog', path: '/blog' },
+          { name: activePost.title, path: `/blog/${activePost.slug}` },
+        ]),
+      ]}
+    />
     <div className="bg-base-100 min-h-screen pt-28 lg:pt-32 pb-16">
       <div className="max-w-4xl mx-auto px-5">
         <Link to="/blog" className="text-sm text-secondary">

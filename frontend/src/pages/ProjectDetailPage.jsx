@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { luxuryEase } from '../lib/animations';
 import { PageWrapper, SectionReveal, SlideIn } from '../components/animations';
 import { useProjectsStore } from '../store/useProjectsStore';
+import SEO from '../components/SEO';
+import { breadcrumbJsonLd, truncate, absoluteUrl, SITE_NAME } from '../lib/seo';
 
 const ProjectDetailPage = () => {
     const { id } = useParams();
@@ -82,8 +84,36 @@ const ProjectDetailPage = () => {
 
     const project = selectedProject;
 
+    const projectJsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'CreativeWork',
+        name: project.title,
+        description: truncate(project.description || '', 300),
+        image: (project.images || []).map((i) => i.url).filter(Boolean),
+        locationCreated: { '@type': 'Place', name: project.location },
+        about: project.category,
+        creator: { '@type': 'Organization', name: SITE_NAME },
+        url: absoluteUrl(`/project/${project._id}`),
+    };
+
     return (
         <PageWrapper>
+        <SEO
+          title={project.title}
+          description={truncate(project.description || '', 160)}
+          image={project.images?.[0]?.url}
+          imageAlt={project.title}
+          type="article"
+          canonical={`/project/${project._id}`}
+          jsonLd={[
+            projectJsonLd,
+            breadcrumbJsonLd([
+              { name: 'Home', path: '/' },
+              { name: 'Projects', path: '/projects' },
+              { name: project.title, path: `/project/${project._id}` },
+            ]),
+          ]}
+        />
         <div className="min-h-screen pt-24 pb-12 px-4 max-w-7xl mx-auto">
             {/* Back Button */}
             <button

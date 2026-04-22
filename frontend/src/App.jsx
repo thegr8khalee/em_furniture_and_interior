@@ -1,72 +1,82 @@
 // src/App.jsx
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import { luxuryEase } from './lib/animations';
-// ... other imports
+import { AnimatePresence } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 import AdminProtectedRoute from './components/AdminProtectedRoutes';
-import { useAuthStore } from './store/useAuthStore'; // Import Zustand store
-import AdminLoginPage from './pages/AdminLoginPage';
-import Navbar from './components/Navbar';
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import Dashboard from './pages/Dashboard';
+import { useAuthStore } from './store/useAuthStore';
 import AdminLoginProtectedRoute from './components/AdminLoginProtectedRoute';
 import { useProductsStore } from './store/useProductsStore';
 import { useCollectionStore } from './store/useCollectionStore';
-import AdminAddProductPage from './pages/AddProductPage';
-import AdminEditProductPage from './pages/EditProductPage';
-import AddCollection from './pages/AddCollection';
-import EditCollection from './pages/EditCollection';
 import { Toaster } from 'react-hot-toast';
+import Navbar from './components/Navbar';
 import BottomNavbar from './components/BottomNavbar';
 import Footer from './components/Footer';
-// import whatsapp from '../src/images/whatsapp_4401461.png';
+import CookieConsentBanner from './components/CookieConsentBanner';
+
+// Public routes — eager-loaded so the home page has no splash on first paint
+import HomePage from './pages/HomePage';
 import Shop from './pages/Shop';
 import ProductPage from './pages/ProductPage';
-import CompareProducts from './pages/CompareProducts';
 import CollectionDetailsPage from './pages/CollectionDetailPage';
 import Styles from './pages/Styles';
-import SignupPage from './pages/Signup';
-import ProfilePage from './pages/Profile';
-import CartPage from './pages/Cart';
-import WishlistPage from './pages/Wishlist';
-import AboutUs from './pages/AboutUs';
-import Terms from './pages/Terms';
-import Privacy from './pages/Privacy';
-import Contact from './pages/Contact';
-import ECatalog from './pages/ECatalog';
-import Showroom from './pages/Showroom';
-import CookieConsentBanner from './components/CookieConsentBanner';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import AdminAddProjectPage from './pages/AddProject';
-import AdminEditProjectPage from './pages/EditProject';
-import Projects from './pages/ProjectsPage';
-import ProjectDetailPage from './pages/ProjectDetailPage';
-import Blog from './pages/Blog';
-import BlogPost from './pages/BlogPost';
-import FAQ from './pages/FAQ';
-import Consultation from './pages/Consultation';
-import CheckoutPage from './pages/CheckoutPage';
-import OrderConfirmationPage from './pages/OrderConfirmationPage';
-import PaymentVerify from './pages/PaymentVerify';
-import OrderHistoryPage from './pages/OrderHistoryPage';
-import CouponManagement from './pages/admin/CouponManagement';
-import OrderManagement from './pages/admin/OrderManagement';
-import TrackOrderPage from './pages/TrackOrderPage';
-import NotificationsPage from './pages/NotificationsPage';
-import LoyaltyPage from './pages/LoyaltyPage';
-import ReviewModeration from './pages/admin/ReviewModeration';
-import ConsultationManagement from './pages/admin/ConsultationManagement';
-import DesignerManagement from './pages/admin/DesignerManagement';
-import MarketingManagement from './pages/admin/MarketingManagement';
-import InventoryManagement from './pages/admin/InventoryManagement';
-import FinanceReports from './pages/admin/FinanceReports';
-import AnalyticsDashboard from './pages/admin/AnalyticsDashboard';
-import SecurityLogs from './pages/admin/SecurityLogs';
-import DocumentBuilder from './pages/admin/DocumentBuilder';
 import NotFoundPage from './pages/NotFoundPage';
-import AdminLayout from './components/admin/AdminLayout';
+
+// Public but less-critical — lazy to keep initial bundle small
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SignupPage = lazy(() => import('./pages/Signup'));
+const ProfilePage = lazy(() => import('./pages/Profile'));
+const CartPage = lazy(() => import('./pages/Cart'));
+const WishlistPage = lazy(() => import('./pages/Wishlist'));
+const CompareProducts = lazy(() => import('./pages/CompareProducts'));
+const AboutUs = lazy(() => import('./pages/AboutUs'));
+const Terms = lazy(() => import('./pages/Terms'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Contact = lazy(() => import('./pages/Contact'));
+const ECatalog = lazy(() => import('./pages/ECatalog'));
+const Showroom = lazy(() => import('./pages/Showroom'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const Projects = lazy(() => import('./pages/ProjectsPage'));
+const ProjectDetailPage = lazy(() => import('./pages/ProjectDetailPage'));
+const Blog = lazy(() => import('./pages/Blog'));
+const BlogPost = lazy(() => import('./pages/BlogPost'));
+const FAQ = lazy(() => import('./pages/FAQ'));
+const Consultation = lazy(() => import('./pages/Consultation'));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage'));
+const OrderConfirmationPage = lazy(() => import('./pages/OrderConfirmationPage'));
+const PaymentVerify = lazy(() => import('./pages/PaymentVerify'));
+const OrderHistoryPage = lazy(() => import('./pages/OrderHistoryPage'));
+const TrackOrderPage = lazy(() => import('./pages/TrackOrderPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const LoyaltyPage = lazy(() => import('./pages/LoyaltyPage'));
+
+// Admin — lazy so public visitors never download admin code
+const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const AdminAddProductPage = lazy(() => import('./pages/AddProductPage'));
+const AdminEditProductPage = lazy(() => import('./pages/EditProductPage'));
+const AddCollection = lazy(() => import('./pages/AddCollection'));
+const EditCollection = lazy(() => import('./pages/EditCollection'));
+const AdminAddProjectPage = lazy(() => import('./pages/AddProject'));
+const AdminEditProjectPage = lazy(() => import('./pages/EditProject'));
+const CouponManagement = lazy(() => import('./pages/admin/CouponManagement'));
+const OrderManagement = lazy(() => import('./pages/admin/OrderManagement'));
+const ReviewModeration = lazy(() => import('./pages/admin/ReviewModeration'));
+const ConsultationManagement = lazy(() => import('./pages/admin/ConsultationManagement'));
+const DesignerManagement = lazy(() => import('./pages/admin/DesignerManagement'));
+const MarketingManagement = lazy(() => import('./pages/admin/MarketingManagement'));
+const InventoryManagement = lazy(() => import('./pages/admin/InventoryManagement'));
+const FinanceReports = lazy(() => import('./pages/admin/FinanceReports'));
+const AnalyticsDashboard = lazy(() => import('./pages/admin/AnalyticsDashboard'));
+const SecurityLogs = lazy(() => import('./pages/admin/SecurityLogs'));
+const DocumentBuilder = lazy(() => import('./pages/admin/DocumentBuilder'));
+const AdminLayout = lazy(() => import('./components/admin/AdminLayout'));
+
+const RouteFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-base-100">
+    <Loader2 className="h-8 w-8 animate-spin text-secondary" />
+  </div>
+);
 
 function App() {
   const { checkAuth, authUser, isAdmin, isAuthReady } = useAuthStore();
@@ -96,6 +106,7 @@ function App() {
       {!isAdminRoute && <BottomNavbar />}
       <main className="">
         <AnimatePresence mode="wait">
+        <Suspense fallback={<RouteFallback />}>
         <Routes location={location} key={location.pathname}>
           {/* Public product/collection/cart/wishlist routes */}
           {/* ... */}
@@ -181,6 +192,7 @@ function App() {
 
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
+        </Suspense>
         </AnimatePresence>{' '}
       </main>
       {!isAdminRoute && <Footer />}

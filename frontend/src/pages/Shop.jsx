@@ -25,6 +25,8 @@ import {
 // import { toast } from 'react-hot-toast';
 import FilterModal from '../components/FilterModal';
 import { Button, EmptyState, ProductCardSkeleton } from '../components/ui';
+import SEO from '../components/SEO';
+import { breadcrumbJsonLd } from '../lib/seo';
 // import Hero1 from '../images/Hero1.png'; // Assuming your hero image path
 // import whatsapp from '../images/whatsapp.png'; // Assuming your whatsapp icon path
 
@@ -393,6 +395,16 @@ const Shop = () => {
 
   return (
     <PageWrapper>
+      <SEO
+        title="Shop Luxury Furniture & Collections"
+        description="Browse our full collection of luxury furniture — sofas, armchairs, bedrooms, dining sets, wardrobes, TV units, and more. Shop online with worldwide shipping from EM Furniture & Interior."
+        keywords="buy furniture Nigeria, luxury sofas, bedroom furniture, dining sets, wardrobes, furniture shop"
+        canonical="/shop"
+        jsonLd={breadcrumbJsonLd([
+          { name: 'Home', path: '/' },
+          { name: 'Shop', path: '/shop' },
+        ])}
+      />
     <div className="min-h-screen bg-white">
       {/* Hero Banner */}
       <div className="relative z-10 h-56 sm:h-64 lg:h-72 overflow-visible">

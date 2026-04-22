@@ -2,18 +2,21 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { luxuryEase, elegantEase } from '../lib/animations';
 import { PageWrapper } from '../components/animations';
-// import Hero1 from '../images/Hero1.png';
-// import Catalog1 from '../images/Catalog1.png';
-// import Catalog2 from '../images/Catalog2.png';
-// import Catalog3 from '../images/catalog3.png';
-// import Catalog4 from '../images/Catalog4.png';
-// import Catalog5 from '../images/catalog5.png';
-// import Catalog6 from '../images/catalog6.png';
-// import Catalog7 from '../images/catalog7.png';
+import SEO from '../components/SEO';
+import { breadcrumbJsonLd } from '../lib/seo';
 
 const ECatalog = () => {
   return (
     <PageWrapper>
+    <SEO
+      title="E-Catalog"
+      description="Browse the EM Furniture & Interior digital catalog — explore our full range of luxury furniture and bespoke interior design pieces."
+      canonical="/e-catalog"
+      jsonLd={breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'E-Catalog', path: '/e-catalog' },
+      ])}
+    />
     <div className="min-h-screen mt-16 bg-base-200 pt-16 pb-12">
       <div className="relative h-48 sm:h-64 overflow-hidden">
         <motion.img

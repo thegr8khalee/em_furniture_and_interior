@@ -26,6 +26,12 @@ import {
   elegantEase,
   luxuryEase,
 } from '../lib/animations';
+import SEO from '../components/SEO';
+import {
+  organizationJsonLd,
+  localBusinessJsonLd,
+  websiteJsonLd,
+} from '../lib/seo';
 
 const HomePage = () => {
   const heroImages = [
@@ -218,6 +224,13 @@ const HomePage = () => {
 
   return (
     <PageWrapper className="min-h-screen bg-white">
+      <SEO
+        title="Luxury Furniture & Bespoke Interior Design in Nigeria"
+        description="Transform your space with EM Furniture & Interior — luxury sofas, bedrooms, dining sets, wardrobes, and bespoke interior design from Kaduna, Nigeria. Worldwide shipping, quality assured, free installation."
+        keywords="luxury furniture Nigeria, interior design Kaduna, bespoke furniture, sofas, bedrooms, dining rooms, wardrobes, EM Furniture"
+        canonical="/"
+        jsonLd={[organizationJsonLd(), localBusinessJsonLd(), websiteJsonLd()]}
+      />
       {/* ===== Hero Section ===== */}
       <section className="relative w-full h-[85vh] lg:h-screen overflow-hidden">
         <AnimatePresence mode="wait">

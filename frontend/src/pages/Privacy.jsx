@@ -2,13 +2,21 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { luxuryEase, elegantEase } from '../lib/animations';
 import { PageWrapper, FadeIn } from '../components/animations';
-// import Hero1 from '../images/Hero1.png';
-// import ME from '../images/ME.png';
-// import CEO from '../images/CEO.png';
+import SEO from '../components/SEO';
+import { breadcrumbJsonLd } from '../lib/seo';
 
 const Privacy = () => {
   return (
     <PageWrapper>
+    <SEO
+      title="Privacy Policy"
+      description="How EM Furniture & Interior collects, uses, and protects your personal information when you browse our site or purchase our products."
+      canonical="/privacy"
+      jsonLd={breadcrumbJsonLd([
+        { name: 'Home', path: '/' },
+        { name: 'Privacy', path: '/privacy' },
+      ])}
+    />
     <div className="min-h-screen bg-white pt-16 pb-12">
       <div className="relative h-48 sm:h-64 overflow-hidden">
         <motion.img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753787004/Hero1_ye6sa7.png"} alt="" className="object-cover h-full w-full" initial={{ scale: 1.15, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 1.4, ease: luxuryEase }} />

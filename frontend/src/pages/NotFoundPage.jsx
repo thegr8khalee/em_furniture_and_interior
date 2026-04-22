@@ -1,10 +1,16 @@
 import { Home, Search } from 'lucide-react';
 import { FadeIn, PageWrapper } from '../components/animations';
 import { Button, Card } from '../components/ui';
+import SEO from '../components/SEO';
 
 const NotFoundPage = () => {
   return (
     <PageWrapper className="min-h-screen bg-base-100">
+      <SEO
+        title="Page Not Found"
+        description="The page you're looking for doesn't exist or has been moved."
+        noindex
+      />
       <div className="content-shell section-shell flex min-h-screen items-center justify-center px-4">
         <FadeIn>
           <Card className="surface-luxury max-w-xl text-center" padding="px-6 py-12 sm:px-10">

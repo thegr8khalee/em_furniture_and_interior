@@ -25,6 +25,12 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useAdminStore } from '../store/useAdminStore';
 import { useMarketingStore } from '../store/useMarketingStore';
 import { axiosInstance } from '../lib/axios.js';
+import SEO from '../components/SEO';
+import {
+  collectionJsonLd,
+  breadcrumbJsonLd,
+  truncate,
+} from '../lib/seo';
 
 const CollectionDetailsPage = () => {
   const { collectionId } = useParams();
@@ -210,6 +216,30 @@ const CollectionDetailsPage = () => {
 
   return (
     <PageWrapper>
+    <SEO
+      title={collection?.name ? `${collection.name} Collection` : 'Collection'}
+      description={truncate(
+        collection?.description ||
+          `Explore the ${collection?.name || ''} collection — curated luxury furniture from EM Furniture & Interior.`,
+        160,
+      )}
+      image={collection?.coverImage?.url}
+      imageAlt={collection?.name}
+      type="product"
+      canonical={`/collection/${collection?._id}`}
+      jsonLd={[
+        collectionJsonLd(collection),
+        breadcrumbJsonLd([
+          { name: 'Home', path: '/' },
+          { name: 'Shop', path: '/shop' },
+          { name: 'Collections', path: '/shop?view=collections' },
+          {
+            name: collection?.name || 'Collection',
+            path: `/collection/${collection?._id}`,
+          },
+        ]),
+      ]}
+    />
     <div className="min-h-screen bg-white pt-16 pb-12">
       <div className="w-full flex justify-between">
         <button

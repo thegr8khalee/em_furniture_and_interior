@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import { luxuryEase } from '../lib/animations';
 import { PageWrapper } from '../components/animations';
 import { Button, Card, EmptyState, Input, ListItemSkeleton, PageHeader } from '../components/ui';
+import SEO from '../components/SEO';
 
 const CartPage = () => {
   const {
@@ -344,6 +345,7 @@ const CartPage = () => {
 
   return (
     <PageWrapper>
+    <SEO title="Your Cart" description="Review your cart." canonical="/cart" noindex />
     <div className="min-h-screen mt-16 bg-white">
       {/* Hero Banner */}
       <PageHeader
