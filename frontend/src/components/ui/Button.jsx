@@ -53,7 +53,7 @@ const Button = ({
   const content = (
     <>
       {isLoading ? <Loader2 size={iconSizes[size] || 18} className="animate-spin" /> : LeftIcon ? <LeftIcon size={iconSizes[size] || 18} /> : null}
-      {children ? <span>{children}</span> : null}
+      {children ? <span className="inline-flex items-center gap-2">{children}</span> : null}
       {!isLoading && RightIcon ? <RightIcon size={iconSizes[size] || 18} /> : null}
     </>
   );

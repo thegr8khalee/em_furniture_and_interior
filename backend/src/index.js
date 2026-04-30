@@ -45,6 +45,9 @@ import sitemapRoutes from './routes/sitemap.routes.js';
 import { setupSwagger } from './swagger.js';
 
 const app = express();
+// Render (and most PaaS) terminate TLS at a proxy and forward the client IP via
+// X-Forwarded-For. express-rate-limit refuses to run unless we opt in.
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 const __dirname = path.resolve();
 
@@ -76,10 +79,11 @@ if (process.env.NODE_ENV === 'production') {
     cors({
       origin: process.env.FRONTEND_URL || 'https://emfurniture.com',
       credentials: true,
+      exposedHeaders: ['Content-Disposition'],
     })
   );
 } else {
-  app.use(cors({ origin: true, credentials: true }));
+  app.use(cors({ origin: true, credentials: true, exposedHeaders: ['Content-Disposition'] }));
 }
 
 // Higher body limit for image-upload routes (base64 payloads)

@@ -30,6 +30,7 @@
   "scripts": {
     "dev": "nodemon ./src/index.js",
     "start": "node src/index.js",
+    "postinstall": "node node_modules/puppeteer/install.mjs",
     "seed": "node src/seed/seed.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest"
   },

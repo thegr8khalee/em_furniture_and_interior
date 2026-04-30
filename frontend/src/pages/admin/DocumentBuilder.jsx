@@ -147,11 +147,25 @@ const DocumentBuilder = () => {
         responseType: 'blob',
       });
 
+      // Pull the server‑assigned document number out of Content-Disposition
+      // (backend sets it as `${type}-${documentNumber}.pdf`); fall back to a
+      // timestamp if the header is missing.
+      const disposition = response.headers?.['content-disposition'] || '';
+      const headerName = /filename="?([^"]+)"?/i.exec(disposition)?.[1] || '';
+      const docNumber = headerName.replace(/\.pdf$/i, '').split('-').slice(1).join('-') || String(Date.now());
+
+      const safeClient = (clientName || 'client')
+        .trim()
+        .replace(/[\\/:*?"<>|]+/g, '')
+        .replace(/\s+/g, '_') || 'client';
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const filename = `${safeClient}_${dateStr}_${documentType}-${docNumber}.pdf`;
+
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${documentType}-${Date.now()}.pdf`;
+      link.download = filename;
       link.click();
       window.URL.revokeObjectURL(url);
 
@@ -277,7 +291,7 @@ const DocumentBuilder = () => {
               ))}
 
               <div className="flex items-center justify-between border-t border-base-300 pt-3">
-                <Button variant="ghost" size="sm" onClick={() => addSectionItem(si)}>
+                <Button className="flex" variant="ghost" size="sm" onClick={() => addSectionItem(si)}>
                   <Plus size={16} className="mr-1" /> Add Item
                 </Button>
                 <div className="text-sm font-semibold text-neutral/70">
@@ -298,7 +312,7 @@ const DocumentBuilder = () => {
             <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral/60">
               Line Items
             </h2>
-            <Button variant="ghost" size="sm" onClick={addItem}>
+            <Button className="flex" variant="ghost" size="sm" onClick={addItem}>
               <Plus size={16} className="mr-1" /> Add Item
             </Button>
           </div>
@@ -435,11 +449,16 @@ const DocumentBuilder = () => {
 
       {/* Actions */}
       <div className="flex flex-wrap gap-3">
-        <Button variant="elegant" size="lg" onClick={handleGenerate} disabled={isGenerating}>
-          {isGenerating ? <Loader2 size={18} className="mr-2 animate-spin" /> : <Download size={18} className="mr-2" />}
+        <Button
+          variant="elegant"
+          size="lg"
+          onClick={handleGenerate}
+          isLoading={isGenerating}
+          leftIcon={Download}
+        >
           {isGenerating ? 'Generating...' : `Download ${documentType.charAt(0).toUpperCase() + documentType.slice(1)}`}
         </Button>
-        <Button variant="ghost" size="lg" onClick={handleReset}>
+        <Button className="flex" variant="ghost" size="lg" onClick={handleReset}>
           Clear Form
         </Button>
       </div>

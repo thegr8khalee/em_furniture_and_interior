@@ -491,29 +491,29 @@ const EditCollection = () => {
           </div>
 
           <div className="form-control">
-            <label className="label cursor-pointer">
-              <span className="label-text">Is Best Seller Collection?</span>
-              <input
-                type="checkbox"
-                name="isBestSeller"
-                className="checkbox checkbox-primary"
-                checked={formData.isBestSeller}
-                onChange={handleChange}
-              />
+            <label className="label">
+              <span className="label-text">Best Seller Collection</span>
             </label>
+            <input
+              type="checkbox"
+              name="isBestSeller"
+              className="checkbox checkbox-primary self-start"
+              checked={formData.isBestSeller}
+              onChange={handleChange}
+            />
           </div>
 
           <div className="form-control">
-            <label className="label cursor-pointer">
-              <span className="label-text">Is on Promotion?</span>
-              <input
-                type="checkbox"
-                name="isPromo"
-                className="checkbox checkbox-primary"
-                checked={formData.isPromo}
-                onChange={handleChange}
-              />
+            <label className="label">
+              <span className="label-text">On Promotion</span>
             </label>
+            <input
+              type="checkbox"
+              name="isPromo"
+              className="checkbox checkbox-primary self-start"
+              checked={formData.isPromo}
+              onChange={handleChange}
+            />
           </div>
 
           {formData.isPromo && (

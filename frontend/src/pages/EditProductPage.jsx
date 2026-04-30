@@ -647,29 +647,29 @@ const AdminEditProductPage = () => {
           </div>
 
           <div className="form-control">
-            <label className="label cursor-pointer">
-              <span className="label-text">Is Best Seller?</span>
-              <input
-                type="checkbox"
-                name="isBestSeller"
-                className="checkbox checkbox-primary"
-                checked={formData.isBestSeller}
-                onChange={handleChange}
-              />
+            <label className="label">
+              <span className="label-text">Best Seller</span>
             </label>
+            <input
+              type="checkbox"
+              name="isBestSeller"
+              className="checkbox checkbox-primary self-start"
+              checked={formData.isBestSeller}
+              onChange={handleChange}
+            />
           </div>
 
           <div className="form-control">
-            <label className="label cursor-pointer">
-              <span className="label-text">Is on Promotion?</span>
-              <input
-                type="checkbox"
-                name="isPromo"
-                className="checkbox checkbox-primary"
-                checked={formData.isPromo}
-                onChange={handleChange}
-              />
+            <label className="label">
+              <span className="label-text">On Promotion</span>
             </label>
+            <input
+              type="checkbox"
+              name="isPromo"
+              className="checkbox checkbox-primary self-start"
+              checked={formData.isPromo}
+              onChange={handleChange}
+            />
           </div>
 
           {formData.isPromo && (
@@ -691,16 +691,16 @@ const AdminEditProductPage = () => {
           )}
 
           <div className="form-control">
-            <label className="label cursor-pointer">
-              <span className="label-text">Is Foreign Product?</span>
-              <input
-                type="checkbox"
-                name="isForeign"
-                className="checkbox checkbox-primary"
-                checked={formData.isForeign}
-                onChange={handleChange}
-              />
+            <label className="label">
+              <span className="label-text">Foreign Product</span>
             </label>
+            <input
+              type="checkbox"
+              name="isForeign"
+              className="checkbox checkbox-primary self-start"
+              checked={formData.isForeign}
+              onChange={handleChange}
+            />
           </div>
 
           {formData.isForeign && (
