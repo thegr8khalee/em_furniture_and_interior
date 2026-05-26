@@ -48,8 +48,8 @@ const docConfig = {
   quotationBankName: 'TAJ BANK',
   quotationAccountNumber: '0012353692',
   quotationAccountName: 'EM MODERN FURNITURE AND INTERIOR LTD',
-  // Default deposit percentage for quotations
-  depositPercent: 80,
+  // Default deposit percentage for quotations / invoices
+  depositPercent: 70,
 };
 
 const formatReceiptAmount = (amount) =>
@@ -434,11 +434,34 @@ const receiptStyles = `
     color: #222;
     line-height: 2;
   }
+
+  .notes-block {
+    margin-top: 30px;
+    padding: 14px 18px;
+    background: #fafafa;
+    border-left: 3px solid #d0d0d0;
+  }
+
+  .notes-block h4 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    color: #222;
+  }
+
+  .notes-block p {
+    font-size: 12px;
+    line-height: 1.7;
+    color: #444;
+    white-space: pre-wrap;
+  }
 `;
 
 /* ── BRANDED DOCUMENT HTML GENERATOR ──────────────────── */
 
-const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, summaryRows }) => {
+const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, summaryRows, notes }) => {
   const bgDiv = docConfig.bgImageUrl
     ? `<div class="receipt-bg" style="background-image: url('${docConfig.bgImageUrl}');"></div>`
     : `<div class="receipt-bg lines-pattern"></div>`;
@@ -507,6 +530,8 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
       ${summaryHTML}
     </table>
 
+    ${notes && String(notes).trim() ? `<div class="notes-block"><h4>Notes</h4><p>${String(notes).trim().replace(/</g, '&lt;')}</p></div>` : ''}
+
     <div class="receipt-footer">
       <div class="bank-details">
         <h4>Bank Details</h4>
@@ -528,12 +553,12 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
 </html>`;
 };
 
-const receiptHTML = ({ clientName, invoiceNumber, date, items, total, amountPaid }) => {
+const receiptHTML = ({ clientName, invoiceNumber, date, items, total, amountPaid, notes }) => {
   const paid = amountPaid != null ? Number(amountPaid) : Number(total);
   const balance = Number(total) - paid;
   return brandedDocumentHTML({
     title: 'Payment Receipt',
-    clientName, invoiceNumber, date, items,
+    clientName, invoiceNumber, date, items, notes,
     summaryRows: [
       { label: 'Total', amount: total },
       { label: 'Paid', amount: paid },
@@ -542,13 +567,21 @@ const receiptHTML = ({ clientName, invoiceNumber, date, items, total, amountPaid
   });
 };
 
-const invoiceHTML = ({ clientName, invoiceNumber, date, items, total }) => {
+const invoiceHTML = ({ clientName, invoiceNumber, date, items, total, depositPercent, notes }) => {
+  const pct = depositPercent != null && !isNaN(Number(depositPercent))
+    ? Number(depositPercent)
+    : docConfig.depositPercent;
+  const summaryRows = [{ label: 'Total', amount: total }];
+  if (pct > 0 && pct < 100) {
+    const deposit = Math.round(Number(total) * pct / 100);
+    const balance = Number(total) - deposit;
+    summaryRows.push({ label: `Deposit (${pct}%)`, amount: deposit });
+    summaryRows.push({ label: 'Balance', amount: balance });
+  }
   return brandedDocumentHTML({
     title: 'Payment Invoice',
-    clientName, invoiceNumber, date, items,
-    summaryRows: [
-      { label: 'Total', amount: total },
-    ],
+    clientName, invoiceNumber, date, items, notes,
+    summaryRows,
   });
 };
 
@@ -1193,6 +1226,7 @@ export const customDocumentHTML = (data) => {
       items: brandedItems,
       total: data.totalAmount || calcTotal,
       amountPaid: data.amountPaid,
+      notes,
     });
   }
 
@@ -1203,6 +1237,8 @@ export const customDocumentHTML = (data) => {
       date: formatDate(new Date()),
       items: brandedItems,
       total: data.totalAmount || calcTotal,
+      depositPercent: data.depositPercent,
+      notes,
     });
   }
 

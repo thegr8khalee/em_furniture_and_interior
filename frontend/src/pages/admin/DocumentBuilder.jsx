@@ -17,7 +17,7 @@ const DocumentBuilder = () => {
   const [clientAddress, setClientAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [validityDays, setValidityDays] = useState(14);
-  const [depositPercent, setDepositPercent] = useState(80);
+  const [depositPercent, setDepositPercent] = useState(70);
   const [amountPaid, setAmountPaid] = useState('');
 
   // Flat items for invoice/receipt
@@ -84,7 +84,9 @@ const DocumentBuilder = () => {
 
   const paid = Number(amountPaid) || 0;
   const balance = subtotal - paid;
-  const deposit = isQuotation ? Math.round(subtotal * (Number(depositPercent) || 0) / 100) : 0;
+  const isInvoice = documentType === 'invoice';
+  const depositPct = Number(depositPercent) || 0;
+  const deposit = (isQuotation || isInvoice) ? Math.round(subtotal * depositPct / 100) : 0;
 
   /* ── Generate ── */
   const handleGenerate = async () => {
@@ -136,6 +138,9 @@ const DocumentBuilder = () => {
             quantity: Number(it.quantity) || 1,
             price: Number(it.price),
           }));
+        if (documentType === 'invoice') {
+          payload.depositPercent = Number(depositPercent) || undefined;
+        }
       }
 
       if (isReceipt) {
@@ -185,7 +190,7 @@ const DocumentBuilder = () => {
     setClientAddress('');
     setNotes('');
     setValidityDays(14);
-    setDepositPercent(80);
+    setDepositPercent(70);
     setAmountPaid('');
     setItems([emptyItem()]);
     setSections([emptySection()]);
@@ -363,6 +368,37 @@ const DocumentBuilder = () => {
               <span className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Total</span>
               <p className="text-xl font-bold text-neutral">
                 ₦{subtotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── INVOICE: Deposit ── */}
+      {isInvoice && (
+        <div className="border border-base-300 bg-white p-6 space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral/60">
+            Invoice Settings
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Input
+              label="Deposit (%)"
+              type="number"
+              min="0"
+              max="100"
+              value={depositPercent}
+              onChange={(e) => setDepositPercent(e.target.value)}
+            />
+            <div>
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Deposit</span>
+              <p className="text-lg font-bold text-neutral">
+                ₦{deposit.toLocaleString('en-NG')}
+              </p>
+            </div>
+            <div>
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Balance</span>
+              <p className="text-lg font-bold text-neutral">
+                ₦{(subtotal - deposit).toLocaleString('en-NG')}
               </p>
             </div>
           </div>
