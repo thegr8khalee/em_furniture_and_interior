@@ -40,14 +40,15 @@ const docConfig = {
   companyAddress: 'C15 Bamaiyi Road, Kaduna',
   companyPhone: '+2349037691860',
   companyWebsite: 'www.emfurnitureandinterior.com',
+  rcNumber: '8153295',
   // Bank details for invoices/receipts
-  bankName: 'TAJ BANK',
-  accountNumber: '0004052820',
-  accountName: 'AMINA MUSA ABDULLAHI',
+  bankName: 'Taj Bank',
+  accountNumber: '0012353692',
+  accountName: 'EM Modern Furniture and Interior Ltd',
   // Bank details for quotations (different account)
-  quotationBankName: 'TAJ BANK',
+  quotationBankName: 'Taj Bank',
   quotationAccountNumber: '0012353692',
-  quotationAccountName: 'EM MODERN FURNITURE AND INTERIOR LTD',
+  quotationAccountName: 'EM Modern Furniture and Interior Ltd',
   // Default deposit percentage for quotations / invoices
   depositPercent: 70,
 };
@@ -363,6 +364,10 @@ const receiptStyles = `
     text-align: right;
   }
 
+  .items-table thead th.center {
+    text-align: center;
+  }
+
   .items-table tbody td {
     padding: 14px 24px;
     font-size: 14px;
@@ -373,6 +378,11 @@ const receiptStyles = `
 
   .items-table tbody td.right {
     text-align: right;
+    font-weight: 500;
+  }
+
+  .items-table tbody td.center {
+    text-align: center;
     font-weight: 500;
   }
 
@@ -470,12 +480,22 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
     ? `<img src="${docConfig.logoUrl}" alt="EM Furniture">`
     : '';
 
-  const itemsHTML = items.map(item => `
+  const itemsHTML = items.map(item => {
+    const quantity = Number(item.quantity) || 1;
+    const lineTotal = item.lineTotal != null ? Number(item.lineTotal) : Number(item.price) || 0;
+    const unitPrice = item.unitPrice != null
+      ? Number(item.unitPrice)
+      : (quantity > 0 ? lineTotal / quantity : lineTotal);
+
+    return `
     <tr>
       <td>${item.description}</td>
-      <td class="right">${formatReceiptAmount(item.price)}</td>
+      <td class="center">${quantity}</td>
+      <td class="right">${formatReceiptAmount(unitPrice)}</td>
+      <td class="right">${formatReceiptAmount(lineTotal)}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   const summaryHTML = summaryRows.map(row => `
     <tr>
@@ -511,6 +531,7 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
       <div class="invoice-meta">
         <p><span class="label">Invoice No:</span>&nbsp;&nbsp;&nbsp;${invoiceNumber}</p>
         <p><span class="label">Date:</span>&nbsp;&nbsp;&nbsp;${dateStr}</p>
+        <p><span class="label">RC:</span>&nbsp;&nbsp;&nbsp;${docConfig.rcNumber}</p>
       </div>
     </div>
 
@@ -518,7 +539,9 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
       <thead>
         <tr>
           <th>Description</th>
-          <th class="right">Price</th>
+          <th class="center">Qty</th>
+          <th class="right">Unit Price</th>
+          <th class="right">Amount</th>
         </tr>
       </thead>
       <tbody>
@@ -554,15 +577,18 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
 };
 
 const receiptHTML = ({ clientName, invoiceNumber, date, items, total, amountPaid, notes }) => {
-  const paid = amountPaid != null ? Number(amountPaid) : Number(total);
-  const balance = Number(total) - paid;
+  const totalAmount = Number(total) || 0;
+  const paid = amountPaid != null ? Number(amountPaid) : totalAmount;
+  const balance = totalAmount - paid;
+  const balancePct = totalAmount > 0 ? Math.round((balance / totalAmount) * 100) : 0;
+
   return brandedDocumentHTML({
     title: 'Payment Receipt',
     clientName, invoiceNumber, date, items, notes,
     summaryRows: [
-      { label: 'Total', amount: total },
+      { label: 'Total', amount: totalAmount },
       { label: 'Paid', amount: paid },
-      { label: 'Balance', amount: balance },
+      { label: `Balance (${balancePct}%)`, amount: balance },
     ],
   });
 };
@@ -576,7 +602,7 @@ const invoiceHTML = ({ clientName, invoiceNumber, date, items, total, depositPer
     const deposit = Math.round(Number(total) * pct / 100);
     const balance = Number(total) - deposit;
     summaryRows.push({ label: `Deposit (${pct}%)`, amount: deposit });
-    summaryRows.push({ label: 'Balance', amount: balance });
+    summaryRows.push({ label: `Balance (${100 - pct}%)`, amount: balance });
   }
   return brandedDocumentHTML({
     title: 'Payment Invoice',
@@ -1072,7 +1098,8 @@ const quotationHTML = ({
         <div class="q-company-info">
           ${docConfig.companyAddress}<br>
           ${docConfig.companyPhone}<br>
-          ${docConfig.companyWebsite}
+          ${docConfig.companyWebsite}<br>
+          RC: ${docConfig.rcNumber}
         </div>
         <div class="q-title-block">
           <div class="q-title">Quotation</div>
@@ -1126,9 +1153,9 @@ const quotationHTML = ({
         <div class="q-bank">
           <h4>Account Details</h4>
           <p>
-            ${docConfig.quotationBankName}<br>
-            Account Number: ${docConfig.quotationAccountNumber}<br>
-            Account Name: ${docConfig.quotationAccountName}
+            ${docConfig.bankName}<br>
+            Account Number: ${docConfig.accountNumber}<br>
+            Account Name: ${docConfig.accountName}
           </p>
         </div>
         <div class="q-sig">
@@ -1152,6 +1179,11 @@ export const orderDocumentHTML = (order, documentType = 'invoice') => {
 
   const brandedItems = order.items.map(item => ({
     description: item.name + (item.quantity > 1 ? ` (\u00d7${item.quantity})` : ''),
+    quantity: Number(item.quantity) || 1,
+    unitPrice: Number(item.price) || ((Number(item.quantity) || 1) > 0
+      ? Number(item.subtotal) / (Number(item.quantity) || 1)
+      : Number(item.subtotal)),
+    lineTotal: Number(item.subtotal) || 0,
     price: item.subtotal,
   }));
 
@@ -1213,6 +1245,9 @@ export const customDocumentHTML = (data) => {
 
   const brandedItems = items.map(item => ({
     description: item.description,
+    quantity: Number(item.quantity) || 1,
+    unitPrice: Number(item.price) || 0,
+    lineTotal: (Number(item.quantity) || 1) * (Number(item.price) || 0),
     price: (item.quantity || 1) * (item.price || 0),
   }));
   let calcTotal = 0;
