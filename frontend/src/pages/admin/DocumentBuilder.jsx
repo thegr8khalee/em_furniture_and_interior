@@ -19,6 +19,8 @@ const DocumentBuilder = () => {
   const [validityDays, setValidityDays] = useState(14);
   const [depositPercent, setDepositPercent] = useState(70);
   const [amountPaid, setAmountPaid] = useState('');
+  const [discountType, setDiscountType] = useState('percentage');
+  const [discountValue, setDiscountValue] = useState('');
 
   // Flat items for invoice/receipt
   const [items, setItems] = useState([emptyItem()]);
@@ -82,11 +84,18 @@ const DocumentBuilder = () => {
     return items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.price) || 0), 0);
   }, [items, sections, isQuotation]);
 
+  const discountVal = Number(discountValue) || 0;
+  const discountAmount = discountType === 'percentage'
+    ? Math.round(subtotal * (discountVal / 100))
+    : discountVal;
+  
+  const grandTotal = Math.max(0, subtotal - discountAmount);
+
   const paid = Number(amountPaid) || 0;
-  const balance = subtotal - paid;
+  const balance = grandTotal - paid;
   const isInvoice = documentType === 'invoice';
   const depositPct = Number(depositPercent) || 0;
-  const deposit = (isQuotation || isInvoice) ? Math.round(subtotal * depositPct / 100) : 0;
+  const deposit = (isQuotation || isInvoice) ? Math.round(grandTotal * depositPct / 100) : 0;
 
   /* ── Generate ── */
   const handleGenerate = async () => {
@@ -113,6 +122,8 @@ const DocumentBuilder = () => {
         clientPhone,
         clientAddress,
         notes,
+        discountType,
+        discountValue: discountVal,
       };
 
       if (isQuotation) {
@@ -144,7 +155,7 @@ const DocumentBuilder = () => {
       }
 
       if (isReceipt) {
-        payload.totalAmount = subtotal;
+        payload.totalAmount = grandTotal;
         payload.amountPaid = paid;
       }
 
@@ -192,6 +203,8 @@ const DocumentBuilder = () => {
     setValidityDays(14);
     setDepositPercent(70);
     setAmountPaid('');
+    setDiscountType('percentage');
+    setDiscountValue('');
     setItems([emptyItem()]);
     setSections([emptySection()]);
   };
@@ -365,7 +378,7 @@ const DocumentBuilder = () => {
           {/* Subtotal */}
           <div className="flex justify-end border-t border-base-300 pt-4">
             <div className="text-right">
-              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Total</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Subtotal</span>
               <p className="text-xl font-bold text-neutral">
                 ₦{subtotal.toLocaleString('en-NG', { minimumFractionDigits: 2 })}
               </p>
@@ -373,6 +386,39 @@ const DocumentBuilder = () => {
           </div>
         </div>
       )}
+
+      {/* ── DISCOUNT SETTINGS (Applies to all) ── */}
+      <div className="border border-base-300 bg-white p-6 space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral/60">
+          Discount Settings
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 items-end">
+          <div className="space-y-1 block text-sm font-medium text-neutral">
+            <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Decrease By</label>
+            <select
+              value={discountType}
+              onChange={(e) => setDiscountType(e.target.value)}
+              className="mt-1 block w-full px-3 py-2 bg-white border border-base-300 text-sm focus:outline-none focus:ring-1 focus:ring-secondary focus:border-secondary h-10"
+            >
+              <option value="percentage">Percentage (%)</option>
+              <option value="fixed">Fixed Amount (₦)</option>
+            </select>
+          </div>
+          <Input
+            label={discountType === 'percentage' ? "Discount (%)" : "Discount (₦)"}
+            type="number"
+            min="0"
+            value={discountValue}
+            onChange={(e) => setDiscountValue(e.target.value)}
+          />
+          <div>
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Grand Total</span>
+            <p className="text-lg font-bold text-neutral">
+              ₦{grandTotal.toLocaleString('en-NG')}
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* ── INVOICE: Deposit ── */}
       {isInvoice && (
@@ -398,7 +444,7 @@ const DocumentBuilder = () => {
             <div>
               <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Balance</span>
               <p className="text-lg font-bold text-neutral">
-                ₦{(subtotal - deposit).toLocaleString('en-NG')}
+                ₦{(grandTotal - deposit).toLocaleString('en-NG')}
               </p>
             </div>
           </div>
@@ -413,8 +459,8 @@ const DocumentBuilder = () => {
           </h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Total</span>
-              <p className="text-lg font-bold text-neutral">₦{subtotal.toLocaleString('en-NG')}</p>
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Grand Total</span>
+              <p className="text-lg font-bold text-neutral">₦{grandTotal.toLocaleString('en-NG')}</p>
             </div>
             <Input
               label="Amount Paid (₦)"
@@ -458,10 +504,10 @@ const DocumentBuilder = () => {
             />
             <div>
               <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Grand Total</span>
-              <p className="text-lg font-bold text-neutral">₦{subtotal.toLocaleString('en-NG')}</p>
+              <p className="text-lg font-bold text-neutral">₦{grandTotal.toLocaleString('en-NG')}</p>
               {Number(depositPercent) > 0 && (
                 <p className="text-sm text-neutral/60 mt-1">
-                  Deposit: ₦{deposit.toLocaleString('en-NG')} &middot; Balance: ₦{(subtotal - deposit).toLocaleString('en-NG')}
+                  Deposit: ₦{deposit.toLocaleString('en-NG')} &middot; Balance: ₦{(grandTotal - deposit).toLocaleString('en-NG')}
                 </p>
               )}
             </div>

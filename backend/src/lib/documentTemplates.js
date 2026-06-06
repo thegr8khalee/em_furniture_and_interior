@@ -576,31 +576,60 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
 </html>`;
 };
 
-const receiptHTML = ({ clientName, invoiceNumber, date, items, total, amountPaid, notes }) => {
+const receiptHTML = ({ clientName, invoiceNumber, date, items, total, amountPaid, notes, discountType, discountValue }) => {
   const totalAmount = Number(total) || 0;
-  const paid = amountPaid != null ? Number(amountPaid) : totalAmount;
-  const balance = totalAmount - paid;
-  const balancePct = totalAmount > 0 ? Math.round((balance / totalAmount) * 100) : 0;
+  
+  let discountAmount = 0;
+  if (discountType === 'percentage' && discountValue) {
+    discountAmount = Math.round(totalAmount * Number(discountValue) / 100);
+  } else if (discountType === 'fixed' && discountValue) {
+    discountAmount = Number(discountValue);
+  }
+  const grandTotal = Math.max(0, totalAmount - discountAmount);
+
+  const paid = amountPaid != null ? Number(amountPaid) : grandTotal;
+  const balance = grandTotal - paid;
+  const balancePct = grandTotal > 0 ? Math.round((balance / grandTotal) * 100) : 0;
+  
+  const summaryRows = [{ label: discountAmount > 0 ? 'Subtotal' : 'Total', amount: totalAmount }];
+  if (discountAmount > 0) {
+    summaryRows.push({ label: 'Discount', amount: discountAmount });
+    summaryRows.push({ label: 'Grand Total', amount: grandTotal });
+  }
+  summaryRows.push(
+      { label: 'Paid', amount: paid },
+      { label: `Balance (${balancePct}%)`, amount: balance }
+  );
 
   return brandedDocumentHTML({
     title: 'Payment Receipt',
     clientName, invoiceNumber, date, items, notes,
-    summaryRows: [
-      { label: 'Total', amount: totalAmount },
-      { label: 'Paid', amount: paid },
-      { label: `Balance (${balancePct}%)`, amount: balance },
-    ],
+    summaryRows,
   });
 };
 
-const invoiceHTML = ({ clientName, invoiceNumber, date, items, total, depositPercent, notes }) => {
+const invoiceHTML = ({ clientName, invoiceNumber, date, items, total, depositPercent, notes, discountType, discountValue }) => {
   const pct = depositPercent != null && !isNaN(Number(depositPercent))
     ? Number(depositPercent)
     : docConfig.depositPercent;
-  const summaryRows = [{ label: 'Total', amount: total }];
+    
+  let discountAmount = 0;
+  if (discountType === 'percentage' && discountValue) {
+    discountAmount = Math.round(Number(total) * Number(discountValue) / 100);
+  } else if (discountType === 'fixed' && discountValue) {
+    discountAmount = Number(discountValue);
+  }
+  const grandTotal = Math.max(0, Number(total) - discountAmount);
+
+  const summaryRows = [{ label: discountAmount > 0 ? 'Subtotal' : 'Total', amount: total }];
+  if (discountAmount > 0) {
+    summaryRows.push({ label: 'Discount', amount: discountAmount });
+    summaryRows.push({ label: 'Grand Total', amount: grandTotal });
+  }
+
   if (pct > 0 && pct < 100) {
-    const deposit = Math.round(Number(total) * pct / 100);
-    const balance = Number(total) - deposit;
+    const deposit = Math.round(grandTotal * pct / 100);
+    const balance = grandTotal - deposit;
     summaryRows.push({ label: `Deposit (${pct}%)`, amount: deposit });
     summaryRows.push({ label: `Balance (${100 - pct}%)`, amount: balance });
   }
@@ -1238,6 +1267,8 @@ export const customDocumentHTML = (data) => {
     items = [],
     notes,
     validityDays,
+    discountType,
+    discountValue,
   } = data;
 
   const titleMap = { invoice: 'Invoice', receipt: 'Receipt', quotation: 'Quotation' };
@@ -1262,6 +1293,8 @@ export const customDocumentHTML = (data) => {
       total: data.totalAmount || calcTotal,
       amountPaid: data.amountPaid,
       notes,
+      discountType,
+      discountValue,
     });
   }
 
@@ -1274,6 +1307,8 @@ export const customDocumentHTML = (data) => {
       total: data.totalAmount || calcTotal,
       depositPercent: data.depositPercent,
       notes,
+      discountType,
+      discountValue,
     });
   }
 
@@ -1298,6 +1333,10 @@ export const customDocumentHTML = (data) => {
     referenceNumber: documentNumber,
     date: formatDate(new Date()),
     sections,
+    discountType,
+    discountValue,
+    // (Ensure you pass them down if quotationHTML supports them, but for now just pass totalAmount or use sections)
+    totalAmount: data.totalAmount,
     depositPercent: data.depositPercent,
     terms: data.terms,
   });

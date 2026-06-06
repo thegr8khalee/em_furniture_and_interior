@@ -19,6 +19,8 @@ export const generateCustomDocument = async (req, res) => {
       depositPercent,
       totalAmount,
       amountPaid,
+      discountType,
+      discountValue,
     } = req.body;
 
     // Validate
@@ -102,6 +104,8 @@ export const generateCustomDocument = async (req, res) => {
         depositPercent: depositPercent != null ? Number(depositPercent) : undefined,
         totalAmount: totalAmount != null ? Number(totalAmount) : undefined,
         amountPaid: amountPaid != null ? Number(amountPaid) : undefined,
+        discountType: discountType,
+        discountValue: discountValue != null ? Number(discountValue) : undefined,
       },
       res
     );
