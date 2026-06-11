@@ -18,6 +18,7 @@ const DocumentBuilder = () => {
   const [notes, setNotes] = useState('');
   const [validityDays, setValidityDays] = useState(14);
   const [depositPercent, setDepositPercent] = useState(70);
+  const [miscellaneousFee, setMiscellaneousFee] = useState('');
   const [amountPaid, setAmountPaid] = useState('');
   const [discountType, setDiscountType] = useState('percentage');
   const [discountValue, setDiscountValue] = useState('');
@@ -89,7 +90,7 @@ const DocumentBuilder = () => {
     ? Math.round(subtotal * (discountVal / 100))
     : discountVal;
   
-  const grandTotal = Math.max(0, subtotal - discountAmount);
+  const grandTotal = Math.max(0, subtotal - discountAmount) + (isQuotation ? (Number(miscellaneousFee) || 0) : 0);
 
   const paid = Number(amountPaid) || 0;
   const balance = grandTotal - paid;
@@ -140,6 +141,7 @@ const DocumentBuilder = () => {
               })),
           }));
         payload.depositPercent = Number(depositPercent) || undefined;
+        payload.miscellaneousFee = Number(miscellaneousFee) || undefined;
         payload.validityDays = validityDays;
       } else {
         payload.items = items
@@ -203,6 +205,7 @@ const DocumentBuilder = () => {
     setValidityDays(14);
     setDepositPercent(70);
     setAmountPaid('');
+    setMiscellaneousFee('');
     setDiscountType('percentage');
     setDiscountValue('');
     setItems([emptyItem()]);
@@ -386,7 +389,31 @@ const DocumentBuilder = () => {
           </div>
         </div>
       )}
-
+      {/* ── QUOTATION: Settings (Deposit & Misc Fee) ── */}
+      {isQuotation && (
+        <div className="border border-base-300 bg-white p-6 space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral/60">
+            Quotation Settings
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              label="Deposit (%)"
+              type="number"
+              min="0"
+              max="100"
+              value={depositPercent}
+              onChange={(e) => setDepositPercent(e.target.value)}
+            />
+            <Input
+              label="Miscellaneous Fee (₦)"
+              type="number"
+              min="0"
+              value={miscellaneousFee}
+              onChange={(e) => setMiscellaneousFee(e.target.value)}
+            />
+          </div>
+        </div>
+      )}
       {/* ── DISCOUNT SETTINGS (Applies to all) ── */}
       <div className="border border-base-300 bg-white p-6 space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral/60">

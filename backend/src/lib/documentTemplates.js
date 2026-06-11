@@ -59,13 +59,13 @@ const formatReceiptAmount = (amount) =>
 /* ── shared CSS ──────────────────────────────────────── */
 
 const baseStyles = `
+  @page { size: A4; margin: 0; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 13px;
     color: #1a1a1a;
-    padding: 50px;
   }
 
   .header {
@@ -236,16 +236,16 @@ const receiptStyles = `
     width: 100%;
     min-height: 100vh;
     position: relative;
-    background: #fff;
+    background: transparent;
   }
 
   .receipt-bg {
-    position: absolute;
+    position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     background-repeat: no-repeat;
     background-size: cover;
     background-position: center;
-    z-index: 0;
+    z-index: -1;
   }
 
   .receipt-bg.lines-pattern {
@@ -261,10 +261,6 @@ const receiptStyles = `
   .receipt-content {
     position: relative;
     z-index: 1;
-    padding: 50px 60px 40px;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
   }
 
   .logo-section {
@@ -513,9 +509,12 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
 
   ${bgDiv}
 
-  <div class="receipt-content">
+  <table style="width: 100%; border-collapse: collapse; border-spacing: 0;">
+    <thead><tr><td><div style="height: 40px;"></div></td></tr></thead>
+    <tbody><tr><td style="padding: 0 50px;">
+      <div class="receipt-content">
 
-    <div class="logo-section">${logoImg}</div>
+        <div class="logo-section">${logoImg}</div>
 
     <div class="company-name">
       <span class="brand">EM</span> <span class="fancy">Furniture &amp; interior</span>&#169;
@@ -570,7 +569,10 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
       </div>
     </div>
 
-  </div>
+      </div>
+    </td></tr></tbody>
+    <tfoot><tr><td><div style="height: 40px;"></div></td></tr></tfoot>
+  </table>
 
 </body>
 </html>`;
@@ -650,36 +652,31 @@ const quotationStyles = `
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     font-size: 14px;
     color: #1a1a1a;
-    background: #fff;
+    background: transparent;
   }
 
   .q-page {
     position: relative;
-    min-height: 100vh;
-    background: #fff;
-    page-break-after: always;
+    background: transparent;
   }
 
-  .q-page:last-child {
-    page-break-after: avoid;
+  .q-page.new-page {
+    page-break-before: always;
+    break-before: page;
   }
 
   .q-page-bg {
-    position: absolute;
+    position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     background-repeat: no-repeat;
     background-size: cover;
     background-position: center;
-    z-index: 0;
+    z-index: -1;
   }
 
   .q-content {
     position: relative;
     z-index: 1;
-    padding: 50px 60px 40px;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
   }
 
   .q-logo {
@@ -781,7 +778,7 @@ const quotationStyles = `
   .q-items-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 4px;
+    margin-bottom: 0px;
   }
 
   .q-items-table thead th {
@@ -996,10 +993,6 @@ const defaultTermsAndConditions = [
     body: 'In cases where any item specified in the mood board is unavailable, a suitable alternative within the same price range will be presented to the client for approval before purchase.',
   },
   {
-    title: 'Project Management Fee',
-    body: 'The interior designer is entitled to: 50% of the project management fee at the start of the project, 30% when the project is 60% completed, and the remaining 20% at the end of the agreed project duration, prior to handover, as stated in the agreement.',
-  },
-  {
     title: 'Site Management',
     body: 'The interior design team shall include a professional site manager, available on-site from 9:00 AM to 5:00 PM throughout the project duration.',
   },
@@ -1042,6 +1035,7 @@ const quotationHTML = ({
   date,
   sections = [],
   depositPercent,
+  miscellaneousFee,
   terms,
 }) => {
   const bgPageDiv = docConfig.bgImageUrl
@@ -1078,11 +1072,18 @@ const quotationHTML = ({
 
   // Summary data
   let grandTotal = 0;
-  const summaryRows = sections.map(section => {
+  let summaryRows = sections.map(section => {
     const cost = section.items.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
     grandTotal += cost;
     return `<tr><td>${section.name}</td><td class="right">${Number(cost).toLocaleString('en-NG')}</td></tr>`;
-  }).join('');
+  });
+
+  if (miscellaneousFee && Number(miscellaneousFee) > 0) {
+    grandTotal += Number(miscellaneousFee);
+    summaryRows.push(`<tr><td>Miscellaneous Fee</td><td class="right">${Number(miscellaneousFee).toLocaleString('en-NG')}</td></tr>`);
+  }
+
+  const summaryRowsHtml = summaryRows.join('');
 
   const deposit = depPct ? Math.round(grandTotal * depPct / 100) : null;
   const balance = deposit ? grandTotal - deposit : null;
@@ -1112,12 +1113,16 @@ const quotationHTML = ({
 <head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"><style>${quotationStyles}</style></head>
 <body>
 
-  <!-- PAGE 1: Header + Sections -->
-  <div class="q-page">
-    ${bgPageDiv}
-    <div class="q-content">
+  ${bgPageDiv}
 
-      <div class="q-logo">${logoImg}</div>
+  <!-- Header + Sections -->
+  <table style="width: 100%; border-collapse: collapse; border-spacing: 0;">
+    <thead><tr><td><div style="height: 40px;"></div></td></tr></thead>
+    <tbody><tr><td style="padding: 0 50px;">
+      <div class="q-page">
+        <div class="q-content">
+
+          <div class="q-logo">${logoImg}</div>
 
       <div class="q-company-name">
         <span class="brand">EM</span> <span class="fancy">Furniture &amp; interior</span>&#169;
@@ -1149,33 +1154,44 @@ const quotationHTML = ({
 
       ${sectionBlocks}
 
-    </div>
-  </div>
+        </div>
+      </div>
+    </td></tr></tbody>
+    <tfoot><tr><td><div style="height: 40px;"></div></td></tr></tfoot>
+  </table>
 
-  <!-- PAGE 2: Summary -->
-  <div class="q-page">
-    ${bgPageDiv}
-    <div class="q-content">
+  <!-- Summary -->
+  <table style="width: 100%; border-collapse: collapse; border-spacing: 0; page-break-before: always;">
+    <thead><tr><td><div style="height: 40px;"></div></td></tr></thead>
+    <tbody><tr><td style="padding: 0 50px;">
+      <div class="q-page">
+        <div class="q-content">
 
-      <h2 class="q-summary-title">Summary</h2>
+          <h2 class="q-summary-title">Summary</h2>
       <table class="q-summary-table">
         <thead><tr><th>Description</th><th class="right">Cost</th></tr></thead>
         <tbody>
-          ${summaryRows}
+          ${summaryRowsHtml}
           <tr class="total-row"><td><strong>Total</strong></td><td class="right">${Number(grandTotal).toLocaleString('en-NG')}</td></tr>
         </tbody>
       </table>
-      ${depositRows}
+      ${miscellaneousFee && Number(miscellaneousFee) > 0 ? `<div style="margin-top: 8px; margin-bottom: 16px; font-size: 11px; color: #555; text-align: left;"><em>* Kindly note that the miscellaneous fee will be refunded upon completion of the project if it is not utilized.</em></div>` : ''}
+          ${depositRows}
 
-    </div>
-  </div>
+        </div>
+      </div>
+    </td></tr></tbody>
+    <tfoot><tr><td><div style="height: 40px;"></div></td></tr></tfoot>
+  </table>
 
-  <!-- PAGE 3: Terms & Conditions -->
-  <div class="q-page">
-    ${bgPageDiv}
-    <div class="q-content">
+  <!-- Terms & Conditions -->
+  <table style="width: 100%; border-collapse: collapse; border-spacing: 0; page-break-before: always;">
+    <thead><tr><td><div style="height: 40px;"></div></td></tr></thead>
+    <tbody><tr><td style="padding: 0 50px;">
+      <div class="q-page">
+        <div class="q-content">
 
-      <h2 class="q-terms-title">Terms <span class="amp">&amp;</span> Conditions</h2>
+          <h2 class="q-terms-title">Terms <span class="amp">&amp;</span> Conditions</h2>
       ${termsHTML}
 
       <div class="q-footer">
@@ -1193,8 +1209,11 @@ const quotationHTML = ({
         </div>
       </div>
 
-    </div>
-  </div>
+        </div>
+      </div>
+    </td></tr></tbody>
+    <tfoot><tr><td><div style="height: 40px;"></div></td></tr></tfoot>
+  </table>
 
 </body>
 </html>`;
@@ -1269,6 +1288,7 @@ export const customDocumentHTML = (data) => {
     validityDays,
     discountType,
     discountValue,
+    miscellaneousFee,
   } = data;
 
   const titleMap = { invoice: 'Invoice', receipt: 'Receipt', quotation: 'Quotation' };
@@ -1335,6 +1355,7 @@ export const customDocumentHTML = (data) => {
     sections,
     discountType,
     discountValue,
+    miscellaneousFee,
     // (Ensure you pass them down if quotationHTML supports them, but for now just pass totalAmount or use sections)
     totalAmount: data.totalAmount,
     depositPercent: data.depositPercent,
