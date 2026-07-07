@@ -22,6 +22,10 @@ export const generateCustomDocument = async (req, res) => {
       discountType,
       discountValue,
       miscellaneousFee,
+      projectFeeType,
+      projectFeeValue,
+      depositType,
+      depositValue,
     } = req.body;
 
     // Validate
@@ -108,6 +112,10 @@ export const generateCustomDocument = async (req, res) => {
         discountType: discountType,
         discountValue: discountValue != null ? Number(discountValue) : undefined,
         miscellaneousFee: miscellaneousFee != null ? Number(miscellaneousFee) : undefined,
+        projectFeeType: projectFeeType,
+        projectFeeValue: projectFeeValue != null ? Number(projectFeeValue) : undefined,
+        depositType: depositType,
+        depositValue: depositValue != null ? Number(depositValue) : undefined,
       },
       res
     );

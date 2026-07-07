@@ -18,7 +18,10 @@ const DocumentBuilder = () => {
   const [notes, setNotes] = useState('');
   const [validityDays, setValidityDays] = useState(14);
   const [depositPercent, setDepositPercent] = useState(70);
-  const [miscellaneousFee, setMiscellaneousFee] = useState('');
+  const [depositType, setDepositType] = useState('percentage');
+  const [depositValue, setDepositValue] = useState('');
+  const [projectFeeType, setProjectFeeType] = useState('percentage');
+  const [projectFeeValue, setProjectFeeValue] = useState('');
   const [amountPaid, setAmountPaid] = useState('');
   const [discountType, setDiscountType] = useState('percentage');
   const [discountValue, setDiscountValue] = useState('');
@@ -89,14 +92,27 @@ const DocumentBuilder = () => {
   const discountAmount = discountType === 'percentage'
     ? Math.round(subtotal * (discountVal / 100))
     : discountVal;
-  
-  const grandTotal = Math.max(0, subtotal - discountAmount) + (isQuotation ? (Number(miscellaneousFee) || 0) : 0);
+
+  const totalAfterDiscount = Math.max(0, subtotal - discountAmount);
+  const projectFeeAmount = isQuotation
+    ? (projectFeeType === 'percentage'
+      ? Math.round(totalAfterDiscount * ((Number(projectFeeValue) || 0) / 100))
+      : (Number(projectFeeValue) || 0))
+    : 0;
+
+  const grandTotal = totalAfterDiscount + projectFeeAmount;
 
   const paid = Number(amountPaid) || 0;
   const balance = grandTotal - paid;
   const isInvoice = documentType === 'invoice';
   const depositPct = Number(depositPercent) || 0;
-  const deposit = (isQuotation || isInvoice) ? Math.round(grandTotal * depositPct / 100) : 0;
+  const deposit = isInvoice ? Math.round(grandTotal * depositPct / 100) : 0;
+  const quotationDeposit = isQuotation
+    ? (depositType === 'percentage'
+      ? Math.round(grandTotal * ((Number(depositValue) || 0) / 100))
+      : (Number(depositValue) || 0))
+    : 0;
+  const quotationBalance = grandTotal - quotationDeposit;
 
   /* ── Generate ── */
   const handleGenerate = async () => {
@@ -141,7 +157,10 @@ const DocumentBuilder = () => {
               })),
           }));
         payload.depositPercent = Number(depositPercent) || undefined;
-        payload.miscellaneousFee = Number(miscellaneousFee) || undefined;
+        payload.depositType = Number(depositValue) > 0 ? depositType : undefined;
+        payload.depositValue = Number(depositValue) || undefined;
+        payload.projectFeeType = Number(projectFeeValue) > 0 ? projectFeeType : undefined;
+        payload.projectFeeValue = Number(projectFeeValue) || undefined;
         payload.validityDays = validityDays;
       } else {
         payload.items = items
@@ -204,8 +223,11 @@ const DocumentBuilder = () => {
     setNotes('');
     setValidityDays(14);
     setDepositPercent(70);
+    setDepositType('percentage');
+    setDepositValue('');
+    setProjectFeeType('percentage');
+    setProjectFeeValue('');
     setAmountPaid('');
-    setMiscellaneousFee('');
     setDiscountType('percentage');
     setDiscountValue('');
     setItems([emptyItem()]);
@@ -395,22 +417,67 @@ const DocumentBuilder = () => {
           <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral/60">
             Quotation Settings
           </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="space-y-1 block text-sm font-medium text-neutral">
+              <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Project Fee Type</label>
+              <select
+                value={projectFeeType}
+                onChange={(e) => setProjectFeeType(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-base-300 text-sm focus:outline-none focus:ring-1 focus:ring-secondary focus:border-secondary h-10"
+              >
+                <option value="percentage">Percentage (%)</option>
+                <option value="fixed">Fixed Amount (₦)</option>
+              </select>
+            </div>
             <Input
-              label="Deposit (%)"
+              label={projectFeeType === 'percentage' ? 'Project Fee (%)' : 'Project Fee (₦)'}
               type="number"
               min="0"
-              max="100"
-              value={depositPercent}
-              onChange={(e) => setDepositPercent(e.target.value)}
+              value={projectFeeValue}
+              onChange={(e) => setProjectFeeValue(e.target.value)}
             />
             <Input
-              label="Miscellaneous Fee (₦)"
+              label="Validity (days)"
+              type="number"
+              min="1"
+              value={validityDays}
+              onChange={(e) => setValidityDays(e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="space-y-1 block text-sm font-medium text-neutral">
+              <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Deposit Type</label>
+              <select
+                value={depositType}
+                onChange={(e) => setDepositType(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-base-300 text-sm focus:outline-none focus:ring-1 focus:ring-secondary focus:border-secondary h-10"
+              >
+                <option value="percentage">Percentage (%)</option>
+                <option value="fixed">Fixed Amount (₦)</option>
+              </select>
+            </div>
+            <Input
+              label={depositType === 'percentage' ? 'Deposit (%)' : 'Deposit (₦)'}
               type="number"
               min="0"
-              value={miscellaneousFee}
-              onChange={(e) => setMiscellaneousFee(e.target.value)}
+              value={depositValue}
+              onChange={(e) => setDepositValue(e.target.value)}
             />
+            <div>
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Grand Total</span>
+              <p className="text-lg font-bold text-neutral">₦{grandTotal.toLocaleString('en-NG')}</p>
+              {Number(projectFeeValue) > 0 && (
+                <p className="text-sm text-neutral/60 mt-1">
+                  Project Fee: ₦{projectFeeAmount.toLocaleString('en-NG')}
+                </p>
+              )}
+              {Number(depositValue) > 0 && (
+                <p className="text-sm text-neutral/60 mt-1">
+                  Deposit: ₦{quotationDeposit.toLocaleString('en-NG')} &middot; Balance: ₦{quotationBalance.toLocaleString('en-NG')}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -502,41 +569,6 @@ const DocumentBuilder = () => {
               <p className={`text-lg font-bold ${balance > 0 ? 'text-error' : 'text-success'}`}>
                 ₦{balance.toLocaleString('en-NG')}
               </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── QUOTATION: Deposit & Summary ── */}
-      {isQuotation && (
-        <div className="border border-base-300 bg-white p-6 space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral/60">
-            Quotation Settings
-          </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Input
-              label="Deposit (%)"
-              type="number"
-              min="0"
-              max="100"
-              value={depositPercent}
-              onChange={(e) => setDepositPercent(e.target.value)}
-            />
-            <Input
-              label="Validity (days)"
-              type="number"
-              min="1"
-              value={validityDays}
-              onChange={(e) => setValidityDays(e.target.value)}
-            />
-            <div>
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">Grand Total</span>
-              <p className="text-lg font-bold text-neutral">₦{grandTotal.toLocaleString('en-NG')}</p>
-              {Number(depositPercent) > 0 && (
-                <p className="text-sm text-neutral/60 mt-1">
-                  Deposit: ₦{deposit.toLocaleString('en-NG')} &middot; Balance: ₦{(grandTotal - deposit).toLocaleString('en-NG')}
-                </p>
-              )}
             </div>
           </div>
         </div>

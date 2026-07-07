@@ -1035,7 +1035,13 @@ const quotationHTML = ({
   date,
   sections = [],
   depositPercent,
+  depositType,
+  depositValue,
+  projectFeeType,
+  projectFeeValue,
   miscellaneousFee,
+  discountType,
+  discountValue,
   terms,
 }) => {
   const bgPageDiv = docConfig.bgImageUrl
@@ -1071,30 +1077,76 @@ const quotationHTML = ({
   }).join('');
 
   // Summary data
-  let grandTotal = 0;
+  let subtotal = 0;
   let summaryRows = sections.map(section => {
     const cost = section.items.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
-    grandTotal += cost;
+    subtotal += cost;
     return `<tr><td>${section.name}</td><td class="right">${Number(cost).toLocaleString('en-NG')}</td></tr>`;
   });
 
-  if (miscellaneousFee && Number(miscellaneousFee) > 0) {
-    grandTotal += Number(miscellaneousFee);
-    summaryRows.push(`<tr><td>Miscellaneous Fee</td><td class="right">${Number(miscellaneousFee).toLocaleString('en-NG')}</td></tr>`);
+  let discountAmount = 0;
+  if (discountType === 'percentage' && Number(discountValue) > 0) {
+    discountAmount = Math.round(subtotal * Number(discountValue) / 100);
+  } else if (discountType === 'fixed' && Number(discountValue) > 0) {
+    discountAmount = Number(discountValue);
+  }
+
+  const totalAfterDiscount = Math.max(0, subtotal - discountAmount);
+  if (discountAmount > 0) {
+    summaryRows.push(`<tr><td>Discount</td><td class="right">-${Number(discountAmount).toLocaleString('en-NG')}</td></tr>`);
+  }
+
+  let computedProjectFee = 0;
+  if (projectFeeType === 'percentage' && Number(projectFeeValue) > 0) {
+    computedProjectFee = Math.round(totalAfterDiscount * Number(projectFeeValue) / 100);
+  } else if (projectFeeType === 'fixed' && Number(projectFeeValue) > 0) {
+    computedProjectFee = Number(projectFeeValue);
+  } else if (Number(miscellaneousFee) > 0) {
+    // Backward compatibility for older payloads.
+    computedProjectFee = Number(miscellaneousFee);
+  }
+
+  const grandTotal = totalAfterDiscount + computedProjectFee;
+
+  if (computedProjectFee > 0) {
+    const projectFeeLabel = projectFeeType === 'percentage' && Number(projectFeeValue) > 0
+      ? `Project Management & Procurement Fee (${Number(projectFeeValue)}%)`
+      : 'Project Management & Procurement Fee';
+    summaryRows.push(`<tr><td>${projectFeeLabel}</td><td class="right">${Number(computedProjectFee).toLocaleString('en-NG')}</td></tr>`);
   }
 
   const summaryRowsHtml = summaryRows.join('');
 
-  const deposit = depPct ? Math.round(grandTotal * depPct / 100) : null;
-  const balance = deposit ? grandTotal - deposit : null;
+  let deposit = null;
+  let balance = null;
+  let depositLabel = '';
+  let balanceLabel = 'Balance:';
+
+  if (depositType === 'percentage' && Number(depositValue) > 0) {
+    const pct = Number(depositValue);
+    deposit = Math.round(grandTotal * pct / 100);
+    balance = grandTotal - deposit;
+    depositLabel = `Deposit (${pct}%):`;
+    balanceLabel = `Balance (${100 - pct}%):`;
+  } else if (depositType === 'fixed' && Number(depositValue) > 0) {
+    deposit = Number(depositValue);
+    balance = grandTotal - deposit;
+    depositLabel = 'Deposit:';
+  } else if (depPct) {
+    // Backward compatibility for older payloads.
+    deposit = Math.round(grandTotal * depPct / 100);
+    balance = grandTotal - deposit;
+    depositLabel = `Deposit (${depPct}%):`;
+    balanceLabel = `Balance (${100 - depPct}%):`;
+  }
 
   const depositRows = deposit != null ? `
     <div class="q-deposit-row">
-      <span class="lbl">Deposit (${depPct}%):</span>
+      <span class="lbl">${depositLabel}</span>
       <span>${Number(deposit).toLocaleString('en-NG')}</span>
     </div>
     <div class="q-deposit-row">
-      <span class="lbl">Balance (${100 - depPct}%):</span>
+      <span class="lbl">${balanceLabel}</span>
       <span>${Number(balance).toLocaleString('en-NG')}</span>
     </div>` : '';
 
@@ -1175,7 +1227,7 @@ const quotationHTML = ({
           <tr class="total-row"><td><strong>Total</strong></td><td class="right">${Number(grandTotal).toLocaleString('en-NG')}</td></tr>
         </tbody>
       </table>
-      ${miscellaneousFee && Number(miscellaneousFee) > 0 ? `<div style="margin-top: 8px; margin-bottom: 16px; font-size: 11px; color: #555; text-align: left;"><em>* Kindly note that the miscellaneous fee will be refunded upon completion of the project if it is not utilized.</em></div>` : ''}
+        ${computedProjectFee > 0 ? `<div style="margin-top: 8px; margin-bottom: 16px; font-size: 11px; color: #555; text-align: left;"><em>* Kindly note that any unutilized project management and procurement fee will be refunded upon completion of the project.</em></div>` : ''}
           ${depositRows}
 
         </div>
@@ -1289,6 +1341,10 @@ export const customDocumentHTML = (data) => {
     discountType,
     discountValue,
     miscellaneousFee,
+    projectFeeType,
+    projectFeeValue,
+    depositType,
+    depositValue,
   } = data;
 
   const titleMap = { invoice: 'Invoice', receipt: 'Receipt', quotation: 'Quotation' };
@@ -1356,6 +1412,10 @@ export const customDocumentHTML = (data) => {
     discountType,
     discountValue,
     miscellaneousFee,
+    projectFeeType,
+    projectFeeValue,
+    depositType,
+    depositValue,
     // (Ensure you pass them down if quotationHTML supports them, but for now just pass totalAmount or use sections)
     totalAmount: data.totalAmount,
     depositPercent: data.depositPercent,
