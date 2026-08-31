@@ -1,7 +1,10 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import paymentRoutes from '../../src/routes/payments.routes.js';
+import orderRoutes from '../../src/routes/order.routes.js';
+import taxRoutes from '../../src/routes/tax.routes.js';
 
 /**
  * Builds an Express app that mirrors index.js for the payment routes,
@@ -12,6 +15,7 @@ import paymentRoutes from '../../src/routes/payments.routes.js';
  */
 export const buildTestApp = () => {
   const app = express();
+  app.use(cookieParser());
 
   app.use('/api/payments/webhooks', express.raw({ type: '*/*', limit: '1mb' }));
   app.use(express.json({ limit: '1mb' }));
@@ -24,6 +28,8 @@ export const buildTestApp = () => {
   app.use('/api/payments', express.urlencoded({ limit: '50mb', extended: true }));
 
   app.use('/api/payments', paymentRoutes);
+  app.use('/api/orders', orderRoutes);
+  app.use('/api/taxes', taxRoutes);
 
   return app;
 };

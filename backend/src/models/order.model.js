@@ -78,6 +78,14 @@ const orderSchema = new mongoose.Schema(
       required: true,
       unique: true
     },
+    // Client-supplied key that makes order creation idempotent. Sparse, so the
+    // unique index only covers orders that carry one — orders created before
+    // this existed, and any path that omits it, are unaffected.
+    idempotencyKey: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -259,6 +267,7 @@ orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ guest: 1, createdAt: -1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
+orderSchema.index({ paymentStatus: 1, createdAt: -1 });
 
 const Order = mongoose.model('Order', orderSchema);
 

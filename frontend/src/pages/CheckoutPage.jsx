@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
 import { useCouponStore } from '../store/useCouponStore';
@@ -48,7 +48,10 @@ const CheckoutPage = () => {
   // Cart details state
   const [detailedCartItems, setDetailedCartItems] = useState([]);
   const [subtotal, setSubtotal] = useState(0);
-  const [shippingCost] = useState(0); // For now, free shipping
+  const [shippingCost] = useState(0); // display only; the server owns the real value
+  // Held across re-renders so a re-submit reuses the same key. Cleared once the
+  // order is placed, so a genuinely new checkout gets a fresh one.
+  const idempotencyKeyRef = useRef(null);
   const [taxAmount, setTaxAmount] = useState(0);
   const [isCalculatingTax, setIsCalculatingTax] = useState(false);
 
@@ -134,27 +137,19 @@ const CheckoutPage = () => {
     const calculateTax = async () => {
       setIsCalculatingTax(true);
       try {
+        // Prices are not sent — the server resolves them from the catalog so the
+        // quote shown here is exactly what the order will be charged.
         const payload = {
           items: detailedCartItems.map((item) => ({
             id: item.item,
             quantity: item.quantity,
-            unitPrice: item.price,
           })),
-          shippingAddress: {
-            address: shippingAddress.address,
-            city: shippingAddress.city,
-            state: shippingAddress.state,
-            country: shippingAddress.country,
-            postalCode: shippingAddress.postalCode,
-          },
-          amount: subtotal - discount + shippingCost,
-          shippingCost,
+          couponCode: appliedCoupon?.code || null,
           currency: 'NGN',
         };
 
         const res = await axiosInstance.post('/taxes/calculate', payload);
-        const calculatedTax = res.data?.tax?.amountToCollect || 0;
-        setTaxAmount(calculatedTax);
+        setTaxAmount(res.data?.pricing?.taxAmount ?? res.data?.tax?.amountToCollect ?? 0);
       } catch (error) {
         console.error('Tax calculation error:', error);
         setTaxAmount(0);
@@ -179,6 +174,9 @@ const CheckoutPage = () => {
     subtotal,
     discount,
     shippingCost,
+    // The coupon is part of the tax payload now, so applying or removing one
+    // must re-request the quote — otherwise the displayed tax is stale.
+    appliedCoupon?.code,
   ]);
 
   const finalTotal = subtotal - discount + shippingCost + taxAmount;
@@ -201,6 +199,18 @@ const CheckoutPage = () => {
     }
 
     try {
+      // One key per checkout attempt, so a double submit or a retry after a
+      // dropped response returns the original order instead of creating a
+      // second one. Regenerated only when a new attempt genuinely begins.
+      // crypto.randomUUID is only available in secure contexts; fall back so a
+      // plain-HTTP deployment still gets a usable key rather than a crash.
+      const newKey = () =>
+        globalThis.crypto?.randomUUID?.() ??
+        `co-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+      const key = idempotencyKeyRef.current ?? (idempotencyKeyRef.current = newKey());
+
+      // shippingCost and taxAmount are no longer sent: the server derives every
+      // money figure from the catalog and its own configuration.
       const orderData = {
         items: detailedCartItems.map(item => ({
           item: item.item,
@@ -211,13 +221,13 @@ const CheckoutPage = () => {
         billingAddress: useSameAddressForBilling ? shippingAddress : billingAddress,
         useSameAddressForBilling,
         couponCode: appliedCoupon?.code || null,
-        shippingCost,
-        taxAmount,
         notes,
-        paymentMethod
+        paymentMethod,
+        idempotencyKey: key
       };
 
       const order = await createOrder(orderData);
+      idempotencyKeyRef.current = null;
 
       toast.success('Order created successfully!');
 

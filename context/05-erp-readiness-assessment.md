@@ -87,7 +87,7 @@ has one test file for 26,378 lines. There is no `.github/` directory, so nothing
 > (`.github/workflows/ci.yml`). **Still open:** the remaining ~130 routes are uncovered, and the backend
 > has no lint script or ESLint config.
 
-### F-05 · High · Tax and shipping are whatever the client says they are
+### F-05 · ~~High~~ · RESOLVED · Tax and shipping are whatever the client says they are
 
 Line prices are correctly re-fetched server-side — that part is right. But `shippingCost` and `taxAmount`
 are read straight from the request body (`order.controller.js:21–22`) and folded into `totalAmount`
@@ -96,7 +96,12 @@ are read straight from the request body (`order.controller.js:21–22`) and fold
 **Impact:** a discount exploit for a shop; for an ERP whose tax reports must survive an audit, it means
 the tax figures are not evidence of anything.
 
-### F-06 · High · Order creation is neither atomic nor idempotent
+> **Closed.** `lib/orderPricing.js` derives subtotal, discount, shipping, tax and total from catalog
+> prices and server configuration. `shippingCost` and `taxAmount` are no longer read from the request
+> body. The tax quote endpoint shares the same helpers, so the figure shown at checkout is the figure
+> charged. Covered by `__tests__/integration/orderPricing.test.js`.
+
+### F-06 · High · PARTLY RESOLVED · Order creation is neither atomic nor idempotent
 
 Coupon usage is incremented and saved at `order.controller.js:97`; the order is saved at `:140`. No
 transaction spans them, so a failure in between burns a coupon use against an order that does not exist.

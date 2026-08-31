@@ -1273,8 +1273,7 @@
                   "billingAddress": { "$ref": "#/components/schemas/ShippingAddress" },
                   "useSameAddressForBilling": { "type": "boolean", "default": true },
                   "couponCode": { "type": "string" },
-                  "shippingCost": { "type": "number", "default": 0 },
-                  "taxAmount": { "type": "number", "default": 0 },
+                  "idempotencyKey": { "type": "string", "description": "Optional per-checkout key. Repeating a request with the same key returns the original order instead of creating a second one." },
                   "notes": { "type": "string" },
                   "paymentMethod": { "type": "string", "default": "whatsapp" }
                 }

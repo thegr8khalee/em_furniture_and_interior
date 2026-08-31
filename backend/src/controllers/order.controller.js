@@ -8,6 +8,7 @@ import LoyaltyTransaction from '../models/loyaltyTransaction.model.js';
 import { generateInvoicePDF, generateOrderDocumentPDF } from '../lib/invoiceGenerator.js';
 import { createNotification } from './notification.controller.js';
 import { sendEmail } from '../services/gmail.service.js';
+import { priceOrder } from '../lib/orderPricing.js';
 
 // Create a new order (for authenticated users and guests)
 export const createOrder = async (req, res) => {
@@ -18,89 +19,43 @@ export const createOrder = async (req, res) => {
       billingAddress,
       useSameAddressForBilling,
       couponCode,
-      shippingCost,
-      taxAmount,
       notes,
-      paymentMethod
+      paymentMethod,
+      idempotencyKey,
     } = req.body;
 
-    // Validate required fields
-    if (!items || items.length === 0) {
-      return res.status(400).json({ message: 'Order must contain at least one item' });
-    }
+    // shippingCost and taxAmount are deliberately NOT read from the body. They
+    // used to be, and were folded straight into the total (finding F-05).
+    // Everything about money is derived server-side below.
 
     if (!shippingAddress) {
       return res.status(400).json({ message: 'Shipping address is required' });
     }
 
-    // Fetch item details and calculate subtotal
-    let subtotal = 0;
-    const orderItems = [];
-
-    for (const item of items) {
-      let itemDetails;
-      let price;
-      let name;
-      let imageUrl;
-
-      if (item.itemType === 'Product') {
-        itemDetails = await Product.findById(item.item);
-        if (!itemDetails) {
-          return res.status(404).json({ message: `Product ${item.item} not found` });
-        }
-        price = itemDetails.discountedPrice || itemDetails.price;
-        name = itemDetails.name;
-        imageUrl = itemDetails.images?.[0];
-      } else if (item.itemType === 'Collection') {
-        itemDetails = await Collection.findById(item.item);
-        if (!itemDetails) {
-          return res.status(404).json({ message: `Collection ${item.item} not found` });
-        }
-        price = itemDetails.discountedPrice || itemDetails.price;
-        name = itemDetails.name;
-        imageUrl = itemDetails.images?.[0];
-      } else {
-        return res.status(400).json({ message: 'Invalid item type' });
-      }
-
-      const itemSubtotal = price * item.quantity;
-      subtotal += itemSubtotal;
-
-      orderItems.push({
-        item: item.item,
-        itemType: item.itemType,
-        name,
-        imageUrl,
-        price,
-        quantity: item.quantity,
-        subtotal: itemSubtotal
-      });
-    }
-
-    // Apply coupon if provided
-    let discount = 0;
-    let couponId = null;
-
-    if (couponCode) {
-      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
-      
-      if (coupon) {
-        // Validate coupon
-        const validation = await coupon.isValidForCart(orderItems, subtotal);
-        
-        if (validation.valid) {
-          discount = coupon.calculateDiscount(subtotal);
-          couponId = coupon._id;
-
-          // Increment usage count
-          coupon.usageCount += 1;
-          await coupon.save();
-        }
+    // A double-clicked checkout, or a client retrying a request whose response
+    // it never saw, must not create a second real order. The unique index on
+    // idempotencyKey is what actually enforces this; the lookup here just makes
+    // the common case a clean 200 rather than a duplicate-key error.
+    if (idempotencyKey) {
+      const existing = await Order.findOne({ idempotencyKey });
+      if (existing) {
+        return res.status(200).json({
+          success: true,
+          message: 'Order already created',
+          idempotent: true,
+          order: existing,
+        });
       }
     }
 
-    // Calculate total
-    const totalAmount = subtotal - discount + (shippingCost || 0) + (taxAmount || 0);
+    const priced = await priceOrder({ items, couponCode });
+    if (priced.error) {
+      return res.status(400).json({ message: priced.error });
+    }
+
+    const { lines, coupon, pricing } = priced;
+    const orderItems = lines.map(({ category, ...line }) => line);
+    const { subtotal, discount, shippingCost, taxAmount, totalAmount } = pricing;
 
     // Determine if this is a guest order and get IDs
     const isGuestOrder = !req.user;
@@ -126,18 +81,49 @@ export const createOrder = async (req, res) => {
       useSameAddressForBilling,
       subtotal,
       discount,
-      couponCode: couponCode?.toUpperCase() || null,
-      couponId,
-      shippingCost: shippingCost || 0,
-      taxAmount: taxAmount || 0,
+      couponCode: coupon ? coupon.code : null,
+      couponId: coupon ? coupon._id : null,
+      shippingCost,
+      taxAmount,
       totalAmount,
+      idempotencyKey: idempotencyKey || undefined,
       notes: notes || '',
       paymentMethod: paymentMethod || 'whatsapp',
       status: 'pending',
       paymentStatus: 'pending'
     });
 
-    await order.save();
+    try {
+      await order.save();
+    } catch (saveError) {
+      // Two concurrent submissions with the same key: the index rejects the
+      // loser. Return the order the winner created rather than an error — from
+      // the customer's point of view their single checkout succeeded once.
+      if (saveError?.code === 11000 && idempotencyKey) {
+        const existing = await Order.findOne({ idempotencyKey });
+        if (existing) {
+          return res.status(200).json({
+            success: true,
+            message: 'Order already created',
+            idempotent: true,
+            order: existing,
+          });
+        }
+      }
+      throw saveError;
+    }
+
+    // Coupon usage is incremented only now that the order exists. It used to be
+    // incremented before the order was saved, so a failure in between burned a
+    // use against an order that never existed (finding F-06). A failure here is
+    // the benign direction: the order stands and one use goes uncounted.
+    if (coupon) {
+      try {
+        await Coupon.updateOne({ _id: coupon._id }, { $inc: { usageCount: 1 } });
+      } catch (couponError) {
+        console.error('Failed to increment coupon usage:', couponError.message);
+      }
+    }
 
     if (userId) {
       await createNotification({

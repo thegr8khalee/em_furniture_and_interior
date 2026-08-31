@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { calculateTax } from '../../src/controllers/tax.controller.js';
+import { getTaxRate, computeTax, computeShipping } from '../../src/lib/orderPricing.js';
 import {
   mockFetch,
   mockPaystackSuccessResponse,
@@ -157,113 +157,40 @@ describe('Tax Calculation Tests', () => {
     process.env.TAX_RATE_PERCENTAGE = '10'; // Set default for tests
   });
 
-  test('should calculate tax successfully based on configured percentage', async () => {
-    const mockReq = {
-      body: {
-        items: [
-          { id: 'prod1', quantity: 1, price: 1000 },
-        ],
-        amount: 1000,
-        currency: 'NGN',
-      },
-    };
+  // Tax is no longer computed from a client-supplied `amount`; it is derived
+  // from catalog prices server-side. That behaviour needs a database, so it is
+  // covered in __tests__/integration/orderPricing.test.js — including the case
+  // this file used to assert, where the client dictated the taxable amount.
+  test('tax rate is read from configuration', async () => {
+    const previous = process.env.TAX_RATE_PERCENTAGE;
+    process.env.TAX_RATE_PERCENTAGE = '7.5';
+    expect(getTaxRate()).toBeCloseTo(0.075, 6);
 
-    const mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
-    };
+    process.env.TAX_RATE_PERCENTAGE = '10';
+    expect(getTaxRate()).toBeCloseTo(0.1, 6);
 
-    await calculateTax(mockReq, mockRes);
+    delete process.env.TAX_RATE_PERCENTAGE;
+    expect(getTaxRate()).toBeCloseTo(0.075, 6); // documented default
 
-    expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-      success: true,
-      tax: expect.objectContaining({
-        amountToCollect: 100, // 10% of 1000
-        rate: 0.1,
-        taxableAmount: 1000,
-      }),
-      currency: 'NGN'
-    }));
+    process.env.TAX_RATE_PERCENTAGE = previous;
   });
 
-  test('should handle validation errors', async () => {
-    const mockReq = {
-      body: {
-        // Missing items
-        amount: 1000,
-      },
-    };
-
-    const mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
-    };
-
-    await calculateTax(mockReq, mockRes);
-
-    expect(mockRes.status).toHaveBeenCalledWith(400);
-    expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-      message: expect.stringMatching(/items are required/i)
-    }));
-  });
-});
-
-describe('Order Document Generation Tests', () => {
-  test('should generate invoice PDF with correct metadata', () => {
-    const mockOrder = createMockOrder({
-      orderNumber: 'ORD-12345678-001',
-      createdAt: new Date('2026-02-12'),
-      status: 'confirmed',
-      paymentStatus: 'paid',
-    });
-
-    const documentType = 'invoice';
-    expect(documentType).toBe('invoice');
-    expect(mockOrder.orderNumber).toBe('ORD-12345678-001');
+  test('tax is charged on the discounted amount, rounded to the minor unit', () => {
+    process.env.TAX_RATE_PERCENTAGE = '7.5';
+    expect(computeTax(100000)).toBe(7500);
+    expect(computeTax(90000)).toBe(6750);
+    expect(computeTax(19.99)).toBe(1.5);
+    expect(computeTax(0)).toBe(0);
+    expect(computeTax(-100)).toBe(0); // never a negative tax
   });
 
-  test('should generate receipt PDF only for paid orders', () => {
-    const paidOrder = createMockOrder({
-      paymentStatus: 'paid',
-    });
+  test('shipping is a server-owned flat rate, defaulting to zero', () => {
+    delete process.env.SHIPPING_FLAT_RATE;
+    expect(computeShipping()).toBe(0);
 
-    const pendingOrder = createMockOrder({
-      paymentStatus: 'pending',
-    });
+    process.env.SHIPPING_FLAT_RATE = '2500';
+    expect(computeShipping()).toBe(2500);
 
-    expect(paidOrder.paymentStatus).toBe('paid');
-    expect(pendingOrder.paymentStatus).toBe('pending');
-  });
-
-  test('should generate quotation PDF with validity period', () => {
-    const mockOrder = createMockOrder({
-      createdAt: new Date('2026-02-12'),
-    });
-
-    const validUntil = new Date(mockOrder.createdAt);
-    validUntil.setDate(validUntil.getDate() + 14);
-
-    expect(validUntil.getDate()).toBeGreaterThan(new Date(mockOrder.createdAt).getDate());
-  });
-
-  test('should include discount in document when coupon applied', () => {
-    const mockOrder = createMockOrder({
-      discount: 100,
-      couponCode: 'SAVE10',
-    });
-
-    expect(mockOrder.discount).toBeGreaterThan(0);
-    expect(mockOrder.couponCode).toBe('SAVE10');
-  });
-
-  test('should include tracking information when available', () => {
-    const mockOrder = createMockOrder({
-      trackingNumber: 'TRACK123',
-      carrier: 'DHL',
-      estimatedDeliveryDate: new Date('2026-02-20'),
-    });
-
-    expect(mockOrder.trackingNumber).toBeTruthy();
-    expect(mockOrder.carrier).toBe('DHL');
+    delete process.env.SHIPPING_FLAT_RATE;
   });
 });
