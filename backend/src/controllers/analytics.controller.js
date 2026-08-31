@@ -43,15 +43,34 @@ export const getSalesByCategory = async (req, res) => {
           as: 'productDetails',
         },
       },
-      { $unwind: { path: '$productDetails', preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          // Collections have no category of their own, and previously fell
+          // through the products-only lookup into an unnamed null bucket, so
+          // their revenue silently disappeared from this report. They now get
+          // their own visible bucket.
+          categoryLabel: {
+            $cond: [
+              { $eq: ['$items.itemType', 'Collection'] },
+              'Collections',
+              { $ifNull: [{ $first: '$productDetails.category' }, 'Uncategorised'] },
+            ],
+          },
+        },
+      },
       {
         $group: {
-          _id: '$productDetails.category',
+          _id: '$categoryLabel',
           totalRevenue: { $sum: '$items.subtotal' },
-          orderCount: { $sum: 1 },
+          // $sum: 1 here counted unwound LINE ITEMS, so a category on a
+          // three-line order was credited with three orders (finding F-08).
+          // Collect distinct order ids and size them instead.
+          orderIds: { $addToSet: '$_id' },
           itemCount: { $sum: '$items.quantity' },
         },
       },
+      { $addFields: { orderCount: { $size: '$orderIds' } } },
+      { $project: { orderIds: 0 } },
       { $sort: { totalRevenue: -1 } },
     ]);
 
@@ -134,9 +153,13 @@ export const getProductPerformance = async (req, res) => {
           productName: { $first: '$items.name' },
           totalRevenue: { $sum: '$items.subtotal' },
           unitsSold: { $sum: '$items.quantity' },
-          orderCount: { $sum: 1 },
+          // Distinct orders, not unwound line items: an order listing the same
+          // product on two lines is still one order (finding F-08).
+          orderIds: { $addToSet: '$_id' },
         },
       },
+      { $addFields: { orderCount: { $size: '$orderIds' } } },
+      { $project: { orderIds: 0 } },
       { $sort: { totalRevenue: -1 } },
       { $limit: parseInt(limit, 10) },
     ]);

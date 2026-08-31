@@ -5,6 +5,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import paymentRoutes from '../../src/routes/payments.routes.js';
 import orderRoutes from '../../src/routes/order.routes.js';
 import taxRoutes from '../../src/routes/tax.routes.js';
+import analyticsRoutes from '../../src/routes/analytics.routes.js';
 
 /**
  * Builds an Express app that mirrors index.js for the payment routes,
@@ -30,6 +31,7 @@ export const buildTestApp = () => {
   app.use('/api/payments', paymentRoutes);
   app.use('/api/orders', orderRoutes);
   app.use('/api/taxes', taxRoutes);
+  app.use('/api/analytics', analyticsRoutes);
 
   return app;
 };

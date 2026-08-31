@@ -116,14 +116,22 @@ or reissue a copy.
 **Impact:** for a business running interior projects on quotes and deposits, this is the largest missing
 piece of day-to-day value — and it is where accounts receivable would have to live.
 
-### F-08 · High · Analytics counts line items as orders
+### F-08 · ~~High~~ · RESOLVED · Analytics counts line items as orders
 
-Four aggregations `$unwind` the items array and then compute `orderCount: { $sum: 1 }`
-(`analytics.controller.js:51`, `:94`, `:137`, `:249`), which counts unwound line items. A category on a
-three-line order is credited with three orders. The same pipelines `$lookup` only against `products`, so
-`Collection` line items resolve to null and accumulate silently under an unnamed category.
+**Correction to the original finding.** It claimed four aggregations were affected. On checking, only
+**two** are: `getSalesByCategory` and `getProductPerformance` `$unwind` the items array before counting
+with `$sum: 1`, so they count line items rather than orders — a category on a three-line order was
+credited with three orders. `getSalesByRegion` and `getCustomerLifetimeValue` group by order without
+unwinding, so their counts were always correct. Region reports were **not** wrong.
 
-**Impact:** category and region reports are wrong today, in a direction that overstates activity.
+`getSalesByCategory` additionally `$lookup`ed only against `products`, so `Collection` line items
+resolved to null and their revenue accumulated silently under an unnamed category.
+
+> **Closed.** Both pipelines now collect distinct order ids with `$addToSet` and size them. Collection
+> lines get an explicit `Collections` bucket rather than a null one — collections carry no `category`
+> field of their own, so they cannot be folded into the product categories. Covered by
+> `__tests__/integration/analytics.test.js`, whose three bug-specific tests were confirmed to fail
+> against the previous implementation.
 
 ### F-09 · ~~High~~ · RESOLVED · Payment verification never checks the amount
 
