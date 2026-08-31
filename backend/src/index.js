@@ -69,6 +69,15 @@ app.use(
 app.use(compression());
 app.use(cookieParser());
 
+// Gateway webhooks need the unmodified request bytes: signatures are computed
+// over the exact payload sent, and express.json() would parse and discard it.
+// This must stay ahead of every other body parser. body-parser marks the request
+// as read, so the parsers below skip these routes.
+app.use(
+  '/api/payments/webhooks',
+  express.raw({ type: '*/*', limit: '1mb' })
+);
+
 // Body parsing — 1mb default, image-upload routes opt in to higher limits
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
@@ -94,8 +103,16 @@ app.use('/api/consultations', largeBodyParser, largeUrlencoded);
 app.use('/api/designers', largeBodyParser, largeUrlencoded);
 app.use('/api/payments', largeBodyParser, largeUrlencoded);
 
-// Apply global rate limiter to all API routes
-app.use('/api', apiLimiter);
+// Apply global rate limiter to all API routes.
+// Gateway webhooks are exempt: throttling a gateway only makes it retry, and a
+// busy sales period is exactly when the limit would bite. These endpoints are
+// already protected by signature verification, which rejects anything
+// unauthenticated before it reaches a handler.
+app.use('/api', (req, res, next) =>
+  req.path.startsWith('/payments/webhooks')
+    ? next()
+    : apiLimiter(req, res, next)
+);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/guestAuth', guestRoutes);

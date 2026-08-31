@@ -32,7 +32,10 @@ And one operational finding that is not about ERP at all and outranks everything
 
 Ranked by cost in money and data integrity, not by difficulty.
 
-### F-01 · Critical · Paid orders can stay marked unpaid forever
+### F-01 · ~~Critical~~ · RESOLVED · Paid orders can stay marked unpaid forever
+
+> **Closed** by the R0 webhook work. Signature-verified webhooks for all three gateways now confirm
+> payment independently of the browser. Covered by `__tests__/integration/webhooks.test.js`.
 
 There are no payment webhooks. `payments.routes.js` mounts only `initialize` and `verify` endpoints, and
 all three gateways are confirmed solely when the customer's browser returns to the verify callback
@@ -113,11 +116,15 @@ three-line order is credited with three orders. The same pipelines `$lookup` onl
 
 **Impact:** category and region reports are wrong today, in a direction that overstates activity.
 
-### F-09 · High · Payment verification never checks the amount
+### F-09 · ~~High~~ · RESOLVED · Payment verification never checks the amount
 
-All three verify handlers check that gateway status is `success` and immediately set
-`paymentStatus: 'paid'` (`payments.controller.js:208–215` and equivalents). None compares the amount the
-gateway reports against `order.totalAmount`. A partial or mismatched settlement marks the order fully paid.
+All three verify handlers checked that gateway status was `success` and immediately set
+`paymentStatus: 'paid'`. None compared the amount the gateway reported against `order.totalAmount`, so a
+partial or mismatched settlement marked the order fully paid.
+
+> **Closed.** Both the webhook and the browser callback now route through
+> `lib/paymentConfirmation.js`, which reconciles amount and currency in integer minor units before
+> confirming. A mismatch leaves the order unpaid and flags it for review rather than auto-confirming.
 
 ### F-10 · High · Admins and customers share one cookie
 
@@ -195,10 +202,11 @@ from phases 1–3.
 
 ## 5. Immediate actions
 
-1. **Ship payment webhooks this week, on the current stack.** F-01 is live revenue loss and the logic
-   ports to Postgres nearly unchanged. Do not let it wait a quarter for a migration.
+1. ~~**Ship payment webhooks this week, on the current stack.**~~ **Done** — see `07` phase R0.
+   Closes F-01 and F-09.
 2. **Add a cost field to products and backfill it.** Small, dependency-free, and it unblocks every margin
    number you will ever want. Early means the data has history by the time reports exist.
-3. **Make the tests real and turn on CI.** The codebase is about to triple in size.
+3. **Make the tests real and turn on CI.** Started: the placeholder suites are deleted and a real
+   `supertest` + in-memory-MongoDB harness exists. CI is still absent — that is the next gap.
 4. **Correct `TESTING.md` and `FEATURES.md`.** Documentation that overstates delivery is how the wrong
    thing gets built next.

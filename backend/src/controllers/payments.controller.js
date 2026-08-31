@@ -3,6 +3,11 @@ import PaymentTransaction from '../models/paymentTransaction.model.js';
 import GuestSession from '../models/guest.model.js';
 import User from '../models/user.model.js';
 import cloudinary from '../lib/cloudinary.js';
+import {
+  confirmOrderPayment,
+  toMinorUnits,
+  RESULT,
+} from '../lib/paymentConfirmation.js';
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 const FLUTTERWAVE_BASE_URL = 'https://api.flutterwave.com/v3';
@@ -66,6 +71,36 @@ const resolveOrderForRequester = async (req, orderId) => {
   }
 
   return { error: 'Authentication required' };
+};
+
+/**
+ * Shared response shape for the three browser-facing verify callbacks.
+ *
+ * A mismatch is reported as unconfirmed rather than as an error: the payment
+ * may well have succeeded at the gateway, but it does not match this order, so
+ * a human has to look at it. Saying "paid" here would recreate finding F-09.
+ */
+const respondToVerification = (res, result, order, transaction) => {
+  const confirmed = result === RESULT.CONFIRMED || result === RESULT.ALREADY_CONFIRMED;
+
+  if (result === RESULT.AMOUNT_MISMATCH || result === RESULT.CURRENCY_MISMATCH) {
+    return res.status(202).json({
+      success: false,
+      status: 'pending_review',
+      message:
+        'Payment received but it does not match this order. Our team is reviewing it and will be in touch.',
+      orderId: order?._id,
+      orderNumber: order?.orderNumber,
+    });
+  }
+
+  return res.json({
+    success: true,
+    status: confirmed ? 'success' : 'failed',
+    orderId: order?._id,
+    orderNumber: order?.orderNumber,
+    amount: transaction.amount,
+  });
 };
 
 export const initializePaystackPayment = async (req, res) => {
@@ -199,36 +234,19 @@ export const verifyPaystackPayment = async (req, res) => {
       return res.status(404).json({ message: 'Payment transaction not found' });
     }
 
-    transaction.gatewayResponse = data.data;
-    transaction.status = data.data.status === 'success' ? 'success' : 'failed';
-    transaction.verified = data.data.status === 'success';
-    transaction.verifiedAt = data.data.status === 'success' ? new Date() : null;
-    await transaction.save();
-
-    const order = await Order.findById(transaction.order);
-    if (order && data.data.status === 'success') {
-      order.paymentStatus = 'paid';
-      order.paymentMethod = 'paystack';
-      if (order.status === 'pending') {
-        order.status = 'confirmed';
-      }
-      await order.save();
-
-      // Clear cart after confirmed payment
-      if (order.user) {
-        await User.findByIdAndUpdate(order.user, { cart: [] });
-      } else if (order.guest) {
-        await GuestSession.findByIdAndUpdate(order.guest, { cart: [] });
-      }
-    }
-
-    res.json({
-      success: true,
-      status: data.data.status,
-      orderId: order?._id,
-      orderNumber: order?.orderNumber,
-      amount: transaction.amount,
+    // Same reconciliation as the webhook — amount and currency are checked here
+    // too, so a customer returning from the gateway cannot confirm an order the
+    // webhook would have rejected.
+    const { result, order } = await confirmOrderPayment({
+      transaction,
+      successful: data.data?.status === 'success',
+      paidMinor: toMinorUnits(data.data?.amount, { alreadyMinor: true }),
+      currency: data.data?.currency,
+      gatewayResponse: data.data,
+      source: 'callback',
     });
+
+    return respondToVerification(res, result, order, transaction);
   } catch (error) {
     console.error('Paystack verification error:', error);
     res.status(500).json({ message: 'Failed to verify payment' });
@@ -371,37 +389,16 @@ export const verifyFlutterwavePayment = async (req, res) => {
       return res.status(404).json({ message: 'Payment transaction not found' });
     }
 
-    const paymentSuccessful = data.data?.status === 'successful';
-    transaction.gatewayResponse = data.data;
-    transaction.status = paymentSuccessful ? 'success' : 'failed';
-    transaction.verified = paymentSuccessful;
-    transaction.verifiedAt = paymentSuccessful ? new Date() : null;
-    await transaction.save();
-
-    const order = await Order.findById(transaction.order);
-    if (order && paymentSuccessful) {
-      order.paymentStatus = 'paid';
-      order.paymentMethod = 'flutterwave';
-      if (order.status === 'pending') {
-        order.status = 'confirmed';
-      }
-      await order.save();
-
-      // Clear cart after confirmed payment
-      if (order.user) {
-        await User.findByIdAndUpdate(order.user, { cart: [] });
-      } else if (order.guest) {
-        await GuestSession.findByIdAndUpdate(order.guest, { cart: [] });
-      }
-    }
-
-    res.json({
-      success: true,
-      status: paymentSuccessful ? 'success' : 'failed',
-      orderId: order?._id,
-      orderNumber: order?.orderNumber,
-      amount: transaction.amount,
+    const { result, order } = await confirmOrderPayment({
+      transaction,
+      successful: data.data?.status === 'successful',
+      paidMinor: toMinorUnits(data.data?.amount),
+      currency: data.data?.currency,
+      gatewayResponse: data.data,
+      source: 'callback',
     });
+
+    return respondToVerification(res, result, order, transaction);
   } catch (error) {
     console.error('Flutterwave verification error:', error);
     res.status(500).json({ message: 'Failed to verify payment' });
@@ -546,37 +543,16 @@ export const verifyStripePayment = async (req, res) => {
       return res.status(404).json({ message: 'Payment transaction not found' });
     }
 
-    const paymentSuccessful = data.payment_status === 'paid';
-    transaction.gatewayResponse = data;
-    transaction.status = paymentSuccessful ? 'success' : 'failed';
-    transaction.verified = paymentSuccessful;
-    transaction.verifiedAt = paymentSuccessful ? new Date() : null;
-    await transaction.save();
-
-    const order = await Order.findById(transaction.order);
-    if (order && paymentSuccessful) {
-      order.paymentStatus = 'paid';
-      order.paymentMethod = 'stripe';
-      if (order.status === 'pending') {
-        order.status = 'confirmed';
-      }
-      await order.save();
-
-      // Clear cart after confirmed payment
-      if (order.user) {
-        await User.findByIdAndUpdate(order.user, { cart: [] });
-      } else if (order.guest) {
-        await GuestSession.findByIdAndUpdate(order.guest, { cart: [] });
-      }
-    }
-
-    res.json({
-      success: true,
-      status: paymentSuccessful ? 'success' : 'failed',
-      orderId: order?._id,
-      orderNumber: order?.orderNumber,
-      amount: transaction.amount,
+    const { result, order } = await confirmOrderPayment({
+      transaction,
+      successful: data.payment_status === 'paid',
+      paidMinor: toMinorUnits(data.amount_total, { alreadyMinor: true }),
+      currency: data.currency,
+      gatewayResponse: data,
+      source: 'callback',
     });
+
+    return respondToVerification(res, result, order, transaction);
   } catch (error) {
     console.error('Stripe verification error:', error);
     res.status(500).json({ message: 'Failed to verify payment' });

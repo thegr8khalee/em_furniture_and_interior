@@ -9,7 +9,7 @@
 
 | # | Phase | Effort | Cumulative |
 |---|---|---|---|
-| R0 | Payment webhooks — current stack | 1 wk | 1 |
+| R0 | Payment webhooks — current stack ✅ **done** | 1 wk | 1 |
 | R1 | Monorepo split | 2–3 wks | 4 |
 | R2 | Supabase Auth — still on MongoDB | 2–3 wks | 7 |
 | R3 | PostgreSQL + Sequelize | 6–8 wks | 15 |

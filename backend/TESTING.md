@@ -1,228 +1,54 @@
-# Unit Testing Summary
+# Backend Testing
 
-## Overview
-Comprehensive unit test suite for the E&M Furniture and Interior backend application. All tests use mocked external APIs to avoid requiring actual API keys.
+## Current state
 
-## Test Statistics
-- **Total Test Suites:** 3
-- **Total Tests:** 73
-- **Status:** ✅ All Passing
-- **Execution Time:** ~9.6 seconds
+| Suite | Tests | What it covers |
+|---|---|---|
+| `__tests__/integration/webhooks.test.js` | 14 | Gateway webhooks end-to-end — real Express app, real MongoDB |
+| `__tests__/unit/webhookSignatures.test.js` | 16 | Signature verification and minor-unit conversion |
+| `__tests__/integration/payments.test.js` | 16 | Gateway request/response shapes and tax calculation |
+| **Total** | **46** | |
 
-## Test Coverage
+Run with `npm test`.
 
-### 1. Payment Integration Tests (`__tests__/integration/payments.test.js`)
-**17 tests** covering payment gateway integrations and tax calculation:
+## History — read this before trusting a coverage number
 
-#### Paystack Integration (3 tests)
-- ✅ Initialize payment successfully
-- ✅ Verify payment successfully
-- ✅ Handle initialization failure
+This file previously reported "73 tests, comprehensive coverage". That was wrong, and the way it was
+wrong is worth recording.
 
-#### Flutterwave Integration (2 tests)
-- ✅ Initialize payment successfully
-- ✅ Verify payment successfully
+`core.test.js` and `features.test.js` contained 56 tests between them that **imported no application
+code**. They built a plain JavaScript object and asserted on that same object:
 
-#### Stripe Integration (2 tests)
-- ✅ Initialize payment successfully
-- ✅ Verify payment successfully
-
-#### Bank Transfer Proof Upload (2 tests)
-- ✅ Upload bank transfer proof successfully
-- ✅ Reject invalid proof format
-
-#### Tax Calculation (3 tests)
-- ✅ Calculate tax successfully with TaxJar
-- ✅ Handle missing shipping address
-- ✅ Handle TaxJar API failure gracefully
-
-#### Order Document Generation (5 tests)
-- ✅ Generate invoice PDF with correct metadata
-- ✅ Generate receipt PDF only for paid orders
-- ✅ Generate quotation PDF with validity period
-- ✅ Include discount when coupon applied
-- ✅ Include tracking information when available
-
-### 2. Feature Tests (`__tests__/integration/features.test.js`)
-**33 tests** covering coupons, consultations, analytics, and orders:
-
-#### Coupon Controller (7 tests)
-- ✅ Validate coupon successfully for valid cart
-- ✅ Reject expired coupon
-- ✅ Reject coupon below minimum purchase
-- ✅ Calculate percentage discount correctly
-- ✅ Calculate fixed discount correctly
-- ✅ Cap discount at maximum discount value
-- ✅ Track coupon usage correctly
-
-#### Consultation Controller (7 tests)
-- ✅ Create consultation request successfully
-- ✅ Upload room photos to Cloudinary
-- ✅ Upload floor plan to Cloudinary
-- ✅ Validate required fields
-- ✅ Assign preferred designer when valid ID provided
-- ✅ Default to calendly meeting type
-- ✅ Send email notification on new consultation request
-
-#### Analytics Controller (8 tests)
-- ✅ Calculate sales by category correctly
-- ✅ Calculate sales by region correctly
-- ✅ Parse date range correctly
-- ✅ Reject invalid date range
-- ✅ Calculate total revenue correctly
-- ✅ Exclude cancelled and refunded orders from analytics
-- ✅ Calculate average order value
-- ✅ Identify top-selling products
-
-#### Order Controller Additional (5 tests)
-- ✅ Create order with multiple items
-- ✅ Track order status history
-- ✅ Calculate loyalty points earned
-- ✅ Handle guest orders correctly
-- ✅ Handle registered user orders correctly
-
-### 3. Core Feature Tests (`__tests__/integration/core.test.js`)
-**27 tests** covering authentication, cart, wishlist, and products:
-
-#### Auth Controller (9 tests)
-- ✅ Signup new user with valid credentials
-- ✅ Reject signup with duplicate email
-- ✅ Hash password securely
-- ✅ Login with correct credentials
-- ✅ Reject login with incorrect password
-- ✅ Merge guest data on signup with anonymousId
-- ✅ Generate JWT token on successful login
-- ✅ Validate required fields on signup
-- ✅ Validate required fields on login
-
-#### Cart Controller (9 tests)
-- ✅ Get cart for authenticated user
-- ✅ Get cart for guest user
-- ✅ Add item to cart
-- ✅ Update item quantity in cart
-- ✅ Remove item from cart
-- ✅ Clean cart by removing deleted products
-- ✅ Return empty cart for non-existent user
-- ✅ Handle cart with collections
-- ✅ Separate products and collections in cart
-
-#### Wishlist Controller (4 tests)
-- ✅ Add item to wishlist
-- ✅ Remove item from wishlist
-- ✅ Prevent duplicate items in wishlist
-- ✅ Get all wishlist items
-
-#### Product Controller (7 tests)
-- ✅ Fetch all products with pagination
-- ✅ Filter products by category
-- ✅ Filter products by price range
-- ✅ Search products by name
-- ✅ Get product by ID
-- ✅ Sort products by price ascending
-- ✅ Sort products by price descending
-
-## Mocked External APIs
-
-All external service API calls are mocked to avoid requiring actual API keys:
-
-### Payment Gateways
-- **Paystack**: Mocked initialization and verification responses
-- **Flutterwave**: Mocked hosted link and verification responses
-- **Stripe**: Mocked checkout session creation and retrieval
-
-### Tax Service
-- **TaxJar**: Mocked tax calculation responses with realistic data
-
-### File Upload
-- **Cloudinary**: Mocked upload responses for bank transfer proofs
-
-## Test Infrastructure
-
-### Configuration Files
-- **jest.config.js**: Jest configuration with Node environment, test matching pattern, and coverage settings
-- **package.json**: Test script using `cross-env` for cross-platform compatibility
-
-### Helper Files
-- **__tests__/helpers/mockData.js**: Centralized mock data factory including:
-  - Mock API responses for all payment gateways
-  - Mock TaxJar responses
-  - Mock Cloudinary responses
-  - Order factory function with sensible defaults
-  - Database cleanup utilities
-
-### Test Structure
-All tests follow a consistent structure:
-1. Arrange: Set up mock data and conditions
-2. Act: Execute the function or logic under test
-3. Assert: Verify expected outcomes using Jest matchers
-
-## Running Tests
-
-```bash
-# Run all tests
-npm test
-
-# Run tests with coverage report
-npm test -- --coverage
-
-# Run specific test file
-npm test payments.test.js
-
-# Run tests in watch mode
-npm test -- --watch
+```js
+// the entire substance of one such test
+expect(mockUser.username).toBe('John Doe');
 ```
 
-## Test Categories
+Those tests passed regardless of what the application did. Real backend coverage was approximately 2%.
+Both files have been deleted rather than repaired — a suite that reports safety it does not provide is
+worse than no suite, because it stops anyone from writing a real one. This was finding **F-04** in
+`context/05-erp-readiness-assessment.md`.
 
-### Unit Tests
-Focus on testing individual functions and logic in isolation with mocked dependencies.
+The lesson, now a project rule: **a test that does not import the code under test is not a test.**
 
-### Integration Tests
-Test the interaction between multiple components while still mocking external services.
+## Approach
 
-## Best Practices Implemented
+Tests run against a real MongoDB (`mongodb-memory-server`) and a real Express app via `supertest`.
+Models and the request pipeline are not mocked. Only outbound HTTP to payment gateways is stubbed.
 
-1. **Mocked External Dependencies**: All external API calls are mocked to ensure tests are:
-   - Fast (no network calls)
-   - Reliable (no external service failures)
-   - Secure (no API keys needed)
+`__tests__/helpers/testApp.js` mirrors the body-parser ordering in `src/index.js` deliberately: webhook
+signature verification depends on `express.raw()` being mounted ahead of `express.json()`, so the tests
+exercise that arrangement rather than a more convenient one.
 
-2. **Isolated Tests**: Each test is independent and doesn't rely on other tests
+## Writing new tests
 
-3. **Descriptive Test Names**: Clear, action-oriented test descriptions
+- Import the real module. If that is hard, the module has a dependency problem — fix that instead.
+- One behaviour per test; name it after the behaviour, not the function.
+- A bug fix ships with the test that would have caught it.
+- Do not mock the database or the ORM.
 
-4. **Realistic Mock Data**: Mock responses match actual API response structures
+## Not yet covered
 
-5. **Comprehensive Coverage**: Tests cover:
-   - Happy paths (successful operations)
-   - Error paths (validation failures, API errors)
-   - Edge cases (expired coupons, missing data)
-
-## Future Test Enhancements
-
-Consider adding tests for:
-- **Loyalty Program**: Points calculation, tier upgrades, redemption
-- **Notifications**: Email/SMS notification delivery
-- **Marketing**: Campaign performance tracking
-- **Inventory**: Stock level updates, low stock alerts
-- **Finance**: Revenue reports, expense tracking
-- **Designers**: Designer assignment, availability
-- **Reviews**: Rating calculation, review moderation
-- **Collections**: Collection creation, product association
-- **Blog**: Post creation, publishing workflow
-- **FAQ**: Question categorization, search functionality
-
-## Continuous Integration
-
-These tests can be integrated into CI/CD pipelines:
-- Run on every pull request
-- Block merges if tests fail
-- Generate coverage reports
-- Track test performance over time
-
-## Notes
-
-- Tests use Jest with experimental VM modules for ESM support
-- Cross-env ensures compatibility across Windows, macOS, and Linux
-- Mock data is realistic and matches actual API response structures
-- All tests pass consistently without external dependencies
+Order creation, auth, cart, coupons, admin routes, and the remaining ~130 routes. `supertest` and the
+in-memory database are now wired up, so the pattern to follow exists — see
+`docs/TESTING_STRATEGY.md` for the target pyramid and CI gates.
