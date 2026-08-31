@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# A newer push to the same branch cancels the older run — CI minutes are better
+# spent on the current head than on a commit nobody is waiting for.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # Puppeteer pulls a ~150 MB Chromium in postinstall for PDF rendering.
+      # Nothing in the test suite renders a PDF, so skip the download and keep
+      # the job fast. Remove this once there are PDF tests to run.
+      - name: Install dependencies
+        working-directory: backend
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: npm ci
+
+      - name: Test
+        working-directory: backend
+        run: npm test
+
+      # No backend lint step: backend/package.json declares no lint script and
+      # the workspace has no ESLint config. Adding both is tracked as part of
+      # finding F-13 rather than bolted on here.
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # The frontend carries 68 pre-existing lint errors. Gating on zero would
+      # make CI red on arrival, so the gate is a per-file ratchet: counts may
+      # fall, never rise. See .github/lint-baseline.json.
+      - name: Lint (ratchet)
+        run: node .github/scripts/lint-ratchet.mjs frontend
+
+      - name: Test
+        working-directory: frontend
+        run: npx vitest run
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  api-spec:
+    name: API spec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Placeholder for the generated-spec drift gate described in
+      # context/06-replatform-plan.md section 6. Until the spec is generated
+      # from route schemas it is hand-maintained, so the most CI can assert is
+      # that it parses and that every route file has a corresponding path.
+      - name: Validate OpenAPI and Postman documents
+        run: node .github/scripts/check-api-docs.mjs

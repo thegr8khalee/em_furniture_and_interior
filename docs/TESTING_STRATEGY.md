@@ -107,9 +107,13 @@ Do not test that a `<div>` has a class. That is what visual regression is for, a
 
 GitHub Actions, on every push and pull request. There is no CI at all today.
 
+**Live today** in `.github/workflows/ci.yml`: backend tests, the frontend lint ratchet, frontend tests,
+frontend build, and API-document validation. The remaining gates below arrive with the phases they
+depend on.
+
 | Gate | Fails the build when |
 |---|---|
-| Lint | ESLint errors in any workspace |
+| Lint | ESLint error count rises in any file — a ratchet, not a zero-error rule, because the frontend starts with 68 pre-existing errors (`.github/lint-baseline.json`) |
 | Unit + integration | Any test fails |
 | Coverage floor | Below threshold on changed packages — start at 60%, ratchet up; never ratchet down |
 | **Migration idempotency** | The full migration suite run **twice** against a clean database does not produce an identical result |

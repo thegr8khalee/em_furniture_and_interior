@@ -52,3 +52,9 @@ exercise that arrangement rather than a more convenient one.
 Order creation, auth, cart, coupons, admin routes, and the remaining ~130 routes. `supertest` and the
 in-memory database are now wired up, so the pattern to follow exists — see
 `docs/TESTING_STRATEGY.md` for the target pyramid and CI gates.
+
+## CI
+
+`.github/workflows/ci.yml` runs on every push and pull request. The backend job installs with
+`PUPPETEER_SKIP_DOWNLOAD=true` — nothing in the suite renders a PDF, and skipping the ~150 MB Chromium
+download keeps the job fast. Remove that when PDF tests exist.

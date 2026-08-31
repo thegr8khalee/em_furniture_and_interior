@@ -66,7 +66,7 @@ Every "finance" number the system produces is revenue, never profit.
 **Fix:** add cost fields during the Postgres migration and backfill. Cheap now, expensive later — the
 data needs history before the reports exist.
 
-### F-04 · Critical · The test suite tests nothing
+### F-04 · ~~Critical~~ · MOSTLY RESOLVED · The test suite tests nothing
 
 `backend/TESTING.md` advertises 73 passing tests as "comprehensive". In reality `core.test.js` and
 `features.test.js` import no application code — they construct a plain object and assert on that same
@@ -81,7 +81,11 @@ Only `payments.test.js` imports a real module. `supertest` is a declared depende
 times; not one of the 140 routes is exercised. Effective backend coverage is roughly **2%**. The frontend
 has one test file for 26,378 lines. There is no `.github/` directory, so nothing runs on push regardless.
 
-**Fix:** delete the placeholder suites, correct `TESTING.md`, and rebuild per `docs/TESTING_STRATEGY.md`.
+> **Largely closed.** The placeholder suites are deleted and `TESTING.md` corrected. A real harness
+> exists — `supertest` against the actual Express app, `mongodb-memory-server` for the database — with
+> 40 backend tests covering the payment webhooks end to end. CI now runs on every push
+> (`.github/workflows/ci.yml`). **Still open:** the remaining ~130 routes are uncovered, and the backend
+> has no lint script or ESLint config.
 
 ### F-05 · High · Tax and shipping are whatever the client says they are
 
@@ -157,7 +161,9 @@ No charting library is installed; the Analytics dashboard is tables and CSS bars
 constraint for ERP reporting. `changes.diff` (2.1 MB) is tracked in git and should be deleted.
 `admin.controller.js` is 1,402 lines and should be split along the boundaries its routes already imply.
 `backend/package.json` declares no `engines` field, so Node version parity between dev, CI and production
-is unenforced.
+is unenforced. The frontend carries **68 ESLint errors** and the backend has no lint configuration at
+all; CI now holds the frontend count with a per-file ratchet (`.github/lint-baseline.json`) that lets it
+fall but never rise.
 
 ---
 
@@ -206,7 +212,7 @@ from phases 1–3.
    Closes F-01 and F-09.
 2. **Add a cost field to products and backfill it.** Small, dependency-free, and it unblocks every margin
    number you will ever want. Early means the data has history by the time reports exist.
-3. **Make the tests real and turn on CI.** Started: the placeholder suites are deleted and a real
-   `supertest` + in-memory-MongoDB harness exists. CI is still absent — that is the next gap.
+3. ~~**Make the tests real and turn on CI.**~~ **Done** — real harness in place, CI running on every
+   push. Extending coverage to the remaining routes is ongoing.
 4. **Correct `TESTING.md` and `FEATURES.md`.** Documentation that overstates delivery is how the wrong
    thing gets built next.
