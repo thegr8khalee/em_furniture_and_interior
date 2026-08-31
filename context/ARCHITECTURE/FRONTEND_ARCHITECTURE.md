@@ -30,8 +30,8 @@
 frontend/
 ├── index.html              # Vite entry HTML
 ├── package.json            # Dependencies, scripts
-├── vite.config.js          # Vite + React + Tailwind plugins, @/ alias
-├── vitest.config.js        # Test configuration (jsdom, v8 coverage)
+├── vite.config.js          # Vite + React + Tailwind plugins (no path alias)
+├── vitest.config.js        # Test config (jsdom, v8 coverage, @ -> ./src alias)
 ├── eslint.config.js        # ESLint 9 flat config
 ├── public/
 │   └── site.webmanifest    # PWA manifest
@@ -118,6 +118,11 @@ frontend/
 | `/admin/finance` | FinanceReports |
 | `/admin/analytics` | AnalyticsDashboard |
 | `/admin/security-logs` | SecurityLogs |
+| `/admin/documents` | DocumentBuilder |
+
+All admin pages except `/admin/login` render inside `AdminLayout`. Catalog and Content screens
+(Products, Collections, Projects, Blog, FAQs) are **not** separate routes — they are
+`/admin/dashboard?section=…` views. Full detail: [`../UI/LAYOUT_AND_NAVIGATION.md`](../UI/LAYOUT_AND_NAVIGATION.md).
 
 ---
 
@@ -187,6 +192,9 @@ export const useDomainStore = create((set, get) => ({
 - Wrapped in Framer Motion `<motion.div>` for page transitions
 - Access stores via hooks: `const { data, fetchData } = useDomainStore()`
 
+> For the full component contract — props, variants, and usage — see
+> [`../UI/COMPONENT_LIBRARY.md`](../UI/COMPONENT_LIBRARY.md).
+
 ### Shared Components
 
 | Component | Purpose |
@@ -209,6 +217,10 @@ Dedicated admin UI components for management pages (product forms, order tables,
 ---
 
 ## 6. Styling System
+
+> Full token reference (colour, type, spacing, elevation, motion) lives in
+> [`../UI/DESIGN_SYSTEM.md`](../UI/DESIGN_SYSTEM.md); interaction patterns in
+> [`../UI/UI_PATTERNS.md`](../UI/UI_PATTERNS.md).
 
 ### Tailwind CSS 4 + DaisyUI 5
 
