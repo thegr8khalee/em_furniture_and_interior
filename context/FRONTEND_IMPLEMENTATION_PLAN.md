@@ -92,7 +92,7 @@
 | F3.5 | Cart page — item list, quantity controls, coupon input, checkout link | ✅ |
 | F3.6 | Wishlist page — item list, move to cart | ✅ |
 | F3.7 | CheckoutPage — shipping address, payment method selection, coupon, order summary | ✅ |
-| F3.8 | PaymentVerify page — gateway callback handling (Paystack, Flutterwave, Stripe) | ✅ |
+| F3.8 | PaymentVerify page — gateway callback handling (Paystack, Stripe) | ✅ |
 | F3.9 | OrderConfirmationPage — order summary, invoice download | ✅ |
 
 ---

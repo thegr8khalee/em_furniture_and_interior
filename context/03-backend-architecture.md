@@ -120,7 +120,7 @@ phone numbers.
 | Service | `[NOW]` | `[TARGET]` |
 |---|---|---|
 | Cloudinary | Base64 through the API, 50 MB limit `[GAP]` | `POST /api/uploads/sign` returns a short-lived signature; browser uploads directly; private assets served via signed delivery URLs |
-| Paystack / Flutterwave / Stripe | Initialize + browser-callback verify `[GAP F-01]` | + HMAC-verified webhooks on a raw-body route, idempotent handlers, amount reconciliation |
+| Paystack / Stripe | Initialize, browser callback, **and HMAC-verified webhooks** on a raw-body route, idempotent, amount-reconciled | unchanged | 
 | TaxJar | Called at checkout, but the client supplies the final `taxAmount` `[GAP F-05]` | Server computes and stores; client value ignored |
 | Email | Resend + `googleapis` + `nodemailer` — three paths | One provider, one templating layer, delivery status recorded |
 | PDF | Puppeteer + PDFKit, generated on demand, discarded `[GAP F-07]` | Rendered once, stored in Supabase Storage, served by reference |

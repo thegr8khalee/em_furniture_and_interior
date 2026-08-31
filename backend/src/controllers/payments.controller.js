@@ -10,25 +10,12 @@ import {
 } from '../lib/paymentConfirmation.js';
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
-const FLUTTERWAVE_BASE_URL = 'https://api.flutterwave.com/v3';
 const STRIPE_BASE_URL = 'https://api.stripe.com/v1';
 
 const getPaystackHeaders = () => {
   const secretKey = process.env.PAYSTACK_SECRET_KEY;
   if (!secretKey) {
     throw new Error('PAYSTACK_SECRET_KEY is not configured');
-  }
-
-  return {
-    Authorization: `Bearer ${secretKey}`,
-    'Content-Type': 'application/json',
-  };
-};
-
-const getFlutterwaveHeaders = () => {
-  const secretKey = process.env.FLUTTERWAVE_SECRET_KEY;
-  if (!secretKey) {
-    throw new Error('FLUTTERWAVE_SECRET_KEY is not configured');
   }
 
   return {
@@ -249,158 +236,6 @@ export const verifyPaystackPayment = async (req, res) => {
     return respondToVerification(res, result, order, transaction);
   } catch (error) {
     console.error('Paystack verification error:', error);
-    res.status(500).json({ message: 'Failed to verify payment' });
-  }
-};
-
-export const initializeFlutterwavePayment = async (req, res) => {
-  try {
-    const { orderId } = req.body;
-
-    if (!orderId) {
-      return res.status(400).json({ message: 'Order ID is required' });
-    }
-
-    const { order, error } = await resolveOrderForRequester(req, orderId);
-    if (error) {
-      return res.status(403).json({ message: error });
-    }
-
-    if (order.paymentStatus === 'paid') {
-      return res.status(400).json({ message: 'Order already paid' });
-    }
-
-    const pendingTransaction = await PaymentTransaction.findOne({
-      order: order._id,
-      paymentMethod: 'flutterwave',
-      status: { $in: ['pending', 'processing'] },
-    });
-
-    if (pendingTransaction?.gatewayReference) {
-      return res.json({
-        success: true,
-        authorizationUrl: pendingTransaction.metadata?.authorizationUrl,
-        reference: pendingTransaction.gatewayReference,
-        orderId: order._id,
-      });
-    }
-
-    const userEmail = order?.shippingAddress?.email || order?.billingAddress?.email;
-    let customerEmail = userEmail;
-
-    if (!customerEmail && order.user) {
-      const user = await User.findById(order.user);
-      customerEmail = user?.email;
-    }
-
-    if (!customerEmail) {
-      return res.status(400).json({ message: 'Customer email is required for payment' });
-    }
-
-    const txRef = `EM-FLW-${order.orderNumber}-${Date.now()}`;
-    const payload = {
-      tx_ref: txRef,
-      amount: order.totalAmount,
-      currency: process.env.FLUTTERWAVE_CURRENCY || 'NGN',
-      redirect_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/verify`,
-      customer: {
-        email: customerEmail,
-        name: order?.shippingAddress?.fullName || 'Customer',
-      },
-      meta: {
-        orderId: order._id.toString(),
-        orderNumber: order.orderNumber,
-      },
-    };
-
-    const response = await fetch(`${FLUTTERWAVE_BASE_URL}/payments`, {
-      method: 'POST',
-      headers: getFlutterwaveHeaders(),
-      body: JSON.stringify(payload),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || data?.status !== 'success') {
-      return res.status(400).json({
-        message: data?.message || 'Failed to initialize Flutterwave payment',
-        error: data,
-      });
-    }
-
-    const transaction = await PaymentTransaction.create({
-      order: order._id,
-      orderNumber: order.orderNumber,
-      user: order.user || null,
-      guest: order.guest || null,
-      amount: order.totalAmount,
-      currency: process.env.FLUTTERWAVE_CURRENCY || 'NGN',
-      paymentMethod: 'flutterwave',
-      gateway: 'flutterwave',
-      gatewayReference: txRef,
-      status: 'pending',
-      metadata: {
-        authorizationUrl: data.data?.link,
-      },
-      ipAddress: req.ip || req.connection?.remoteAddress,
-      userAgent: req.get('user-agent'),
-    });
-
-    res.json({
-      success: true,
-      authorizationUrl: data.data?.link,
-      reference: txRef,
-      transactionId: transaction._id,
-      orderId: order._id,
-    });
-  } catch (error) {
-    console.error('Flutterwave initialize error:', error);
-    res.status(500).json({ message: 'Failed to initialize payment' });
-  }
-};
-
-export const verifyFlutterwavePayment = async (req, res) => {
-  try {
-    const { tx_ref: txRef } = req.query;
-
-    if (!txRef) {
-      return res.status(400).json({ message: 'Payment reference is required' });
-    }
-
-    const response = await fetch(
-      `${FLUTTERWAVE_BASE_URL}/transactions/verify_by_reference?tx_ref=${encodeURIComponent(txRef)}`,
-      {
-        method: 'GET',
-        headers: getFlutterwaveHeaders(),
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok || data?.status !== 'success') {
-      return res.status(400).json({
-        message: data?.message || 'Failed to verify Flutterwave payment',
-        error: data,
-      });
-    }
-
-    const transaction = await PaymentTransaction.findOne({ gatewayReference: txRef });
-    if (!transaction) {
-      return res.status(404).json({ message: 'Payment transaction not found' });
-    }
-
-    const { result, order } = await confirmOrderPayment({
-      transaction,
-      successful: data.data?.status === 'successful',
-      paidMinor: toMinorUnits(data.data?.amount),
-      currency: data.data?.currency,
-      gatewayResponse: data.data,
-      source: 'callback',
-    });
-
-    return respondToVerification(res, result, order, transaction);
-  } catch (error) {
-    console.error('Flutterwave verification error:', error);
     res.status(500).json({ message: 'Failed to verify payment' });
   }
 };

@@ -40,7 +40,7 @@ CONTEXT/
 | **CONVENTIONS.md** | Coding standards — ES Modules, naming rules, Controller-Service-Model (CSM) architecture |
 | **IMPLEMENTATION_PLAN.md** | Phased backend build plan (Phase 0–5) with task status tracking |
 | **FRONTEND_IMPLEMENTATION_PLAN.md** | Phased frontend build plan (Phase F0–F7) mirroring backend milestones |
-| **API_INTEGRATIONS.md** | External service catalog — Supabase, Paystack, Flutterwave, OpenAI, Sentry, OFAC, Termii, etc. |
+| **API_INTEGRATIONS.md** | External service catalog — Supabase, Paystack, OpenAI, Sentry, OFAC, Termii, etc. |
 | **USAGE_FLOW.md** | End-to-end user journey: onboarding → shipment → documents → clearance → tracking → analytics |
 | **GLOSSARY.md** | Domain terms — trade/customs jargon, Nigerian regulatory bodies (CBN, NAFDAC, NCS, SON), acronyms |
 | **CHANGELOG.md** | Chronological record of architectural decisions and milestones (2025–2026) |

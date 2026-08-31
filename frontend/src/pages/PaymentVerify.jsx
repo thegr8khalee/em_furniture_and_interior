@@ -17,10 +17,9 @@ const PaymentVerify = () => {
     const verifyPayment = async () => {
       const params = new URLSearchParams(location.search);
       const reference = params.get('reference');
-      const txRef = params.get('tx_ref');
       const sessionId = params.get('session_id');
 
-      if (!reference && !txRef && !sessionId) {
+      if (!reference && !sessionId) {
         setStatus('failed');
         setMessage('Missing payment reference.');
         return;
@@ -31,8 +30,6 @@ const PaymentVerify = () => {
 
         if (sessionId) {
           response = await axiosInstance.get(`/payments/stripe/verify?session_id=${sessionId}`);
-        } else if (txRef) {
-          response = await axiosInstance.get(`/payments/flutterwave/verify?tx_ref=${txRef}`);
         } else {
           response = await axiosInstance.get(`/payments/paystack/verify?reference=${reference}`);
         }

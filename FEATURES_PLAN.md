@@ -77,5 +77,5 @@ This document lists only the features that are implemented.
 - Rate limiting.
 
 ## Suggested Service Integrations (Optional)
-- Payments and invoices: payment gateways (Paystack, Flutterwave, manual bank transfer proof upload, Pay-by-transfer option at checkout, Stripe for international payments) + PDF generation.
+- Payments and invoices: payment gateways (Paystack, manual bank transfer proof upload, Pay-by-transfer option at checkout, Stripe for international payments) + PDF generation.
 - Taxes: TaxJar/Avalara.

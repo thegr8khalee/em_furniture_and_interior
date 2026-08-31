@@ -13,11 +13,9 @@ import {
   createPendingPayment,
   paystackBody,
   paystackSignature,
-  flutterwaveBody,
   stripeBody,
   stripeSignature,
   PAYSTACK_SECRET,
-  FLUTTERWAVE_HASH,
   STRIPE_SECRET,
 } from '../helpers/paymentFixtures.js';
 
@@ -31,11 +29,12 @@ let app;
 
 beforeAll(async () => {
   process.env.PAYSTACK_SECRET_KEY = PAYSTACK_SECRET;
-  process.env.FLUTTERWAVE_WEBHOOK_HASH = FLUTTERWAVE_HASH;
   process.env.STRIPE_WEBHOOK_SECRET = STRIPE_SECRET;
   await connectTestDb();
   app = buildTestApp();
-});
+  // Generous: the first run in a clean environment provisions the in-memory
+  // MongoDB binary, which can exceed Jest's 5s default and fail the whole suite.
+}, 120000);
 
 afterAll(async () => {
   await closeTestDb();
@@ -166,50 +165,6 @@ describe('Paystack webhook', () => {
     expect(res.body.result).toBe('failed');
     expect((await Order.findById(order._id)).paymentStatus).toBe('pending');
     expect((await PaymentTransaction.findById(transaction._id)).status).toBe('failed');
-  });
-});
-
-describe('Flutterwave webhook', () => {
-  const PATH = '/api/payments/webhooks/flutterwave';
-
-  test('confirms on a matching hash and amount in major units', async () => {
-    const { order } = await createPendingPayment({
-      totalAmount: 150000,
-      gateway: 'flutterwave',
-      reference: 'FLW-1',
-    });
-    const body = flutterwaveBody({ reference: 'FLW-1', amount: 150000 });
-
-    const res = await postWebhook(PATH, body, { 'verif-hash': FLUTTERWAVE_HASH });
-
-    expect(res.status).toBe(200);
-    expect(res.body.result).toBe('confirmed');
-    expect((await Order.findById(order._id)).paymentStatus).toBe('paid');
-  });
-
-  test('rejects a wrong verif-hash with 401', async () => {
-    const { order } = await createPendingPayment({ gateway: 'flutterwave', reference: 'FLW-2' });
-    const body = flutterwaveBody({ reference: 'FLW-2', amount: 150000 });
-
-    const res = await postWebhook(PATH, body, { 'verif-hash': 'wrong-hash' });
-
-    expect(res.status).toBe(401);
-    expect((await Order.findById(order._id)).paymentStatus).toBe('pending');
-  });
-
-  test('does not confuse major and minor units', async () => {
-    const { order } = await createPendingPayment({
-      totalAmount: 150000,
-      gateway: 'flutterwave',
-      reference: 'FLW-3',
-    });
-    // 15,000,000 would be correct for Paystack (kobo) but is 100x too much here.
-    const body = flutterwaveBody({ reference: 'FLW-3', amount: 15000000 });
-
-    const res = await postWebhook(PATH, body, { 'verif-hash': FLUTTERWAVE_HASH });
-
-    expect(res.body.result).toBe('amount_mismatch');
-    expect((await Order.findById(order._id)).paymentStatus).toBe('pending');
   });
 });
 

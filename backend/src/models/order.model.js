@@ -170,6 +170,10 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
+      // 'flutterwave' is retained for orders paid before the gateway was
+      // removed. It is no longer offered at checkout and has no code path;
+      // dropping it would make those historical orders fail validation on any
+      // later save, e.g. an admin updating the delivery status.
       enum: ['cash_on_delivery', 'bank_transfer', 'card', 'whatsapp', 'paystack', 'flutterwave', 'stripe', 'download_invoice'],
       default: 'whatsapp'
     },

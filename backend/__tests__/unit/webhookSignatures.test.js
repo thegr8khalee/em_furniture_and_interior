@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import {
   verifyPaystackSignature,
-  verifyFlutterwaveSignature,
   verifyStripeSignature,
 } from '../../src/lib/webhookSignatures.js';
 import { toMinorUnits } from '../../src/lib/paymentConfirmation.js';
@@ -29,22 +28,6 @@ describe('verifyPaystackSignature', () => {
     expect(verifyPaystackSignature(body, undefined, secret)).toBe(false);
     expect(verifyPaystackSignature(body, sign(body), undefined)).toBe(false);
     expect(verifyPaystackSignature(body.toString(), sign(body), secret)).toBe(false);
-  });
-});
-
-describe('verifyFlutterwaveSignature', () => {
-  test('accepts an exact hash match', () => {
-    expect(verifyFlutterwaveSignature('hash-abc', 'hash-abc')).toBe(true);
-  });
-
-  test('rejects a mismatch or a prefix of the correct hash', () => {
-    expect(verifyFlutterwaveSignature('hash-abd', 'hash-abc')).toBe(false);
-    expect(verifyFlutterwaveSignature('hash-ab', 'hash-abc')).toBe(false);
-  });
-
-  test('rejects when either side is absent', () => {
-    expect(verifyFlutterwaveSignature(undefined, 'hash-abc')).toBe(false);
-    expect(verifyFlutterwaveSignature('hash-abc', undefined)).toBe(false);
   });
 });
 
@@ -82,8 +65,8 @@ describe('verifyStripeSignature', () => {
   });
 });
 
-// The unit mix-up these guard against is expensive: treating Flutterwave's
-// major units as Paystack's minor units silently under-charges by 100x.
+// Guards the conversion a gateway integration depends on: reading a major-unit
+// amount as minor units silently under-charges by 100x.
 describe('toMinorUnits', () => {
   test('converts major units to minor', () => {
     expect(toMinorUnits(150000)).toBe(15000000);

@@ -69,7 +69,7 @@ Supabase user id. That intermediate state is stable, shippable, and halves the s
 
 ### Phase 0 — Payment webhooks `1 week`
 
-Signature-verified webhook endpoints for Paystack, Flutterwave and Stripe. Verify the HMAC against the
+Signature-verified webhook endpoints for Paystack and Stripe. Verify the HMAC against the
 raw request body (mount a raw body parser on these routes only — `express.json()` will otherwise have
 already consumed and re-serialised it, and the signature will never match). Compare the settled amount
 against `order.totalAmount` before marking paid, closing F-09. Make handlers idempotent: gateways retry,

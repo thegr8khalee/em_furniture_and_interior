@@ -36,7 +36,7 @@ Existing Nigerian e-commerce platforms (Jumia, Konga) provide generic marketplac
 
 - Offering **style-based browsing** (Modern, Antique/Royal, Minimalist, etc.)
 - Integrating **interior design consultations** directly into the shopping experience
-- Supporting **Nigerian payment rails** (Paystack, Flutterwave, bank transfer with proof upload) alongside international gateways (Stripe)
+- Supporting **Nigerian payment rails** (Paystack, bank transfer with proof upload) alongside international gateways (Stripe)
 - Providing **curated collections** — pre-assembled product bundles for room setups
 
 ---
@@ -47,7 +47,7 @@ Existing Nigerian e-commerce platforms (Jumia, Konga) provide generic marketplac
 
 1. **Shop + Design in one platform** — Browse products, book a consultation, and get a professionally designed room.
 2. **Style-first discovery** — Filter the entire catalog by interior design styles, not just categories.
-3. **Nigerian payment ecosystem** — Paystack, Flutterwave, manual bank transfer proof, and pay-on-delivery.
+3. **Nigerian payment ecosystem** — Paystack, manual bank transfer proof, and pay-on-delivery.
 4. **Guest-friendly** — Full cart, wishlist, and checkout without account creation.
 5. **Loyalty programme** — Earn and redeem points across purchases.
 
@@ -97,7 +97,6 @@ Existing Nigerian e-commerce platforms (Jumia, Konga) provide generic marketplac
 | Gateway | Type | Use Case |
 |---------|------|----------|
 | Paystack | Hosted checkout | Primary Nigerian gateway |
-| Flutterwave | Hosted checkout | Alternative Nigerian gateway |
 | Stripe | Hosted checkout | International payments |
 | Bank transfer | Proof upload | Manual verification for unbanked/preference |
 
@@ -142,5 +141,5 @@ Existing Nigerian e-commerce platforms (Jumia, Konga) provide generic marketplac
 ## 7. Regulatory Considerations
 
 - **Data privacy** — Privacy policy page, cookie consent banner, session-based storage with user opt-in.
-- **Payment compliance** — Gateway-managed PCI compliance (Paystack, Flutterwave, Stripe handle card data).
+- **Payment compliance** — Gateway-managed PCI compliance (Paystack, Stripe handle card data).
 - **Consumer protection** — Order tracking, invoice generation, clear terms & conditions.

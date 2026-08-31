@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "EM Furniture & Interior API",
-    "description": "REST API for EM Furniture and Interior e-commerce platform. Supports user and guest authentication, product/collection management, orders, payments (Paystack, Flutterwave, Stripe, bank transfer), consultations, loyalty, marketing, and admin operations.",
+    "description": "REST API for EM Furniture and Interior e-commerce platform. Supports user and guest authentication, product/collection management, orders, payments (Paystack, Stripe, bank transfer), consultations, loyalty, marketing, and admin operations.",
     "version": "1.0.0",
     "contact": {
       "name": "EM Furniture & Interior"
@@ -1475,39 +1475,6 @@
         }
       }
     },
-    "/api/payments/flutterwave/initialize": {
-      "post": {
-        "tags": ["Payments"],
-        "summary": "Initialize Flutterwave payment",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["orderId"],
-                "properties": {
-                  "orderId": { "type": "string" }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Payment initialized", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "authorizationUrl": { "type": "string" }, "reference": { "type": "string" }, "transactionId": { "type": "string" }, "orderId": { "type": "string" } } } } } }
-        }
-      }
-    },
-    "/api/payments/flutterwave/verify": {
-      "get": {
-        "tags": ["Payments"],
-        "summary": "Verify Flutterwave payment",
-        "parameters": [{ "name": "tx_ref", "in": "query", "required": true, "schema": { "type": "string" } }],
-        "responses": {
-          "200": { "description": "Payment status", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "status": { "type": "string" }, "orderId": { "type": "string" }, "orderNumber": { "type": "string" }, "amount": { "type": "number" } } } } } }
-        }
-      }
-    },
     "/api/payments/stripe/initialize": {
       "post": {
         "tags": ["Payments"],
@@ -1547,25 +1514,6 @@
         "summary": "Paystack payment webhook",
         "description": "Authoritative payment confirmation from Paystack. Verifies the signature over the raw request body, reconciles the settled amount against the order total, and is idempotent across redelivery. Called by the gateway, never by a client.",
         "parameters": [{ "name": "x-paystack-signature", "in": "header", "required": true, "schema": { "type": "string" }, "description": "HMAC-SHA512 of the raw body, keyed with the Paystack secret key." }],
-        "requestBody": {
-          "required": true,
-          "description": "Raw gateway event payload.",
-          "content": { "application/json": { "schema": { "type": "object" } } }
-        },
-        "responses": {
-          "200": { "description": "Received. Also returned for ignored event types, unknown references, and amount mismatches - none improve on retry.", "content": { "application/json": { "schema": { "type": "object", "properties": { "received": { "type": "boolean" }, "result": { "type": "string", "enum": ["confirmed", "already_confirmed", "amount_mismatch", "currency_mismatch", "failed", "order_missing"] }, "duplicate": { "type": "boolean" }, "ignored": { "type": "string" } } } } } },
-          "400": { "description": "Body is not parseable JSON" },
-          "401": { "description": "Signature missing or invalid" },
-          "500": { "description": "Webhook secret not configured, or a server fault" }
-        }
-      }
-    },
-    "/api/payments/webhooks/flutterwave": {
-      "post": {
-        "tags": ["Payments"],
-        "summary": "Flutterwave payment webhook",
-        "description": "Authoritative payment confirmation from Flutterwave. Verifies the signature over the raw request body, reconciles the settled amount against the order total, and is idempotent across redelivery. Called by the gateway, never by a client.",
-        "parameters": [{ "name": "verif-hash", "in": "header", "required": true, "schema": { "type": "string" }, "description": "The secret hash configured in the Flutterwave dashboard." }],
         "requestBody": {
           "required": true,
           "description": "Raw gateway event payload.",

@@ -72,8 +72,7 @@ This document lists the available features in the EM Furniture and Interior web 
 - Email delivery for contact form submissions.
 - Cloudinary-hosted assets.
 - WhatsApp deep link with prefilled message.
-- Paystack payment initialization and verification with hosted checkout.
-- Flutterwave hosted checkout with verification callback.
+- Paystack payment initialization, hosted checkout, and signature-verified webhooks.
 - Stripe hosted checkout with verification callback.
 - Bank transfer proof upload for manual payment verification.
 - TaxJar live tax calculation during checkout.

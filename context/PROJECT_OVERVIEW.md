@@ -12,7 +12,7 @@
 
 ## Problem Statement
 
-Small-to-medium furniture businesses lack affordable, feature-rich e-commerce platforms that combine product sales with interior design services. Generic platforms don't support consultations, designer assignment, style-based filtering, or the Nigerian payment ecosystem (Paystack, Flutterwave, bank transfer proof).
+Small-to-medium furniture businesses lack affordable, feature-rich e-commerce platforms that combine product sales with interior design services. Generic platforms don't support consultations, designer assignment, style-based filtering, or the Nigerian payment ecosystem (Paystack, bank transfer proof).
 
 ---
 
@@ -25,7 +25,7 @@ A purpose-built platform delivering **150+ features** across **8 implementation 
 | **Product Catalog** | Filtering by category/style, product comparison, recently viewed, estimated delivery |
 | **Collections** | Curated product bundles with reviews and promotions |
 | **E-Commerce** | Cart, wishlist, coupons, guest checkout, tax calculation, PDF invoices |
-| **Payments** | Paystack, Flutterwave, Stripe, bank transfer with proof upload |
+| **Payments** | Paystack, Stripe, bank transfer with proof upload |
 | **Customer Accounts** | Order history, order tracking, notifications, loyalty points |
 | **Interior Design** | Consultation booking, designer selection, room photo/floor plan uploads |
 | **Content** | Blog, FAQs, portfolio projects, about/contact/terms/privacy pages |
@@ -41,7 +41,7 @@ A purpose-built platform delivering **150+ features** across **8 implementation 
 | **Backend** | Node.js, Express 4, ES Modules |
 | **Database** | MongoDB with Mongoose 8 |
 | **Auth** | JWT (HTTP-only cookies), bcryptjs |
-| **Payments** | Paystack, Flutterwave, Stripe |
+| **Payments** | Paystack, Stripe |
 | **Storage** | Cloudinary (images), pdfkit (documents) |
 | **Email** | Gmail API via googleapis + Nodemailer |
 | **Testing** | Jest (backend, 72 tests), Vitest (frontend, 43 tests) — 115 total, 100% pass |

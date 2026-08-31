@@ -12,12 +12,10 @@ import GuestSession from '../models/guest.model.js';
  */
 
 /**
- * Gateways report amounts in different units:
- *   Paystack  — minor units (kobo)
- *   Stripe    — minor units
- *   Flutterwave — major units (naira)
- * Orders store a float in major units, so everything is normalised to integer
- * minor units before comparison. Rounding here is deliberate: comparing floats
+ * Gateways report amounts in different units — Paystack and Stripe both send
+ * minor units, but that is a per-gateway convention and not something to
+ * assume for any gateway added later. Orders store a float in major units, so
+ * everything is normalised to integer minor units before comparison. Rounding here is deliberate: comparing floats
  * for equality is exactly the bug that finding F-11 is about.
  */
 export const toMinorUnits = (amount, { alreadyMinor = false } = {}) => {

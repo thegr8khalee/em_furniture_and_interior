@@ -67,7 +67,7 @@ EM Furniture and Interior follows a **monolithic modular** architecture — a si
 │              │                   │                       │
 │  MongoDB     │                   │  Cloudinary (images)  │
 │  └─ Mongoose │                   │  Paystack (payments)  │
-│  └─ 20 models│                   │  Flutterwave (pay.)   │
+│  └─ 20 models│                   │  Stripe (payments)    │
 │  └─ Embedded │                   │  Stripe (payments)    │
 │    documents │                   │  Gmail API (email)    │
 │  └─ TTL idx  │                   │  Google Maps (embed)  │
@@ -220,7 +220,6 @@ Frontend (CheckoutPage)
 | MongoDB Atlas | TCP/TLS | Bidirectional | Connection string |
 | Cloudinary | HTTPS REST | Outbound | API key + secret |
 | Paystack | HTTPS REST | Outbound + redirect | Secret key |
-| Flutterwave | HTTPS REST | Outbound + redirect | Secret key |
 | Stripe | HTTPS REST | Outbound + redirect | Secret key |
 | Gmail API | HTTPS REST | Outbound | OAuth2 (client ID + secret + refresh token) |
 | Google Maps | HTTPS iframe | Frontend embed | API key (restricted) |

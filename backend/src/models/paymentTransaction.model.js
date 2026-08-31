@@ -32,6 +32,7 @@ const paymentTransactionSchema = new mongoose.Schema(
     paymentMethod: {
       type: String,
       required: true,
+      // 'flutterwave' retained for historical transactions only — see order.model.js
       enum: [
         'paystack',
         'flutterwave',
@@ -44,6 +45,7 @@ const paymentTransactionSchema = new mongoose.Schema(
     // Gateway-specific fields
     gateway: {
       type: String,
+      // 'flutterwave' retained for historical transactions only
       enum: ['paystack', 'flutterwave', 'stripe', 'manual'],
     },
     gatewayReference: {

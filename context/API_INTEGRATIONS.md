@@ -17,17 +17,6 @@
 | Config | `PAYSTACK_SECRET_KEY` environment variable |
 | Docs | https://paystack.com/docs/api |
 
-### Flutterwave
-
-| Property | Value |
-|----------|-------|
-| Purpose | Alternative Nigerian payment gateway |
-| Flow | Server-side initialization → hosted checkout → server-side verification |
-| Endpoints | `POST /api/payments/flutterwave/initialize`, `GET /api/payments/flutterwave/verify` |
-| Package | Direct HTTP calls (Flutterwave REST API) |
-| Config | `FLUTTERWAVE_SECRET_KEY` environment variable |
-| Docs | https://developer.flutterwave.com/docs |
-
 ### Stripe
 
 | Property | Value |
@@ -182,7 +171,6 @@
 | `CLOUDINARY_API_KEY` | Cloudinary |
 | `CLOUDINARY_API_SECRET` | Cloudinary |
 | `PAYSTACK_SECRET_KEY` | Paystack |
-| `FLUTTERWAVE_SECRET_KEY` | Flutterwave |
 | `STRIPE_SECRET_KEY` | Stripe |
 | `GMAIL_CLIENT_ID` | Gmail API |
 | `GMAIL_CLIENT_SECRET` | Gmail API |

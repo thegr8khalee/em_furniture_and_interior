@@ -2,7 +2,6 @@ import PaymentTransaction from '../models/paymentTransaction.model.js';
 import WebhookEvent from '../models/webhookEvent.model.js';
 import {
   verifyPaystackSignature,
-  verifyFlutterwaveSignature,
   verifyStripeSignature,
 } from '../lib/webhookSignatures.js';
 import {
@@ -145,58 +144,6 @@ export const handlePaystackWebhook = async (req, res) => {
     });
   } catch (error) {
     console.error('[webhook:paystack] handler error:', error);
-    return res.status(500).json({ message: 'Webhook processing failed' });
-  }
-};
-
-/* ------------------------------------------------------------ Flutterwave */
-
-export const handleFlutterwaveWebhook = async (req, res) => {
-  try {
-    const secretHash = process.env.FLUTTERWAVE_WEBHOOK_HASH;
-    if (!secretHash) {
-      console.error('[webhook:flutterwave] FLUTTERWAVE_WEBHOOK_HASH is not configured');
-      return res.status(500).json({ message: 'Webhook not configured' });
-    }
-
-    if (!verifyFlutterwaveSignature(req.get('verif-hash'), secretHash)) {
-      console.warn('[webhook:flutterwave] signature verification failed');
-      return res.status(401).json({ message: 'Invalid signature' });
-    }
-
-    const payload = parseRawBody(req);
-    if (!payload) return res.status(400).json({ message: 'Invalid payload' });
-
-    const { event, data } = payload;
-
-    if (event !== 'charge.completed') {
-      return res.status(200).json({ received: true, ignored: event });
-    }
-
-    const reference = data?.tx_ref;
-    if (!reference) return res.status(200).json({ received: true, note: 'no reference' });
-
-    const eventDoc = await claimEvent({
-      gateway: 'flutterwave',
-      eventId: String(data?.id ?? reference),
-      eventType: event,
-      reference,
-      payload,
-    });
-    if (!eventDoc) return res.status(200).json({ received: true, duplicate: true });
-
-    return await applyPayment({
-      res,
-      gateway: 'flutterwave',
-      eventDoc,
-      reference,
-      successful: data?.status === 'successful',
-      paidMinor: toMinorUnits(data?.amount), // Flutterwave sends major units
-      currency: data?.currency,
-      payload,
-    });
-  } catch (error) {
-    console.error('[webhook:flutterwave] handler error:', error);
     return res.status(500).json({ message: 'Webhook processing failed' });
   }
 };

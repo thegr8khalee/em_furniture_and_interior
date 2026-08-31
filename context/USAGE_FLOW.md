@@ -48,7 +48,6 @@ Cart Page (/cart)
         ├─ Enter billing address (optional)
         ├─ Select payment method:
         │     ├─ Paystack ──► Hosted checkout ──► /payment/verify?gateway=paystack
-        │     ├─ Flutterwave ──► Hosted checkout ──► /payment/verify?gateway=flutterwave
         │     ├─ Stripe ──► Hosted checkout ──► /payment/verify?gateway=stripe
         │     ├─ Bank Transfer ──► Upload proof of payment
         │     ├─ Cash on Delivery

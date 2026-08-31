@@ -3,7 +3,6 @@ import Order from '../../src/models/order.model.js';
 import PaymentTransaction from '../../src/models/paymentTransaction.model.js';
 
 export const PAYSTACK_SECRET = 'sk_test_paystack_secret';
-export const FLUTTERWAVE_HASH = 'flw_test_secret_hash';
 export const STRIPE_SECRET = 'whsec_test_stripe_secret';
 
 const address = {
@@ -64,12 +63,6 @@ export const paystackBody = ({ reference, amountKobo, status = 'success', id = 9
 
 export const paystackSignature = (rawBody, secret = PAYSTACK_SECRET) =>
   crypto.createHmac('sha512', secret).update(Buffer.from(rawBody)).digest('hex');
-
-export const flutterwaveBody = ({ reference, amount, status = 'successful', id = 888001 }) =>
-  JSON.stringify({
-    event: 'charge.completed',
-    data: { id, tx_ref: reference, amount, currency: 'NGN', status },
-  });
 
 export const stripeBody = ({ reference, amountMinor, paymentStatus = 'paid', id = 'evt_test_1' }) =>
   JSON.stringify({

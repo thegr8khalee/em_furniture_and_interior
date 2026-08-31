@@ -34,7 +34,7 @@
 | **ODM** | Object Document Mapper — Mongoose maps JavaScript objects to MongoDB documents |
 | **SPA** | Single Page Application — the React frontend runs entirely in the browser |
 | **SSR** | Server-Side Rendering — *not used*; the app is a client-rendered SPA |
-| **Hosted checkout** | Payment flow where the customer is redirected to the gateway's own page (Paystack, Flutterwave, Stripe) |
+| **Hosted checkout** | Payment flow where the customer is redirected to the gateway's own page (Paystack, Stripe) |
 | **Aggregation pipeline** | MongoDB's multi-stage data processing framework, used for analytics queries |
 | **Embedded document** | A sub-document stored inside a parent document (e.g., cart items inside User, reviews inside Product) |
 | **Fire-and-forget** | An async operation that runs without blocking the main request (e.g., activity logging) |
@@ -134,7 +134,6 @@
 | Method | Description |
 |--------|------------|
 | `paystack` | Online card payment via Paystack |
-| `flutterwave` | Online payment via Flutterwave |
 | `stripe` | International card payment via Stripe |
 | `bank_transfer` | Manual bank transfer with proof upload |
 | `cash_on_delivery` | Pay upon delivery |

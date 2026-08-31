@@ -24,8 +24,8 @@ production data.
 ### `apps/api` — current `[NOW]`
 
 Per `backend/.env.example`: `NODE_ENV`, `PORT`, `FRONTEND_URL`, `MONGODB_URI`, `JWT_SECRET`,
-`CLOUDINARY_*`, `GOOGLE_*` + `EMAIL_USER`, `PAYSTACK_SECRET_KEY`, `FLUTTERWAVE_SECRET_KEY`,
-`FLUTTERWAVE_CURRENCY`, `STRIPE_SECRET_KEY`, `STRIPE_CURRENCY`, `TAX_RATE_PERCENTAGE`,
+`CLOUDINARY_*`, `GOOGLE_*` + `EMAIL_USER`, `PAYSTACK_SECRET_KEY`,
+`STRIPE_SECRET_KEY`, `STRIPE_CURRENCY`, `TAX_RATE_PERCENTAGE`,
 `SEED_ADMIN_PASSWORD`.
 
 ### `apps/api` — target `[TARGET]`
@@ -40,8 +40,7 @@ Per `backend/.env.example`: `NODE_ENV`, `PORT`, `FRONTEND_URL`, `MONGODB_URI`, `
 | `SUPABASE_SERVICE_ROLE_KEY` | server only — never reaches a browser bundle |
 | `SUPABASE_JWKS_URL` | token verification |
 | `CLOUDINARY_*` | unchanged; now used to mint upload signatures rather than receive uploads |
-| `PAYSTACK_SECRET_KEY`, `PAYSTACK_WEBHOOK_SECRET` | webhook secret is new |
-| `FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_WEBHOOK_HASH` | |
+| `PAYSTACK_SECRET_KEY` | also signs webhooks — no separate secret |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | |
 | `TAX_RATE_PERCENTAGE` | server-side computation only (F-05) |
 | `RESEND_API_KEY` | after consolidating three email paths to one |

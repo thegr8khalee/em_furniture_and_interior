@@ -20,9 +20,6 @@ Testing payment gateway integrations and validation logic:
 - ✅ Validate Paystack payment reference
 - ✅ Handle payment success redirect
 
-#### Flutterwave Integration (2 tests)
-- ✅ Prepare Flutterwave checkout data (tx_ref, currency, redirect URL)
-- ✅ Validate Flutterwave transaction reference
 
 #### Stripe Integration (2 tests)
 - ✅ Prepare Stripe checkout data (orderId, amount, currency)
@@ -255,7 +252,7 @@ Each test validates one specific behavior:
 it('should render payment gateway options', () => {
   render(<CheckoutPage />);
   expect(screen.getByText('Paystack')).toBeInTheDocument();
-  expect(screen.getByText('Flutterwave')).toBeInTheDocument();
+  expect(screen.getByText('Paystack')).toBeInTheDocument();
   expect(screen.getByText('Stripe')).toBeInTheDocument();
 });
 ```

@@ -32,7 +32,6 @@
    CLOUDINARY_API_KEY=your_api_key
    CLOUDINARY_API_SECRET=your_api_secret
    PAYSTACK_SECRET_KEY=your_paystack_key
-   FLUTTERWAVE_SECRET_KEY=your_flutterwave_key
    STRIPE_SECRET_KEY=your_stripe_key
    GMAIL_CLIENT_ID=your_gmail_client_id
    GMAIL_CLIENT_SECRET=your_gmail_client_secret

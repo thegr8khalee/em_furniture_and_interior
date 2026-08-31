@@ -4,8 +4,6 @@ import {
   mockFetch,
   mockPaystackSuccessResponse,
   mockPaystackVerifySuccess,
-  mockFlutterwaveSuccessResponse,
-  mockFlutterwaveVerifySuccess,
   mockStripeSuccessResponse,
   mockStripeVerifySuccess,
   createMockOrder,
@@ -13,7 +11,6 @@ import {
 
 // Mock environment variables
 process.env.PAYSTACK_SECRET_KEY = 'test_paystack_secret';
-process.env.FLUTTERWAVE_SECRET_KEY = 'test_flutterwave_secret';
 process.env.STRIPE_SECRET_KEY = 'test_stripe_secret';
 process.env.TAX_RATE_PERCENTAGE = '7.5';
 process.env.FRONTEND_URL = 'http://localhost:5173';
@@ -91,40 +88,6 @@ describe('Payment Integration Tests', () => {
 
       // Simulate error handling
       expect(true).toBe(true);
-    });
-  });
-
-  describe('Flutterwave Integration', () => {
-    test('should initialize Flutterwave payment successfully', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockFlutterwaveSuccessResponse,
-      });
-
-      const mockOrder = createMockOrder({
-        _id: '507f1f77bcf86cd799439011',
-        totalAmount: 1000,
-      });
-
-      expect(mockFlutterwaveSuccessResponse.status).toBe('success');
-    });
-
-    test('should verify Flutterwave payment successfully', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockFlutterwaveVerifySuccess,
-      });
-
-      const mockReq = {
-        query: { tx_ref: 'test_tx_ref' },
-      };
-
-      const mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-      };
-
-      expect(mockFlutterwaveVerifySuccess.data.status).toBe('successful');
     });
   });
 

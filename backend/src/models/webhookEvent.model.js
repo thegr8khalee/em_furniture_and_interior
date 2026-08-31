@@ -13,7 +13,7 @@ const webhookEventSchema = new mongoose.Schema(
     gateway: {
       type: String,
       required: true,
-      enum: ['paystack', 'flutterwave', 'stripe'],
+      enum: ['paystack', 'stripe'],
     },
     eventId: { type: String, required: true },
     eventType: { type: String },

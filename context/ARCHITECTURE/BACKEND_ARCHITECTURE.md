@@ -117,7 +117,7 @@ backend/
 | `marketing.controller.js` | getActiveBanners, getActiveFlashSales, getAdminBanners, createBanner, updateBanner, deleteBanner, getAdminFlashSales, createFlashSale, updateFlashSale, deleteFlashSale | Marketing |
 | `notification.controller.js` | getMyNotifications, markAsRead, markAllRead, deleteNotification | Notifications |
 | `order.controller.js` | createOrder, getMyOrders, getOrderById, getOrderByNumber, generateInvoice, generateReceipt, generateQuotation, getAllOrders, updateOrderStatus, updatePaymentStatus, deleteOrder | Orders |
-| `payments.controller.js` | initializePaystackPayment, verifyPaystackPayment, initializeFlutterwavePayment, verifyFlutterwavePayment, initializeStripePayment, verifyStripePayment, uploadBankTransferProof | Payments |
+| `payments.controller.js` | initializePaystackPayment, verifyPaystackPayment, initializeStripePayment, verifyStripePayment, uploadBankTransferProof | Payments |
 | `products.controller.js` | getProducts, getProductsCount, getProductsByIds, getProductById | Products |
 | `project.controller.js` | getProjects, getProjectsCount, getProjectById | Projects |
 | `review.controller.js` | addReviewToProduct, addReviewToCollection, getPendingProductReviews, getPendingCollectionReviews, approveProductReview, rejectProductReview, approveCollectionReview, rejectCollectionReview | Reviews |
@@ -234,7 +234,7 @@ resolvePermissions(role, explicitPermissions)
 | Total tests | 72 |
 | Pass rate | 100% |
 | Duration | ~9.6 seconds |
-| Mocking | Mongoose models, Cloudinary, payment gateways (Paystack, Flutterwave, Stripe), pdfkit |
+| Mocking | Mongoose models, Cloudinary, payment gateways (Paystack, Stripe), pdfkit |
 | Coverage | Collected via Jest (excludes seed, index.js, __tests__) |
 
 ### Test Suites
@@ -243,4 +243,4 @@ resolvePermissions(role, explicitPermissions)
 |-------|------|-------|--------|
 | Core | `core.test.js` | 23 | Auth (signup, login, hashing, JWT, guest merge, password reset) |
 | Features | `features.test.js` | 33 | Coupons, consultations, analytics, orders, designers, marketing |
-| Payments | `payments.test.js` | 17 | Paystack, Flutterwave, Stripe integration, tax calculation, PDF generation |
+| Payments | `payments.test.js` | 17 | Paystack, Stripe integration, tax calculation, PDF generation |

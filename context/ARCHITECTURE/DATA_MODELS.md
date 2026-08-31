@@ -140,7 +140,7 @@
 | totalAmount | Number | — | Final total |
 | status | String | enum | pending, confirmed, processing, shipped, delivered, cancelled, refunded |
 | paymentStatus | String | enum | pending, completed, failed, refunded |
-| paymentMethod | String | — | paystack, flutterwave, stripe, bank_transfer, cash_on_delivery, whatsapp |
+| paymentMethod | String | — | paystack, stripe, bank_transfer, cash_on_delivery, whatsapp — plus `flutterwave`, retained in the enum for orders placed before that gateway was removed |
 | timestamps | — | auto | createdAt, updatedAt |
 
 ---
@@ -154,7 +154,7 @@
 | guest | ObjectId | ref: Guest | Guest payer |
 | amount | Number | required | Payment amount |
 | currency | String | default 'NGN' | Currency code |
-| paymentMethod | String | enum | paystack, flutterwave, stripe, bank_transfer, cash_on_delivery, whatsapp |
+| paymentMethod | String | enum | paystack, stripe, bank_transfer, cash_on_delivery, whatsapp — plus `flutterwave`, retained in the enum for orders placed before that gateway was removed |
 | gateway | String | — | Gateway identifier |
 | gatewayReference | String | — | Transaction reference |
 | bankTransferProof | Object | — | `{ url, public_id }` (Cloudinary) |

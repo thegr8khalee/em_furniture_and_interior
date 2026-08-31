@@ -91,7 +91,7 @@ graph TB
     end
     subgraph External
         CLD["Cloudinary<br/>signed direct upload"]
-        PAY["Paystack · Flutterwave · Stripe"]
+        PAY["Paystack · Stripe"]
         MAIL["Resend / Gmail SMTP"]
         B2["Backblaze B2<br/>encrypted dumps"]
         SEN["Sentry"]
@@ -148,7 +148,7 @@ graph TB
 | Component | `[NOW]` | `[TARGET]` | Role |
 |---|---|---|---|
 | Media | Cloudinary `^2.7.0`, base64 through API `[GAP]` | Cloudinary signed direct upload | Zero binary payloads on the API |
-| Payments | Paystack, Flutterwave, Stripe — **redirect verification only** `[GAP]` | + signed webhooks | Reliable payment capture |
+| Payments | Paystack, Stripe — signed webhooks + amount reconciliation | unchanged | Reliable payment capture |
 | Tax | TaxJar, client-supplied amount `[GAP]` | server-side computation | Auditable tax figures |
 | Email | Resend `^6.1.1`, `googleapis`, `nodemailer` | consolidate to one | Transactional email |
 | PDF | Puppeteer `^24.40.0`, PDFKit `^0.17.2` | Puppeteer on Render (Docker) | Invoice and document rendering |

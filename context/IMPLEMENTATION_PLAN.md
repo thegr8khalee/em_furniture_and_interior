@@ -199,7 +199,7 @@
 |---|------|--------|
 | P.1 | Payment transaction model (order ref, gateway, status, proof) | ✅ |
 | P.2 | Paystack — initialize + verify | ✅ |
-| P.3 | Flutterwave — initialize + verify | ✅ |
+| P.3 | ~~Flutterwave~~ — removed; Paystack is the sole Nigerian gateway | — |
 | P.4 | Stripe — initialize + verify | ✅ |
 | P.5 | Bank transfer proof upload (Cloudinary) | ✅ |
 | P.6 | Payment routes (initialize + verify per gateway) | ✅ |

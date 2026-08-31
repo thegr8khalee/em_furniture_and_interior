@@ -122,3 +122,27 @@
 | pdfkit for documents | Server-side PDF generation without external service dependency |
 | Gmail API over SMTP | OAuth2 security, avoids "less secure app" issues with Google |
 | DaisyUI over custom components | Rapid development with themed, accessible components on top of Tailwind |
+
+---
+
+## Flutterwave removed — Paystack is the sole Nigerian gateway
+
+**Decision.** Drop the Flutterwave integration. Paystack covers the same market and
+maintaining two Nigerian gateways doubled the webhook, reconciliation and test surface for
+no commercial gain. Stripe stays for international cards; bank transfer with proof upload
+stays for the unbanked.
+
+**Removed.** Initialize, verify and webhook endpoints; controller and signature-verification
+code; routes; env vars (`FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_CURRENCY`,
+`FLUTTERWAVE_WEBHOOK_HASH`); the `tx_ref` branch in `PaymentVerify.jsx`; OpenAPI paths and
+Postman requests; seed data; and the associated tests.
+
+**Deliberately retained.** `'flutterwave'` stays in the `paymentMethod` and `gateway` enums on
+`order` and `paymentTransaction`. Those values are historical fact for orders already paid
+through it, and removing them would make any later save of such an order — an admin updating
+a delivery status, for instance — fail validation. The enum entries carry a comment saying so.
+No new record can be written with them, because no code path produces one.
+
+**Note.** The checkout page never actually offered Flutterwave as an option; only the verify
+callback and the backend supported it.
+

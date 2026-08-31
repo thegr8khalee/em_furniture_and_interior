@@ -213,8 +213,6 @@ All authenticated requests use JWT stored in HTTP-only cookies. Cookies are sent
 |--------|------|------|---------|-------------|
 | POST | `/api/payments/paystack/initialize` | guest | initializePaystackPayment | Start Paystack checkout |
 | GET | `/api/payments/paystack/verify` | — | verifyPaystackPayment | Verify Paystack payment |
-| POST | `/api/payments/flutterwave/initialize` | guest | initializeFlutterwavePayment | Start Flutterwave checkout |
-| GET | `/api/payments/flutterwave/verify` | — | verifyFlutterwavePayment | Verify Flutterwave payment |
 | POST | `/api/payments/stripe/initialize` | guest | initializeStripePayment | Start Stripe checkout |
 | GET | `/api/payments/stripe/verify` | — | verifyStripePayment | Verify Stripe payment |
 | POST | `/api/payments/bank-transfer/proof` | guest | uploadBankTransferProof | Upload transfer proof |

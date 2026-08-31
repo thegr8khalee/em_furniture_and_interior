@@ -2,15 +2,12 @@ import express from 'express';
 import {
 	initializePaystackPayment,
 	verifyPaystackPayment,
-	initializeFlutterwavePayment,
-	verifyFlutterwavePayment,
 	initializeStripePayment,
 	verifyStripePayment,
 	uploadBankTransferProof,
 } from '../controllers/payments.controller.js';
 import {
 	handlePaystackWebhook,
-	handleFlutterwaveWebhook,
 	handleStripeWebhook,
 } from '../controllers/webhooks.controller.js';
 import { identifyGuest } from '../middleware/identifyGuest.js';
@@ -24,7 +21,6 @@ const router = express.Router();
 // retry, and the signature check already rejects anything unauthenticated.
 // The raw body these need is preserved by the express.raw() mount in index.js.
 router.post('/webhooks/paystack', handlePaystackWebhook);
-router.post('/webhooks/flutterwave', handleFlutterwaveWebhook);
 router.post('/webhooks/stripe', handleStripeWebhook);
 
 // Initialize Paystack payment
@@ -32,12 +28,6 @@ router.post('/paystack/initialize', createLimiter, identifyGuest, initializePays
 
 // Verify Paystack payment (public callback)
 router.get('/paystack/verify', verifyPaystackPayment);
-
-// Initialize Flutterwave payment
-router.post('/flutterwave/initialize', createLimiter, identifyGuest, initializeFlutterwavePayment);
-
-// Verify Flutterwave payment (public callback)
-router.get('/flutterwave/verify', verifyFlutterwavePayment);
 
 // Initialize Stripe payment
 router.post('/stripe/initialize', createLimiter, identifyGuest, initializeStripePayment);

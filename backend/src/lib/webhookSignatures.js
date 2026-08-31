@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 /**
- * Webhook signature verification for the three payment gateways.
+ * Webhook signature verification for the payment gateways.
  *
  * Every function here takes the RAW request body as a Buffer. Signatures are
  * computed over the exact bytes the gateway sent: if the body has been parsed
@@ -37,16 +37,6 @@ export const verifyPaystackSignature = (rawBody, signature, secret) => {
     .digest('hex');
 
   return safeCompare(expected, signature);
-};
-
-/**
- * Flutterwave: a shared secret hash echoed verbatim in the verif-hash header.
- * Not an HMAC — Flutterwave sends back the value configured in the dashboard,
- * so this is a constant-time equality check against that configured value.
- */
-export const verifyFlutterwaveSignature = (signature, secretHash) => {
-  if (!signature || !secretHash) return false;
-  return safeCompare(secretHash, signature);
 };
 
 /**
