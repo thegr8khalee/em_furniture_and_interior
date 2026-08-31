@@ -1,0 +1,204 @@
+# 05 — ERP Readiness Assessment
+
+> Full codebase audit against ERP requirements. Findings F-01 … F-13.
+> Audited at commit `8db2e2b`. Every finding was confirmed by reading the referenced source.
+
+---
+
+## 1. Verdict
+
+**Broader than expected on surface area, weaker than expected on foundations.**
+
+The admin panel already covers catalog, orders, coupons, marketing, consultations, reviews, inventory,
+audit logging and document generation, organised behind a permission system that resolves per request.
+That is a real product, and the RBAC design in particular does not need rewriting.
+
+But it is a **store back-office, not an ERP**. An ERP's defining property is that every business event
+lands in one place that always balances. Nothing in the system does that today. Three structural
+absences block the entire category:
+
+1. **No cost price anywhere.** `product.model.js` has `price` and `discountedPrice` and nothing else.
+   Margin, COGS and inventory valuation are not "unbuilt" — they are *uncomputable* from stored data.
+2. **No ledger.** `finance.controller.js` is 170 lines that sum orders and emit CSV. No accounts, no
+   journal, no expenses, no payables or receivables.
+3. **Stock never moves.** Selling something does not decrement it.
+
+And one operational finding that is not about ERP at all and outranks everything above in urgency:
+**payments are confirmed only by the customer's browser**, so paid orders can stay marked unpaid forever.
+
+---
+
+## 2. Findings
+
+Ranked by cost in money and data integrity, not by difficulty.
+
+### F-01 · Critical · Paid orders can stay marked unpaid forever
+
+There are no payment webhooks. `payments.routes.js` mounts only `initialize` and `verify` endpoints, and
+all three gateways are confirmed solely when the customer's browser returns to the verify callback
+(`payments.controller.js:175`, `:344`, `:522`). If the customer pays and then closes the tab, loses
+signal, or the redirect fails, the money reaches the gateway and the database never learns: the order sits
+at `paymentStatus: 'pending'` permanently and is excluded from every revenue and analytics query, all of
+which filter on `paymentStatus: 'paid'`.
+
+**Impact:** silent, unbounded revenue under-reporting. Live today.
+**Fix:** signature-verified webhook endpoints per gateway; treat the browser callback as a UX
+convenience only, never as the source of truth.
+
+### F-02 · Critical · Selling a product never reduces its stock
+
+`createOrder` (`order.controller.js:13–140`) reads product prices but never touches `stockQuantity`. The
+only thing that changes stock is an admin typing a number into the Inventory screen
+(`inventory.controller.js:62–81`). Inventory is therefore a manual spreadsheet with an audit trail,
+permanently drifting from reality. There is also no availability check — twenty units of a
+single-unit item can be sold.
+
+**Fix:** stock movements as append-only events; reserve on order confirmation, decrement on dispatch.
+
+### F-03 · Critical · No cost price — margin is unknowable
+
+`product.model.js:26` defines `price`; there is no cost, landed cost, or supplier price on any model.
+Every "finance" number the system produces is revenue, never profit.
+
+**Fix:** add cost fields during the Postgres migration and backfill. Cheap now, expensive later — the
+data needs history before the reports exist.
+
+### F-04 · Critical · The test suite tests nothing
+
+`backend/TESTING.md` advertises 73 passing tests as "comprehensive". In reality `core.test.js` and
+`features.test.js` import no application code — they construct a plain object and assert on that same
+object:
+
+```js
+// __tests__/integration/core.test.js:26
+expect(mockUser.username).toBe('John Doe');
+```
+
+Only `payments.test.js` imports a real module. `supertest` is a declared dependency and is used zero
+times; not one of the 140 routes is exercised. Effective backend coverage is roughly **2%**. The frontend
+has one test file for 26,378 lines. There is no `.github/` directory, so nothing runs on push regardless.
+
+**Fix:** delete the placeholder suites, correct `TESTING.md`, and rebuild per `docs/TESTING_STRATEGY.md`.
+
+### F-05 · High · Tax and shipping are whatever the client says they are
+
+Line prices are correctly re-fetched server-side — that part is right. But `shippingCost` and `taxAmount`
+are read straight from the request body (`order.controller.js:21–22`) and folded into `totalAmount`
+(`:103`, `:131–132`) with no recalculation or validation. A modified request sets its own tax.
+
+**Impact:** a discount exploit for a shop; for an ERP whose tax reports must survive an audit, it means
+the tax figures are not evidence of anything.
+
+### F-06 · High · Order creation is neither atomic nor idempotent
+
+Coupon usage is incremented and saved at `order.controller.js:97`; the order is saved at `:140`. No
+transaction spans them, so a failure in between burns a coupon use against an order that does not exist.
+Separately there is no idempotency key, so a double-clicked checkout creates two real orders.
+
+### F-07 · High · Every quotation and invoice generated is thrown away
+
+`document.controller.js` renders a PDF and returns it. There is no document model, no persisted record,
+no sequential numbering. You cannot list quotations issued, see which converted, chase an unpaid invoice,
+or reissue a copy.
+
+**Impact:** for a business running interior projects on quotes and deposits, this is the largest missing
+piece of day-to-day value — and it is where accounts receivable would have to live.
+
+### F-08 · High · Analytics counts line items as orders
+
+Four aggregations `$unwind` the items array and then compute `orderCount: { $sum: 1 }`
+(`analytics.controller.js:51`, `:94`, `:137`, `:249`), which counts unwound line items. A category on a
+three-line order is credited with three orders. The same pipelines `$lookup` only against `products`, so
+`Collection` line items resolve to null and accumulate silently under an unnamed category.
+
+**Impact:** category and region reports are wrong today, in a direction that overstates activity.
+
+### F-09 · High · Payment verification never checks the amount
+
+All three verify handlers check that gateway status is `success` and immediately set
+`paymentStatus: 'paid'` (`payments.controller.js:208–215` and equivalents). None compares the amount the
+gateway reports against `order.totalAmount`. A partial or mismatched settlement marks the order fully paid.
+
+### F-10 · High · Admins and customers share one cookie
+
+`lib/utils.js:6–22` issues both admin and customer sessions as a cookie named `jwt` on the same domain,
+distinguished only by a `role` claim. Logging into the storefront clobbers an active admin session and
+vice versa. Tokens live 15 days with no refresh, no revocation list, and no way to force-logout a
+compromised admin. There is no 2FA on admin accounts.
+
+**Credit where due:** `protectAdminRoute.js` re-reads the admin from the database on every request, so
+permission changes take effect immediately. That is the right design.
+
+### F-11 · Medium · Money is stored as floating point
+
+Every amount is a JavaScript `Number` (`order.model.js`, `product.model.js`). Tolerable at storefront
+scale; not tolerable once thousands of lines sum into a ledger that must balance to the kobo.
+
+**Fix during the migration, not after.** Retrofitting integer minor units means a second pass over every
+row and every controller.
+
+### F-12 · Medium · The most-queried collection has no indexes
+
+Twelve models declare indexes; eight do not — including `product`, filtered by category and style on
+every shop page, and `user`. `sku` (`product.model.js:64`) is a plain trimmed string with no unique
+constraint, so duplicate SKUs are possible, which quietly breaks any stock or purchasing module keyed on
+them.
+
+### F-13 · Medium · Housekeeping
+
+No charting library is installed; the Analytics dashboard is tables and CSS bars — workable now, a real
+constraint for ERP reporting. `changes.diff` (2.1 MB) is tracked in git and should be deleted.
+`admin.controller.js` is 1,402 lines and should be split along the boundaries its routes already imply.
+`backend/package.json` declares no `engines` field, so Node version parity between dev, CI and production
+is unenforced.
+
+---
+
+## 3. Module gap matrix
+
+| Module | State | What exists | What is missing |
+|---|---|---|---|
+| **CMS** | Partial | Blog, FAQs, projects, banners, per-product SEO with JSON-LD | Media library, draft/publish/scheduling, revision history, reusable blocks, editable static pages |
+| **Sales & orders** | Solid | Full lifecycle, status history, guest checkout, coupons, invoices, tracking | Returns/RMA, credit notes, partial refunds, backorders, order→stock link |
+| **Finance** | **Absent** | Revenue rollup + CSV export. That is the entire module. | Chart of accounts, double-entry journal, AR, AP, bank reconciliation, period close, trial balance, P&L, balance sheet, cash flow |
+| **Expenses** | **Absent** | Nothing — no expense, supplier, vendor or bill model exists | Expense entry with categories, receipt capture, approval workflow, recurring costs, supplier bills, payment runs |
+| **Purchasing** | **Absent** | Nothing | Suppliers, purchase orders, goods receipt, three-way match, landed cost, reorder points |
+| **Inventory** | Nominal | One number per product, manual adjustment with audit trail, low-stock threshold | Multi-location, reservations, movements as events, valuation, stock takes, transfers, BOM for bespoke pieces |
+| **Analytics** | Partial | Revenue, category, region, product, designer, CLV, funnel — with F-08 | Margin and profitability, cash position, aged receivables, budget vs actual, cohorts, saved views, scheduled reports, charts |
+| **Projects / CRM** | Partial | Consultations, designer assignment, scheduling, portfolio | Project as a financial object: budget, quote, deposit, milestones, labour, cost-to-complete, profit per job |
+| **Access & audit** | **Good** | 14 permissions, 5 roles, per-request resolution, audit log, activity log, rate limiting | Finer permissions per module, approval limits, 2FA, session revocation |
+| **HR / payroll** | Absent | Nothing — designers are catalog entries, not employees | Out of scope by decision |
+
+---
+
+## 4. Effort
+
+Assuming one experienced full-stack developer, and **excluding** the replatform in `06`:
+
+| Phase | Scope | Effort |
+|---|---|---|
+| 0 | Stop the bleeding — webhooks, tests, CI, server-side tax, atomic orders, stock decrement, indexes | 3–4 weeks |
+| 1 | Financial spine — minor units, chart of accounts, journal, posting rules, cost price, trial balance, period close | 6–8 weeks |
+| 2 | Expenses and payables — suppliers, bills, expense entry with approval, recurring costs, aged payables | 4–5 weeks |
+| 3 | Documents, receivables, projects — persistence, numbering, quote→invoice, AR, project profitability | 5–6 weeks |
+| 4 | Inventory and purchasing — movement events, multi-location, reservations, POs, goods receipt, valuation | 5–6 weeks |
+| 5 | Reporting and CMS finish — statutory reports, saved views, charts, media library, drafts, revisions | 4–5 weeks |
+
+**Total 27–34 weeks solo**, roughly 4–5 months with two developers. Phases 0–2 alone (13–17 weeks) reach
+the point where the dashboard shows profit rather than takings, which is where most of the value lands.
+
+These figures assume the current stack. `07-implementation-roadmap.md` gives the revised sequencing and
+effort once the replatform in `06` is folded in — Postgres and Supabase remove an estimated 6–8 weeks
+from phases 1–3.
+
+---
+
+## 5. Immediate actions
+
+1. **Ship payment webhooks this week, on the current stack.** F-01 is live revenue loss and the logic
+   ports to Postgres nearly unchanged. Do not let it wait a quarter for a migration.
+2. **Add a cost field to products and backfill it.** Small, dependency-free, and it unblocks every margin
+   number you will ever want. Early means the data has history by the time reports exist.
+3. **Make the tests real and turn on CI.** The codebase is about to triple in size.
+4. **Correct `TESTING.md` and `FEATURES.md`.** Documentation that overstates delivery is how the wrong
+   thing gets built next.

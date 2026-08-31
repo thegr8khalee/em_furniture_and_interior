@@ -1,10 +1,37 @@
 # EM Furniture and Interior — Context Hub
 
-> Master index and navigation for the project knowledge base.
+> **Start at [`00-master-context.md`](00-master-context.md).** It is the index, and it defines the
+> `[NOW]` / `[TARGET]` / `[GAP]` convention every document in the numbered suite uses.
+
+## ERP & Replatform suite
+
+| Document | What You'll Find |
+|----------|-----------------|
+| [00-master-context.md](00-master-context.md) | Master index, core principles, engineering rules |
+| [01-system-overview.md](01-system-overview.md) | Business context, stakeholders, scope, technology matrix |
+| [02-repo-structure-and-modules.md](02-repo-structure-and-modules.md) | Codebase map, module catalog, RBAC matrix |
+| [03-backend-architecture.md](03-backend-architecture.md) | Runtime, request pipeline, data layer, integrations |
+| [04-business-flow-and-processes.md](04-business-flow-and-processes.md) | End-to-end operational workflows |
+| [05-erp-readiness-assessment.md](05-erp-readiness-assessment.md) | **The audit** — findings F-01…F-13, gap matrix |
+| [06-replatform-plan.md](06-replatform-plan.md) | **The migration** — Supabase, Postgres, split, tests, docs |
+| [07-implementation-roadmap.md](07-implementation-roadmap.md) | Combined sequencing, effort, exit criteria |
+| [08-admin-ui-guidelines.md](08-admin-ui-guidelines.md) | UI parity constraint, tokens, component kit |
+| [09-operational-setup-checklist.md](09-operational-setup-checklist.md) | Vercel / Render / Supabase config and secrets |
+| [10-notifications-and-trigger-matrix.md](10-notifications-and-trigger-matrix.md) | Channels and the event → notification matrix |
+| [lifecycles/](lifecycles/) | Order, document, project and inventory state machines |
+
+Formal deliverables — architecture, data model, testing, deployment, backup, data protection, commands —
+are in [`../docs/`](../docs/README.md).
 
 ---
 
-## Quick Links
+## Legacy documents
+
+The documents below predate the suite above. They remain accurate about the current MVP and are
+superseded for anything ERP or replatform related. `GLOSSARY.md` and `CONVENTIONS.md` are still
+authoritative.
+
+### Core
 
 | Document | What You'll Find |
 |----------|-----------------|
