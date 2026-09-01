@@ -1,5 +1,13 @@
 # Auth Migration Runbook (R2)
 
+> **Not currently needed.** MongoDB holds no accounts, so there is nothing to
+> bulk-import — new signups create Supabase identities from the outset. This
+> stays because the situation changes the moment anyone registers against the
+> legacy path, and because it documents behaviour the code still relies on.
+>
+> To create the first console account on an empty database, use
+> `npm run auth:bootstrap-admin -w apps/api` instead; see the end of this file.
+
 Moving existing accounts into Supabase Auth. Run from a machine that can reach
 both MongoDB Atlas and Supabase.
 
@@ -124,3 +132,21 @@ Only once every account is linked and Supabase sign-in is confirmed working:
 Do these as separate commits, after the import has been stable in production for
 a few days. There is no hurry, and the fallback path is what makes it safe to
 wait.
+
+---
+
+## Bootstrapping the first admin
+
+On an empty database there is no account to sign in with. This creates one in
+both places at once — a Supabase identity and the linked `admins` record:
+
+```bash
+npm run auth:bootstrap-admin -w apps/api -- \
+  --email you@example.com --username you --role super_admin
+```
+
+The password is read from `BOOTSTRAP_ADMIN_PASSWORD`, never from an argument,
+because command lines end up in shell history and process listings.
+
+Idempotent: running it again for an existing email links or updates rather than
+duplicating. Use it once, then manage further staff from the console.

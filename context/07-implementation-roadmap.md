@@ -12,7 +12,7 @@
 | R0 | Payment webhooks — current stack ✅ **done** | 1 wk | 1 |
 | R1 | Monorepo split ✅ **done** | 2–3 wks | 4 |
 | R2 | Supabase Auth — still on MongoDB · *code complete, import pending* | 2–3 wks | 7 |
-| R3 | PostgreSQL + Sequelize | 6–8 wks | 15 |
+| R3 | PostgreSQL + Sequelize — *greenfield, no data to migrate* | 4–5 wks | 13 |
 | R4 | Harden and document | 2–3 wks | 18 |
 | E1 | Financial spine | 5–6 wks | 24 |
 | E2 | Expenses and payables | 3–4 wks | 28 |
@@ -20,7 +20,7 @@
 | E4 | Inventory and purchasing | 4–5 wks | 38 |
 | E5 | Reporting and CMS finish | 4–5 wks | 43 |
 
-**≈ 33–43 weeks solo.** Eight to ten months alone, five to six with two developers.
+**≈ 31–40 weeks solo**, revised down from 33–43: R3 loses its data-migration half now that MongoDB is known to be empty. Seven to nine months alone, four to six with two developers.
 
 The ERP phases are shorter than the estimates in `05` §4 (which assumed the current stack). Postgres
 removes the hand-rolled integrity work from E1 and E4; Supabase removes auth work from E2's approval
@@ -47,9 +47,12 @@ admin and customer sessions coexist without collision (closes F-10); guest carts
 registered account; RLS is enabled deny-all on every table.
 
 **R3 — PostgreSQL.** The migration suite runs twice against a clean database with an identical result;
-a production-snapshot rehearsal has been completed twice; a written rollback has been executed once;
-row counts and financial totals reconcile between Mongo and Postgres; money is integer minor units
-throughout; no `sync()` path exists in production code.
+every route passes its integration tests against Postgres; money is integer minor units throughout; no
+`sync()` path exists in production code.
+
+*Revised — MongoDB is empty.* The snapshot rehearsals, the executed rollback, and the row-count and
+financial-total reconciliation all existed to protect live data. There is none, so they no longer apply.
+What remains is the schema and the data-access rewrite.
 
 **R4 — Harden and document.** F-02, F-05, F-06, F-08, F-12, F-13 closed; integration tests cover every
 route with at least an authorisation check and a happy path; CI runs lint, tests, migration idempotency

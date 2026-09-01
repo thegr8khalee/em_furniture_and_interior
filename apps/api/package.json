@@ -35,7 +35,8 @@
     "seed": "node src/seed/seed.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
     "auth:import": "node src/scripts/importUsersToSupabase.js",
-    "auth:import:dry": "node src/scripts/importUsersToSupabase.js --dry-run"
+    "auth:import:dry": "node src/scripts/importUsersToSupabase.js --dry-run",
+    "auth:bootstrap-admin": "node src/scripts/bootstrapAdmin.js"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

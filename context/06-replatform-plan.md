@@ -141,11 +141,15 @@ foreign key, which is precisely the integrity this migration exists to gain.
 point at one real foreign key. More work than two nullable columns with a `CHECK`, and the right shape —
 every ERP module still to be built needs to reference "a thing that can be sold" uniformly.
 
-**IDs.** UUID primary keys, plus a `legacy_mongo_id char(24)` column with a unique index on every migrated
-table. Migration scripts resolve references through it, reconciliation against the old database stays
-possible for as long as needed, and the column is dropped once confidence is established.
+**IDs.** UUID primary keys throughout.
 
-**Money.** Integer minor units, done here as part of a migration already being written. Closes F-11.
+> **Revised: there is no data to migrate.** MongoDB is empty — no customers, no orders, no catalog. That
+> removes the entire migration apparatus this section was built around: no `legacy_mongo_id` columns, no
+> reference remapping, no reconciliation pass, no dual-write question, no maintenance window, and no
+> rehearsals against a production snapshot. R3 becomes a greenfield schema plus a rewrite of the
+> data-access layer — materially smaller, and far less dangerous.
+
+**Money.** Integer minor units from the outset. Closes F-11, and with no existing rows there is nothing to convert.
 
 **There are no TTL indexes in PostgreSQL.** `activityLog` relies on a Mongo TTL index for 90-day expiry,
 `GuestSession` on another. Postgres has no equivalent: use `pg_cron` (available on Supabase) or monthly
@@ -219,10 +223,10 @@ downloads it. Render supports this via Docker, which is one reason Render is the
 API — but the Dockerfile must install Chromium's system libraries, and the service needs enough memory
 (512 MB is not enough; budget 1 GB+). This is why PDF rendering does not move to a serverless function.
 
-**Do not dual-write.** Running Mongo and Postgres in parallel with writes to both is the textbook
-migration pattern and the wrong one at this scale — roughly double the work, plus reconciliation bugs
-that outlive the migration. A rehearsed maintenance-window cutover is right here. Rehearse against a
-production snapshot at least twice, with a written rollback that has actually been executed once.
+**~~Do not dual-write.~~ Moot — the database is empty.** This trap mattered while R3 meant moving live
+data. With nothing to move there is no parallel-write period, no cutover window and no rollback drill:
+create the schema, rewrite the data layer against it, drop MongoDB. Keep the old path only until the new
+one passes its tests.
 
 **Do not build ERP features during the migration.** The strongest pull in a project like this is to add
 the expenses module while already rewriting models. Migrating a known-good system is a problem where you
