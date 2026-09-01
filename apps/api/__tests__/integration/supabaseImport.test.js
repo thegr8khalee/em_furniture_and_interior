@@ -1,7 +1,12 @@
 import { jest } from '@jest/globals';
 import User from '../../src/models/user.model.js';
 import Admin from '../../src/models/admin.model.js';
-import { importCollection, USER_METADATA, ADMIN_METADATA } from '../../src/scripts/importUsersToSupabase.js';
+import {
+  importCollection,
+  USER_METADATA,
+  ADMIN_METADATA,
+  databaseNameFrom,
+} from '../../src/scripts/importUsersToSupabase.js';
 import { connectTestDb, closeTestDb, clearCollections } from '../helpers/testApp.js';
 
 /**
@@ -185,5 +190,28 @@ describe('local linkage constraints', () => {
     await expect(
       User.create({ username: 'B', email: 'b@example.com', passwordHash: 'y', supabaseUserId: 'sb-dup' })
     ).rejects.toThrow();
+  });
+});
+
+/**
+ * Atlas hands out connection strings with no database name. Connecting with one
+ * lands in the driver default ("test"), where these collections do not exist —
+ * so the import would find nothing and report success. Failing loudly instead
+ * is the whole point of this guard.
+ */
+describe('databaseNameFrom', () => {
+  test('returns null when the URI carries no database name', () => {
+    expect(databaseNameFrom('mongodb+srv://u:p@c.mongodb.net/?appName=x')).toBeNull();
+    expect(databaseNameFrom('mongodb+srv://u:p@c.mongodb.net/')).toBeNull();
+    expect(databaseNameFrom('mongodb+srv://u:p@c.mongodb.net')).toBeNull();
+  });
+
+  test('extracts the database name when present', () => {
+    expect(databaseNameFrom('mongodb+srv://u:p@c.mongodb.net/em_furniture?appName=x')).toBe('em_furniture');
+    expect(databaseNameFrom('mongodb://localhost:27017/em_furniture')).toBe('em_furniture');
+  });
+
+  test('is not confused by an @ inside the password', () => {
+    expect(databaseNameFrom('mongodb+srv://user:pa@ss@c.mongodb.net/db1')).toBe('db1');
   });
 });

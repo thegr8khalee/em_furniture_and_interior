@@ -9,6 +9,7 @@ Specification and design context lives in [`../context/`](../context/00-master-c
 | [ERD_DATA_MODEL.md](ERD_DATA_MODEL.md) | MongoDB → PostgreSQL mapping, target schema, ledger constraints |
 | [TESTING_STRATEGY.md](TESTING_STRATEGY.md) | Test pyramid, tooling, CI gates |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Vercel + Render + Supabase, release procedure, R3 cutover |
+| [AUTH_MIGRATION_RUNBOOK.md](AUTH_MIGRATION_RUNBOOK.md) | Running the R2 account import, verification and rollback |
 | [BACKUP_RUNBOOK.md](BACKUP_RUNBOOK.md) | Encrypted off-provider backups, verification, restore drills |
 | [DATA_PROTECTION.md](DATA_PROTECTION.md) | NDPR / GDPR obligations, retention, subject rights |
 | [COMMANDS.md](COMMANDS.md) | Command reference, current and target |

@@ -116,6 +116,18 @@ export const ADMIN_METADATA = (d) => ({
   role: d.role,
 });
 
+/**
+ * A connection string with no database name silently connects to the driver
+ * default ("test"), where these collections do not exist — so the import would
+ * find nothing, import nothing, and report success. Atlas hands out URIs in
+ * exactly that shape, so this is worth failing loudly on.
+ */
+export const databaseNameFrom = (uri) => {
+  const afterHost = uri.split('://')[1]?.split('@').pop() ?? '';
+  const path = afterHost.split('/').slice(1).join('/');
+  return path.split('?')[0] || null;
+};
+
 const run = async (dryRun) => {
   const required = ['MONGODB_URI', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
   const missing = required.filter((k) => !process.env[k]);
@@ -124,8 +136,33 @@ const run = async (dryRun) => {
     process.exit(2);
   }
 
+  const dbName = databaseNameFrom(process.env.MONGODB_URI);
+  if (!dbName) {
+    console.error(
+      'MONGODB_URI has no database name, so this would connect to "test" and\n' +
+      'silently import nothing. Add it before the query string, e.g.\n' +
+      '  mongodb+srv://user:pass@cluster.mongodb.net/em_furniture?appName=website-db'
+    );
+    process.exit(2);
+  }
+
   await mongoose.connect(process.env.MONGODB_URI);
-  console.log(`${dryRun ? 'DRY RUN — ' : ''}importing into ${config().url}\n`);
+  console.log(`${dryRun ? 'DRY RUN — ' : ''}database "${dbName}" -> ${config().url}\n`);
+
+  // Print what is there before touching anything, so "0 imported" is obviously
+  // an empty database rather than a successful no-op.
+  const [userTotal, adminTotal, userLinked, adminLinked] = await Promise.all([
+    User.countDocuments(),
+    Admin.countDocuments(),
+    User.countDocuments({ supabaseUserId: { $nin: [null, undefined] } }),
+    Admin.countDocuments({ supabaseUserId: { $nin: [null, undefined] } }),
+  ]);
+  console.log(`found  users: ${userTotal} (${userLinked} already linked)`);
+  console.log(`found  admins: ${adminTotal} (${adminLinked} already linked)\n`);
+
+  if (userTotal === 0 && adminTotal === 0) {
+    console.warn('No accounts found. Check the database name in MONGODB_URI.\n');
+  }
 
   const users = await importCollection('user', User, USER_METADATA, { dryRun });
   console.log('users  ', users);
