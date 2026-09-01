@@ -290,3 +290,280 @@ describe('ledger', () => {
     ).toBe(true);
   });
 });
+
+describe('orders', () => {
+  const seedAddress = async () => {
+    const { rows } = await client.query(
+      `INSERT INTO core.addresses (full_name,phone,email,line1,city,state)
+       VALUES ('A','1','a@x.com','L','C','S') RETURNING id`
+    );
+    return rows[0].id;
+  };
+
+  const insertOrder = (addr, cols) =>
+    client.query(
+      `INSERT INTO sales.orders
+         (order_number, supabase_user_id, shipping_address_id,
+          subtotal_minor, discount_minor, shipping_minor, tax_minor, total_minor, idempotency_key)
+       VALUES ($1, gen_random_uuid(), $2, $3, $4, $5, $6, $7, $8)`,
+      [cols.number, addr, cols.subtotal, cols.discount ?? 0, cols.shipping ?? 0, cols.tax ?? 0, cols.total, cols.key ?? null]
+    );
+
+  // Finding F-05: money was taken from the request body. The total now has to
+  // be the sum of its parts, so a controller that computes it wrongly fails to
+  // insert rather than producing a wrong invoice.
+  t('rejects a total that is not the sum of its parts', async () => {
+    const addr = await seedAddress();
+    await expect(
+      insertOrder(addr, { number: 'ORD-A1', subtotal: 100000, tax: 7500, total: 999999 })
+    ).rejects.toThrow();
+  });
+
+  t('accepts an arithmetically consistent total', async () => {
+    const addr = await seedAddress();
+    await insertOrder(addr, { number: 'ORD-A2', subtotal: 100000, tax: 7500, total: 107500 });
+    expect(true).toBe(true);
+  });
+
+  t('rejects a discount larger than the subtotal', async () => {
+    const addr = await seedAddress();
+    await expect(
+      insertOrder(addr, { number: 'ORD-A3', subtotal: 1000, discount: 5000, total: -4000 })
+    ).rejects.toThrow();
+  });
+
+  // Finding F-06: a double-clicked checkout must not create two orders.
+  t('rejects a second order reusing an idempotency key', async () => {
+    const addr = await seedAddress();
+    await insertOrder(addr, { number: 'ORD-A4', subtotal: 1000, total: 1000, key: 'checkout-x' });
+    await expect(
+      insertOrder(addr, { number: 'ORD-A5', subtotal: 1000, total: 1000, key: 'checkout-x' })
+    ).rejects.toThrow();
+  });
+});
+
+describe('inventory', () => {
+  let itemId;
+  let locationId;
+
+  const setup = async () => {
+    const { rows: i } = await client.query(
+      "INSERT INTO catalog.sellable_items (kind) VALUES ('product') RETURNING id"
+    );
+    itemId = i[0].id;
+    const { rows: l } = await client.query(
+      `INSERT INTO inv.locations (name, kind) VALUES ('WH-' || gen_random_uuid()::text, 'warehouse') RETURNING id`
+    );
+    locationId = l[0].id;
+  };
+
+  // Finding F-02: stock was a mutable number nothing decremented. A mutable
+  // counter cannot be audited or explained; an append-only log can.
+  t('rejects editing or deleting a stock movement', async () => {
+    await setup();
+    await client.query(
+      `INSERT INTO inv.stock_movements (sellable_item_id, location_id, kind, quantity)
+       VALUES ($1,$2,'goods_receipt',10)`,
+      [itemId, locationId]
+    );
+    expect(await rejects('UPDATE inv.stock_movements SET quantity = 999')).toBe(true);
+    expect(await rejects('DELETE FROM inv.stock_movements')).toBe(true);
+  });
+
+  t('rejects a zero-quantity movement', async () => {
+    await setup();
+    expect(
+      await rejects(
+        `INSERT INTO inv.stock_movements (sellable_item_id, location_id, kind, quantity)
+         VALUES ($1,$2,'count_adjustment',0)`,
+        [itemId, locationId]
+      )
+    ).toBe(true);
+  });
+
+  t('derives available stock as on_hand minus live reservations', async () => {
+    await setup();
+    await client.query(
+      `INSERT INTO inv.stock_movements (sellable_item_id, location_id, kind, quantity)
+       VALUES ($1,$2,'goods_receipt',10), ($1,$2,'sale_dispatch',-3)`,
+      [itemId, locationId]
+    );
+    await client.query(
+      `INSERT INTO inv.reservations (sellable_item_id, location_id, quantity) VALUES ($1,$2,2)`,
+      [itemId, locationId]
+    );
+
+    const { rows } = await client.query(
+      'SELECT on_hand, reserved, available FROM inv.stock_available WHERE sellable_item_id = $1',
+      [itemId]
+    );
+    expect(rows[0]).toMatchObject({ on_hand: '7', reserved: '2', available: '5' });
+  });
+
+  t('rejects a stock take approved by whoever counted it', async () => {
+    await setup();
+    const { rows } = await client.query(
+      `INSERT INTO core.staff (supabase_user_id, email, username, role)
+       VALUES (gen_random_uuid(), 'counter-' || gen_random_uuid()::text || '@x.com', 'c', 'warehouse_officer')
+       RETURNING id`
+    );
+    expect(
+      await rejects(
+        'INSERT INTO inv.stock_takes (location_id, counted_by, approved_by) VALUES ($1,$2,$2)',
+        [locationId, rows[0].id]
+      )
+    ).toBe(true);
+  });
+});
+
+describe('documents', () => {
+  // Finding F-07: quotations and invoices were rendered and discarded.
+  t('numbers gaplessly, returning the number on rollback', async () => {
+    const take = async () => {
+      const { rows } = await client.query("SELECT fin.next_document_number('invoice', 2099) AS n");
+      return rows[0].n;
+    };
+
+    expect(await take()).toBe('INV-2099-0001');
+    expect(await take()).toBe('INV-2099-0002');
+
+    // A sequence would burn 0003 here. The counter row returns it.
+    await client.query('BEGIN');
+    await take();
+    await client.query('ROLLBACK');
+
+    expect(await take()).toBe('INV-2099-0003');
+  });
+
+  t('rejects an unknown document type', async () => {
+    expect(await rejects("SELECT fin.next_document_number('sticker', 2099)")).toBe(true);
+  });
+
+  t('rejects repricing or un-issuing a sent document', async () => {
+    await client.query(
+      `INSERT INTO fin.documents (doc_type, number, status, client_name, total_minor)
+       VALUES ('invoice','INV-TEST-1','sent','Ada',50000)`
+    );
+    expect(
+      await rejects("UPDATE fin.documents SET total_minor = 1 WHERE number = 'INV-TEST-1'")
+    ).toBe(true);
+    expect(
+      await rejects("UPDATE fin.documents SET status = 'draft' WHERE number = 'INV-TEST-1'")
+    ).toBe(true);
+  });
+
+  t('requires a credit note to name the invoice it reverses', async () => {
+    expect(
+      await rejects(
+        `INSERT INTO fin.documents (doc_type, number, client_name, total_minor)
+         VALUES ('credit_note','CN-TEST-1','Ada',100)`
+      )
+    ).toBe(true);
+  });
+});
+
+describe('segregation of duties', () => {
+  const staff = async (role) => {
+    const { rows } = await client.query(
+      `INSERT INTO core.staff (supabase_user_id, email, username, role)
+       VALUES (gen_random_uuid(), gen_random_uuid()::text || '@x.com', 'u', $1) RETURNING id`,
+      [role]
+    );
+    return rows[0].id;
+  };
+
+  // The first control an auditor asks about, enforced by the database rather
+  // than trusted to a service. It holds for every role, super_admin included.
+  t('rejects an expense approved by the person who raised it', async () => {
+    const person = await staff('accountant');
+    expect(
+      await rejects(
+        `INSERT INTO fin.expenses (reference, description, amount_minor, spent_on, status, raised_by, approved_by)
+         VALUES ('EXP-SELF-' || gen_random_uuid()::text, 'x', 1000, current_date, 'approved', $1, $1)`,
+        [person]
+      )
+    ).toBe(true);
+  });
+
+  t('accepts an expense approved by someone else', async () => {
+    const raiser = await staff('sales_officer');
+    const approver = await staff('accountant');
+    await client.query(
+      `INSERT INTO fin.expenses (reference, description, amount_minor, spent_on, status, raised_by, approved_by)
+       VALUES ('EXP-OK-' || gen_random_uuid()::text, 'x', 1000, current_date, 'approved', $1, $2)`,
+      [raiser, approver]
+    );
+    expect(true).toBe(true);
+  });
+
+  t('rejects an approved expense with no approver recorded', async () => {
+    expect(
+      await rejects(
+        `INSERT INTO fin.expenses (reference, description, amount_minor, spent_on, status)
+         VALUES ('EXP-NONE-' || gen_random_uuid()::text, 'x', 1000, current_date, 'approved')`
+      )
+    ).toBe(true);
+  });
+
+  t('rejects a variation order approved by its requester', async () => {
+    const person = await staff('sales_officer');
+    const { rows } = await client.query(
+      `INSERT INTO crm.projects (reference, title) VALUES ('PRJ-' || gen_random_uuid()::text, 'T') RETURNING id`
+    );
+    expect(
+      await rejects(
+        `INSERT INTO crm.variation_orders (project_id, description, amount_minor, requested_by, approved_by)
+         VALUES ($1, 'more work', 5000, $2, $2)`,
+        [rows[0].id, person]
+      )
+    ).toBe(true);
+  });
+});
+
+describe('activity log retention', () => {
+  // PostgreSQL has no TTL index. Retention is a partition drop, which is far
+  // cheaper than a mass DELETE and does not bloat the table.
+  t('drops only partitions entirely older than the cutoff', async () => {
+    await client.query("SELECT core.ensure_activity_partition('2020-01-15')");
+    await client.query('SELECT core.ensure_activity_partition(now()::date)');
+
+    const partitions = async () => {
+      const { rows } = await client.query(`
+        SELECT count(*)::int AS n
+          FROM pg_class c
+          JOIN pg_namespace n ON n.oid = c.relnamespace
+          JOIN pg_inherits i ON i.inhrelid = c.oid
+         WHERE n.nspname = 'core' AND c.relkind = 'r'
+           AND i.inhparent = 'core.activity_logs'::regclass
+      `);
+      return rows[0].n;
+    };
+
+    const before = await partitions();
+    const { rows } = await client.query('SELECT core.drop_activity_partitions_older_than(90) AS dropped');
+    expect(rows[0].dropped).toBeGreaterThanOrEqual(1);
+    expect(await partitions()).toBeLessThan(before);
+
+    // The current month must survive.
+    const { rows: current } = await client.query(`
+      SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'core' AND c.relkind = 'r'
+         AND c.relname = 'activity_logs_' || to_char(now(), 'YYYY_MM')
+    `);
+    expect(current[0].n).toBe(1);
+  });
+
+  // The first version of this function matched on relname LIKE 'activity_logs_%',
+  // which also matches every index on every partition — it would have tried to
+  // DROP TABLE an index.
+  t('ignores the indexes on its partitions', async () => {
+    await client.query('SELECT core.ensure_activity_partition(now()::date)');
+    const { rows } = await client.query(`
+      SELECT count(*)::int AS n
+        FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'core' AND c.relname LIKE 'activity_logs_%' AND c.relkind = 'i'
+    `);
+    expect(rows[0].n).toBeGreaterThan(0);            // indexes do match the name pattern
+    await client.query('SELECT core.drop_activity_partitions_older_than(90)');  // must not throw
+  });
+});

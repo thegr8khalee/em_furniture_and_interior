@@ -12,7 +12,7 @@
 | R0 | Payment webhooks — current stack ✅ **done** | 1 wk | 1 |
 | R1 | Monorepo split ✅ **done** | 2–3 wks | 4 |
 | R2 | Supabase Auth — still on MongoDB · *code complete, import pending* | 2–3 wks | 7 |
-| R3 | PostgreSQL + Sequelize — *greenfield, no data to migrate* | 4–5 wks | 13 |
+| R3 | PostgreSQL + Sequelize — *schema complete, models pending* | 4–5 wks | 13 |
 | R4 | Harden and document | 2–3 wks | 18 |
 | E1 | Financial spine | 5–6 wks | 24 |
 | E2 | Expenses and payables | 3–4 wks | 28 |
@@ -187,6 +187,43 @@ but the client guest path still uses the `anonymousId` cookie, because guest car
 **Constraint discovered:** this environment's proxy allows HTTPS only, so raw TCP to Postgres (5432 /
 6543) is blocked. R2 is unaffected — it is entirely HTTPS admin API — but **R3 migrations cannot be run
 from here**; they will need to run from a developer machine or CI.
+
+## 4e. R3 progress
+
+**Schema complete: 57 tables across seven domain schemas**, developed and tested against a real
+PostgreSQL 16 rather than a mock. The environment turned out to have `psql` installed and Postgres one
+`apt-get` away, so the "no local Postgres" constraint recorded earlier was wrong — CI now runs a
+`postgres:16` service and a migration-idempotency gate.
+
+| Schema | Tables | Carries |
+|---|---|---|
+| `core` | 9 | Profiles, staff, addresses, counters, audit and activity logs, notification outbox |
+| `catalog` | 7 | Sellable-item supertype, products, collections, images, SEO |
+| `sales` | 12 | Carts, orders, lines, coupons, payments, webhook events, reviews, loyalty |
+| `crm` | 7 | Designers, consultations, projects, phase history, variation orders, time |
+| `inv` | 5 | Locations, stock movements, reservations, stock takes |
+| `fin` | 10 | Accounts, periods, journal, documents, expenses, suppliers, bills |
+| `cms` | 7 | Blog, FAQs, portfolio, media, banners, flash sales |
+
+**Every invariant is enforced by the database, with a test asserting the bad case is rejected.** That is
+the point of moving to Postgres: under concurrency "the service always writes balanced entries" is a
+hope, a deferred constraint trigger is a guarantee.
+
+- Ledger: unbalanced entries, lines that are both debit and credit, edits or deletes of posted history,
+  postings into a closed period, overlapping periods
+- Orders: a total that is not `subtotal − discount + shipping + tax` (F-05), a discount exceeding the
+  subtotal, a reused idempotency key (F-06)
+- Inventory: edits or deletes of stock movements, zero-quantity movements; stock is *derived* from an
+  append-only log rather than stored (F-02)
+- Documents: repricing or un-issuing a sent document, a credit note naming no invoice (F-07); numbering
+  is gapless and **verified to return its number on rollback**, which a sequence would not
+- Segregation of duties: expenses, variation orders and stock takes cannot be approved by whoever
+  raised them — enforced in the schema, so it holds for `super_admin` too
+- Catalog: a product hanging off a sellable item declared as a collection, duplicate SKUs, negative
+  prices, discounts above list price (F-12)
+
+**Remaining in R3:** Sequelize models over this schema, then rewriting the data-access layer
+controller by controller. That was always the bulk of the work.
 
 ## 5. Standing risks
 
