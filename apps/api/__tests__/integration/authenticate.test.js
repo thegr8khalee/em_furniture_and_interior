@@ -179,3 +179,96 @@ describe('guards', () => {
     expect((await withToken(request(app).get('/console/finance'), token)).status).toBe(200);
   });
 });
+
+/**
+ * GET /api/auth/session is what both clients now call to learn who they are.
+ * It must answer for either scheme and must never 401, or every anonymous page
+ * load logs a failure.
+ */
+describe('GET /auth/session', () => {
+  let sessionApp;
+
+  beforeAll(async () => {
+    const { buildTestApp } = await import('../helpers/testApp.js');
+    sessionApp = buildTestApp();
+  });
+
+  test('answers 200 with authenticated:false when signed out', async () => {
+    const res = await request(sessionApp).get('/api/auth/session');
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ authenticated: false, kind: 'anonymous' });
+  });
+
+  test('returns a customer and marks the scheme', async () => {
+    await makeUser();
+    const res = await withToken(request(sessionApp).get('/api/auth/session'), await tokenFor(SUB_USER));
+    expect(res.body).toMatchObject({ authenticated: true, kind: 'customer', scheme: 'supabase' });
+    expect(res.body.user.email).toBe('ada@example.com');
+  });
+
+  test('returns staff with their permissions', async () => {
+    await makeAdmin('admin');
+    const res = await withToken(request(sessionApp).get('/api/auth/session'), await tokenFor(SUB_STAFF));
+    expect(res.body).toMatchObject({ authenticated: true, kind: 'staff' });
+    expect(res.body.user.permissions).toContain(PERMISSIONS.FINANCE_VIEW);
+    // The clients key admin UI off role === 'admin'; that contract is preserved.
+    expect(res.body.user.role).toBe('admin');
+  });
+
+  test('reports a valid identity with no local record as unlinked', async () => {
+    const token = await tokenFor('99999999-0000-0000-0000-000000000009', { email: 'ghost@example.com' });
+    const res = await withToken(request(sessionApp).get('/api/auth/session'), token);
+    expect(res.body).toMatchObject({ authenticated: true, kind: 'unlinked' });
+  });
+
+  test('still answers 200 for a bad token, reporting why', async () => {
+    const res = await withToken(request(sessionApp).get('/api/auth/session'), 'rubbish');
+    expect(res.status).toBe(200);
+    expect(res.body.authenticated).toBe(false);
+    expect(res.body.reason).toBeTruthy();
+  });
+});
+
+describe('POST /auth/link', () => {
+  let sessionApp;
+
+  beforeAll(async () => {
+    const { buildTestApp } = await import('../helpers/testApp.js');
+    sessionApp = buildTestApp();
+  });
+
+  test('links an unimported account by the email on the verified token', async () => {
+    const user = await User.create({ username: 'Ada', email: 'ada@example.com', passwordHash: 'x' });
+    const token = await tokenFor(SUB_USER, { email: 'ada@example.com' });
+
+    const res = await withToken(request(sessionApp).post('/api/auth/link'), token);
+
+    expect(res.status).toBe(200);
+    expect((await User.findById(user._id)).supabaseUserId).toBe(SUB_USER);
+  });
+
+  // Matching on a body-supplied email would let anyone claim another account.
+  test('ignores an email in the request body', async () => {
+    await User.create({ username: 'Victim', email: 'victim@example.com', passwordHash: 'x' });
+    const token = await tokenFor(SUB_USER, { email: 'attacker@example.com' });
+
+    const res = await withToken(request(sessionApp).post('/api/auth/link'), token)
+      .send({ email: 'victim@example.com' });
+
+    expect(res.status).toBe(404);
+    expect((await User.findOne({ email: 'victim@example.com' })).supabaseUserId).toBeUndefined();
+  });
+
+  test('refuses to relink an account already bound to another identity', async () => {
+    await User.create({ username: 'Ada', email: 'ada@example.com', passwordHash: 'x', supabaseUserId: 'sb-other' });
+    const token = await tokenFor(SUB_USER, { email: 'ada@example.com' });
+
+    const res = await withToken(request(sessionApp).post('/api/auth/link'), token);
+
+    expect(res.status).toBe(409);
+  });
+
+  test('requires a session', async () => {
+    expect((await request(sessionApp).post('/api/auth/link')).status).toBe(401);
+  });
+});

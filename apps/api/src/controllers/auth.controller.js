@@ -539,3 +539,109 @@ export const changePassword = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
+/**
+ * GET /api/auth/session — who is calling?
+ *
+ * Accepts either scheme: a Supabase bearer token resolved by `identify`, or the
+ * legacy `jwt` cookie. Both run side by side during R2, so the clients need one
+ * endpoint that answers correctly regardless of which one authenticated the
+ * request.
+ *
+ * Always 200. "Signed out" is an answer, not an error, and returning 401 here
+ * would make every anonymous page load log a failure.
+ */
+export const getSession = async (req, res) => {
+  try {
+    if (req.admin) {
+      return res.json({
+        authenticated: true,
+        kind: 'staff',
+        scheme: req.actor ? 'supabase' : 'legacy-cookie',
+        user: {
+          _id: req.admin._id,
+          username: req.admin.username,
+          email: req.admin.email,
+          role: 'admin',
+          staffRole: req.admin.role,
+          permissions: req.adminPermissions || [],
+        },
+      });
+    }
+
+    if (req.user) {
+      return res.json({
+        authenticated: true,
+        kind: 'customer',
+        scheme: req.actor ? 'supabase' : 'legacy-cookie',
+        user: {
+          _id: req.user._id,
+          username: req.user.username,
+          email: req.user.email,
+          phoneNumber: req.user.phoneNumber,
+          loyaltyPoints: req.user.loyaltyPoints,
+        },
+      });
+    }
+
+    // A valid Supabase identity with no local record yet — signed up but not
+    // linked, or not covered by the import. The client can complete linkage.
+    if (req.actor?.kind === 'unlinked') {
+      return res.json({
+        authenticated: true,
+        kind: 'unlinked',
+        scheme: 'supabase',
+        supabaseUserId: req.actor.supabaseUserId,
+        email: req.actor.email,
+      });
+    }
+
+    return res.json({
+      authenticated: false,
+      kind: req.actor?.kind === 'guest' ? 'guest' : 'anonymous',
+      reason: req.authError || null,
+    });
+  } catch (error) {
+    console.error('Error resolving session:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * POST /api/auth/link — attach a Supabase identity to the local record.
+ *
+ * Used after a Supabase-first signup, and to adopt an account the bulk import
+ * has not reached. Matching is by the email on the verified token, never by an
+ * email in the request body — otherwise anyone could claim another account.
+ */
+export const linkSupabaseIdentity = async (req, res) => {
+  try {
+    if (!req.actor?.supabaseUserId) {
+      return res.status(401).json({ message: 'A Supabase session is required.' });
+    }
+    if (req.user || req.admin) {
+      return res.json({ linked: true, alreadyLinked: true });
+    }
+
+    const email = req.actor.email;
+    if (!email) {
+      return res.status(400).json({ message: 'Token carries no email to match on.' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(404).json({ message: 'No local account for this identity.' });
+    }
+    if (user.supabaseUserId && user.supabaseUserId !== req.actor.supabaseUserId) {
+      return res.status(409).json({ message: 'Account is already linked to a different identity.' });
+    }
+
+    user.supabaseUserId = req.actor.supabaseUserId;
+    await user.save();
+
+    return res.json({ linked: true, userId: user._id });
+  } catch (error) {
+    console.error('Error linking identity:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};

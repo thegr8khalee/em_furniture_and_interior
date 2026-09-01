@@ -1,9 +1,17 @@
 import { create } from 'zustand';
-import { axiosInstance } from '@em/api-client';
+import { axiosInstance, getSupabase, isSupabaseConfigured } from '@em/api-client';
 import toast from 'react-hot-toast';
 import { useAuthStore } from './useAuthStore.js';
 import { useProductsStore } from './useProductsStore.js';
 import { useCollectionStore } from './useCollectionStore.js';
+
+/** Same two-scheme sign-in as useAuthStore; see the note there. */
+const supabaseSignIn = async ({ email, password }) => {
+  if (!isSupabaseConfigured()) return { ok: false, reason: 'unconfigured' };
+  const { data, error } = await getSupabase().auth.signInWithPassword({ email, password });
+  if (error) return { ok: false, reason: error.message };
+  return { ok: true, session: data.session };
+};
 
 export const useAdminStore = create((set) => ({
   authUser: null,
@@ -32,19 +40,28 @@ export const useAdminStore = create((set) => ({
   adminLogin: async (data) => {
     set({ isLoading: true });
     try {
-      console.log('Sending login request with data:', data); // Add this
-      const res = await axiosInstance.post('/admin/login', data);
-      console.log('Login response:', res);
-      useAuthStore.setState({
-        authUser: res.data,
-        isAdmin: res.data?.role === 'admin',
-        permissions: res.data?.permissions || [],
-      });
+      // Staff and customers share one Supabase user pool; the server decides
+      // which a caller is, from the database. The legacy admin endpoint stays
+      // as a fallback for staff the bulk import has not reached yet.
+      const supabase = await supabaseSignIn(data);
+      if (!supabase.ok) {
+        await axiosInstance.post('/admin/login', data);
+      }
+
+      await useAuthStore.getState().checkAuth();
+      const { authUser, isAdmin } = useAuthStore.getState();
+      if (!authUser || !isAdmin) {
+        throw new Error('That account does not have console access.');
+      }
+
       toast.success('Logged in successfully');
+      return true;
     } catch (error) {
-      console.error('Login error:', error); // Add this
-      console.error('Error response:', error.response); // Add this
-      toast.error(error.message);
+      // Deliberately not logging `data`: it contains the password, and the
+      // previous implementation printed it to the browser console on every
+      // sign-in attempt.
+      toast.error(error.response?.data?.message || error.message || 'Login failed');
+      return false;
     } finally {
       set({ isLoading: false });
     }
@@ -52,11 +69,15 @@ export const useAdminStore = create((set) => ({
 
   AdminLogout: async () => {
     try {
-      await axiosInstance.post('/admin/logout');
-      useAuthStore.setState({ authUser: null, permissions: [], isAdmin: false });
+      // Both schemes must be cleared, or the session survives in whichever one
+      // was missed and the next page load looks signed in.
+      if (isSupabaseConfigured()) {
+        await getSupabase().auth.signOut().catch(() => {});
+      }
+      await axiosInstance.post('/admin/logout').catch(() => {});
       toast.success('Logged out successfully');
-    } catch (error) {
-      toast.error(error.message);
+    } finally {
+      useAuthStore.setState({ authUser: null, permissions: [], isAdmin: false });
     }
   },
 

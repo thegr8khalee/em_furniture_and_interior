@@ -86,6 +86,8 @@ export const ROUTES = [
   // from the stores, not guessed — several differ from the obvious guess
   // (products/count returns totalProducts, /blog returns items, a product
   // detail returns the document itself rather than a wrapper).
+  // /auth/session always answers 200; "signed out" is an answer, not an error.
+  [/\/api\/auth\/session/, { body: { authenticated: false, kind: 'anonymous' } }],
   [/\/api\/auth\/check/, { status: 401, body: { message: 'Unauthorized' } }],
 
   [/\/api\/products\/count/, { body: { totalProducts: PRODUCTS.length } }],

@@ -42,6 +42,28 @@ export async function stubApi(page) {
   });
 }
 
+/**
+ * Stub Supabase so the clients' auth bootstrap is deterministic.
+ *
+ * The stores now call supabase-js on mount, and those requests go to
+ * <project>.supabase.co — not to /api — so the API stub does not catch them.
+ * Left unstubbed they would reach the real project over the network, making
+ * the baselines depend on it. Everything here answers "signed out".
+ */
+export async function stubSupabase(page) {
+  await page.route(/https:\/\/[a-z0-9-]+\.supabase\.co\/.*/, async (route) => {
+    const url = route.request().url();
+    if (url.includes('/auth/v1/token') || url.includes('/auth/v1/user')) {
+      return route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'invalid_grant', error_description: 'Signed out fixture' }),
+      });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
+  });
+}
+
 export async function blockExternal(page) {
   // Remote images (Cloudinary, placeholders) -> a fixed pixel, so layout is
   // driven by CSS rather than by whatever the CDN returns today.
@@ -169,6 +191,7 @@ async function waitForImages(page) {
  */
 export async function visit(page, path) {
   await stubApi(page);
+  await stubSupabase(page);
   await blockExternal(page);
   await page.clock.install({ time: FIXED_TIME });
 

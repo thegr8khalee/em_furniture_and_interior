@@ -1,6 +1,26 @@
 import { create } from 'zustand';
-import { axiosInstance } from '@em/api-client';
+import { axiosInstance, getSupabase, isSupabaseConfigured } from '@em/api-client';
 import toast from 'react-hot-toast';
+
+/**
+ * Authentication runs on two schemes at once during R2.
+ *
+ * Supabase is primary: sign-in issues a bearer token that the axios
+ * interceptor attaches to every request. The legacy cookie endpoints remain as
+ * a fallback, because an account that the bulk import has not reached yet will
+ * fail Supabase sign-in with credentials that are perfectly valid locally.
+ * Falling back means the migration does not have to be a big-bang cutover.
+ *
+ * Identity and permissions always come from GET /auth/session — the server
+ * decides who someone is, never a claim in the token.
+ */
+const supabaseSignIn = async ({ email, password }) => {
+  if (!isSupabaseConfigured()) return { ok: false, reason: 'unconfigured' };
+  const supabase = getSupabase();
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { ok: false, reason: error.message };
+  return { ok: true, session: data.session };
+};
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -16,16 +36,23 @@ export const useAuthStore = create((set, get) => ({
   checkAuth: async () => {
     set({ isCheckingAuth: true });
     try {
-      const res = await axiosInstance.get('/auth/check');
+      // Answers for either scheme and never 401s, so a signed-out visitor does
+      // not log an error on every page load.
+      const res = await axiosInstance.get('/auth/session');
+      const { authenticated, kind, user } = res.data;
 
-      set({
-        authUser: res.data,
-        isAdmin: res.data.role === 'admin',
-        permissions: res.data.permissions || [],
-      });
+      if (authenticated && user) {
+        set({
+          authUser: user,
+          isAdmin: kind === 'staff',
+          permissions: user.permissions || [],
+        });
+      } else {
+        set({ authUser: null, isAdmin: false, permissions: [] });
+      }
     } catch (error) {
       console.log('Error in checkAuth:', error);
-      set({ authUser: null });
+      set({ authUser: null, isAdmin: false, permissions: [] });
     } finally {
       set({ isCheckingAuth: false, isAuthReady: true });
     }
@@ -34,8 +61,11 @@ export const useAuthStore = create((set, get) => ({
   signup: async (data) => {
     set({ isLoading: true });
     try {
-      const res = await axiosInstance.post('/auth/signup', data);
-      set({ authUser: res.data });
+      await axiosInstance.post('/auth/signup', data);
+      // The account now exists locally. Sign in through Supabase when it is
+      // configured so the new session is a bearer one from the outset.
+      await supabaseSignIn({ email: data.email, password: data.password });
+      await get().checkAuth();
       toast.success('account created');
     } catch (error) {
       toast.error(error.response.data.message);
@@ -47,11 +77,22 @@ export const useAuthStore = create((set, get) => ({
   login: async (data) => {
     set({ isLoading: true });
     try {
-      const res = await axiosInstance.post('/auth/login', data);
-      set({ authUser: res.data });
-      toast.success('Welcome Back!');
+      const supabase = await supabaseSignIn(data);
+
+      if (!supabase.ok) {
+        // Not yet imported, or genuinely wrong credentials — the legacy
+        // endpoint distinguishes the two by succeeding or failing.
+        await axiosInstance.post('/auth/login', data);
+      }
+
+      await get().checkAuth();
+      if (!get().authUser) throw new Error('Signed in but no account was found.');
+
+      toast.success('Logged in successfully');
+      return true;
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || error.message || 'Login failed');
+      return false;
     } finally {
       set({ isLoading: false });
     }
@@ -59,12 +100,17 @@ export const useAuthStore = create((set, get) => ({
 
   logout: async () => {
     try {
-      await axiosInstance.post('/auth/logout');
+      // Both schemes must be cleared. Signing out of one while the other
+      // survives leaves the user apparently logged in on the next page load.
+      if (isSupabaseConfigured()) {
+        await getSupabase().auth.signOut().catch(() => {});
+      }
+      await axiosInstance.post('/auth/logout').catch(() => {});
       set({ authUser: null, permissions: [], isAdmin: false });
       toast.success('Logged out successfully');
-      get().disconnectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      console.log('Error in logout:', error);
+      set({ authUser: null, permissions: [], isAdmin: false });
     }
   },
 

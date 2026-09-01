@@ -3,7 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "vite --port 5174",
     "build": "vite build",
@@ -16,6 +18,7 @@
     "@em/api-client": "*",
     "@em/domain": "*",
     "@em/ui": "*",
+    "@supabase/supabase-js": "^2.112.4",
     "@tailwindcss/vite": "^4.1.11",
     "@tinymce/tinymce-react": "^6.2.1",
     "axios": "^1.10.0",

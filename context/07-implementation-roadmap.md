@@ -11,7 +11,7 @@
 |---|---|---|---|
 | R0 | Payment webhooks — current stack ✅ **done** | 1 wk | 1 |
 | R1 | Monorepo split ✅ **done** | 2–3 wks | 4 |
-| R2 | Supabase Auth — still on MongoDB · *server side done* | 2–3 wks | 7 |
+| R2 | Supabase Auth — still on MongoDB · *code complete, import pending* | 2–3 wks | 7 |
 | R3 | PostgreSQL + Sequelize | 6–8 wks | 15 |
 | R4 | Harden and document | 2–3 wks | 18 |
 | E1 | Financial spine | 5–6 wks | 24 |
@@ -161,9 +161,25 @@ baselined. Tracked for the pass that adds authenticated e2e fixtures.
   than duplicating it, and survives a partial failure — a re-run links only what is left.
 - Guest sessions map onto Supabase anonymous sign-ins, replacing the hand-rolled `anonymousId` cookie.
 
-**Remaining:** switch both frontends to Supabase sign-in, run the import against production data, then
-retire `protectRoute`, `protectAdminRoute` and `JWT_SECRET`. The legacy path is deliberately untouched
-so both schemes can run side by side during the switchover rather than requiring a big-bang cutover.
+**Frontend switchover done.** Both clients sign in through Supabase, and the axios interceptor attaches
+the bearer token to every request. Identity and permissions come from `GET /auth/session`, which answers
+for either scheme and never returns 401 — a signed-out visitor is an answer, not an error.
+
+The legacy cookie path is deliberately intact and used as a fallback: an account the bulk import has not
+reached yet fails Supabase sign-in with credentials that are perfectly valid locally, so falling back is
+what keeps this from being a big-bang cutover. `POST /auth/link` adopts such an account on first
+Supabase sign-in, matching on the email in the *verified token* — never one supplied in the request body,
+which would let anyone claim someone else's account. There is a test for that.
+
+**Remaining before the legacy path can be retired:**
+
+1. Run `npm run auth:import -w apps/api` against production data (dry-run first).
+2. Confirm every account carries a `supabaseUserId`.
+3. Remove `protectRoute`, `protectAdminRoute`, `JWT_SECRET` and the `passwordHash` field.
+
+**Not switched:** guest sessions. The server middleware already resolves Supabase anonymous sign-ins,
+but the client guest path still uses the `anonymousId` cookie, because guest carts are keyed by
+`GuestSession._id` in Mongo. Moving that is entangled with the R3 schema work and belongs there.
 
 **Constraint discovered:** this environment's proxy allows HTTPS only, so raw TCP to Postgres (5432 /
 6543) is blocked. R2 is unaffected — it is entirely HTTPS admin API — but **R3 migrations cannot be run

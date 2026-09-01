@@ -17,6 +17,7 @@
     "@em/api-client": "*",
     "@em/domain": "*",
     "@em/ui": "*",
+    "@supabase/supabase-js": "^2.112.4",
     "@tailwindcss/vite": "^4.1.11",
     "@tinymce/tinymce-react": "^6.2.1",
     "axios": "^1.10.0",
