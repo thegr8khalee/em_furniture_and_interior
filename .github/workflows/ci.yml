@@ -74,6 +74,44 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+  visual:
+    name: Visual regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm ci --prefix frontend
+
+      # Pinned to the repo's Playwright version so the browser build matches the
+      # one the committed baselines were captured with. A different Chromium
+      # renders text slightly differently and every snapshot diffs.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Guards the R1 parity constraint: the split must not change rendering.
+      - name: Visual regression
+        run: npm run test:visual
+
+      - name: Structural checks
+        run: npx playwright test --config e2e/playwright.config.js structure.spec.js
+
+      - name: Upload diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            e2e/test-results
+          retention-days: 7
+
   api-spec:
     name: API spec
     runs-on: ubuntu-latest

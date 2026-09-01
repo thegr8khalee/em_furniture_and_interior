@@ -10,7 +10,7 @@
 | # | Phase | Effort | Cumulative |
 |---|---|---|---|
 | R0 | Payment webhooks — current stack ✅ **done** | 1 wk | 1 |
-| R1 | Monorepo split — *CI landed ahead of this, see below* | 2–3 wks | 4 |
+| R1 | Monorepo split — *baselines captured, split pending* | 2–3 wks | 4 |
 | R2 | Supabase Auth — still on MongoDB | 2–3 wks | 7 |
 | R3 | PostgreSQL + Sequelize | 6–8 wks | 15 |
 | R4 | Harden and document | 2–3 wks | 18 |
@@ -123,8 +123,11 @@ The lint gate is a ratchet rather than a zero-error rule: the frontend carries 6
 gating on zero would have made CI red on arrival. Counts are held per file and may only fall
 (`.github/lint-baseline.json`, `.github/scripts/lint-ratchet.mjs --update`).
 
-Still missing from the R4 target: migration idempotency and OpenAPI drift checks (both need R3), visual
-regression (needs R1), and a coverage floor (needs meaningful coverage first).
+**Visual regression** landed with the R1 preparation: 26 storefront routes × 2 viewports, captured before
+any files move, running in CI. See `e2e/README.md`.
+
+Still missing from the R4 target: migration idempotency and OpenAPI drift checks (both need R3), and a
+coverage floor (needs meaningful coverage first).
 
 ## 5. Standing risks
 

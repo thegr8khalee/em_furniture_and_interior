@@ -178,6 +178,17 @@ is unenforced. The frontend carries **68 ESLint errors** and the backend has no 
 all; CI now holds the frontend count with a per-file ratchet (`.github/lint-baseline.json`) that lets it
 fall but never rise.
 
+### F-14 · Low · The desktop navbar has no landmark element
+
+Found while writing the visual-regression structural checks. The only `<nav>` on a storefront page is the
+mobile bottom bar (`lg:hidden`); the desktop navigation is built from plain `<div>`s
+(`components/Navbar.jsx:247`). Screen-reader users get no navigation landmark at desktop widths, and
+`page.locator('nav')` finds nothing visible — which is how it surfaced.
+
+Cheap to fix (one element rename) but it is a markup change, so it is excluded from R1–R4 by the
+UI-parity constraint. Schedule it as its own commit after the replatform, where it can be reviewed on its
+own.
+
 ---
 
 ## 3. Module gap matrix
