@@ -51,10 +51,12 @@ Per `backend/.env.example`: `NODE_ENV`, `PORT`, `FRONTEND_URL`, `MONGODB_URI`, `
 
 `JWT_SECRET` and `MONGODB_URI` are retired at the end of R3.
 
-### `apps/storefront` and `apps/erp` `[TARGET]`
+### `apps/storefront` and `apps/erp` `[NOW]`
 
-`VITE_API_BASE_URL` · `VITE_SUPABASE_URL` · `VITE_SUPABASE_ANON_KEY` · `VITE_CLOUDINARY_CLOUD_NAME` ·
-`VITE_SENTRY_DSN`.
+Placeholders live in each app's `.env.example`; copy to `.env.local`.
+
+`VITE_API_BASE_URL` · `VITE_SUPABASE_URL` · `VITE_SUPABASE_ANON_KEY` ·
+`VITE_CLOUDINARY_CLOUD_NAME` · `VITE_SENTRY_DSN`.
 
 **Everything prefixed `VITE_` is public.** It is compiled into the bundle and readable by anyone. The
 service-role key and every gateway secret must never appear with that prefix. Worth stating explicitly
