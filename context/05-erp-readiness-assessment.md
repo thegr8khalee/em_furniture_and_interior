@@ -143,7 +143,7 @@ partial or mismatched settlement marked the order fully paid.
 > `lib/paymentConfirmation.js`, which reconciles amount and currency in integer minor units before
 > confirming. A mismatch leaves the order unpaid and flags it for review rather than auto-confirming.
 
-### F-10 · High · Admins and customers share one cookie
+### F-10 · High · IN PROGRESS · Admins and customers share one cookie
 
 `lib/utils.js:6–22` issues both admin and customer sessions as a cookie named `jwt` on the same domain,
 distinguished only by a `role` claim. Logging into the storefront clobbers an active admin session and
@@ -151,7 +151,16 @@ vice versa. Tokens live 15 days with no refresh, no revocation list, and no way 
 compromised admin. There is no 2FA on admin accounts.
 
 **Credit where due:** `protectAdminRoute.js` re-reads the admin from the database on every request, so
-permission changes take effect immediately. That is the right design.
+permission changes take effect immediately. That is the right design, and it is preserved.
+
+> **Server side closed (R2).** `middleware/authenticate.js` resolves the caller from a Supabase bearer
+> token verified against the project JWKS — no shared cookie name, no shared signing secret, and no
+> collision between a storefront and a console session. Staff and customers share one Supabase user
+> pool; which one a caller is comes from a database lookup, never from a token claim, and there is a
+> test proving a smuggled `role` claim is ignored.
+>
+> **Still open:** the two frontends still sign in through the legacy cookie endpoints. Switching them
+> over, and retiring `protectRoute`/`protectAdminRoute`, is the remaining half of R2.
 
 ### F-11 · Medium · Money is stored as floating point
 

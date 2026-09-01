@@ -11,7 +11,7 @@
 |---|---|---|---|
 | R0 | Payment webhooks — current stack ✅ **done** | 1 wk | 1 |
 | R1 | Monorepo split ✅ **done** | 2–3 wks | 4 |
-| R2 | Supabase Auth — still on MongoDB | 2–3 wks | 7 |
+| R2 | Supabase Auth — still on MongoDB · *server side done* | 2–3 wks | 7 |
 | R3 | PostgreSQL + Sequelize | 6–8 wks | 15 |
 | R4 | Harden and document | 2–3 wks | 18 |
 | E1 | Financial spine | 5–6 wks | 24 |
@@ -145,6 +145,29 @@ changed: the top 800px of the login screen are pixel-identical bar 0.1% in one s
 
 **Deferred:** console routes beyond the login screen need a seeded admin session before they can be
 baselined. Tracked for the pass that adds authenticated e2e fixtures.
+
+## 4d. R2 progress
+
+**Done and verified against the live project** (`uxandoybecppocvrcdrs`):
+
+- Token verification via JWKS. The project signs with **ES256**, so Express holds no signing secret at
+  all — an improvement on the outgoing scheme, where anything able to read `JWT_SECRET` could mint an
+  admin token. Confirmed against real tokens, and confirmed to reject tampered signatures, expired
+  tokens, unknown keys and tokens from another Supabase project.
+- **bcrypt hashes import without a password reset.** This was previously an assumption taken from
+  documentation; it is now a measured fact. A `$2b$10$` hash written by this codebase was imported and
+  authenticated with its original plaintext, for both a customer and a staff account, end to end.
+- Idempotent import script: skips linked accounts, adopts an email already present in Supabase rather
+  than duplicating it, and survives a partial failure — a re-run links only what is left.
+- Guest sessions map onto Supabase anonymous sign-ins, replacing the hand-rolled `anonymousId` cookie.
+
+**Remaining:** switch both frontends to Supabase sign-in, run the import against production data, then
+retire `protectRoute`, `protectAdminRoute` and `JWT_SECRET`. The legacy path is deliberately untouched
+so both schemes can run side by side during the switchover rather than requiring a big-bang cutover.
+
+**Constraint discovered:** this environment's proxy allows HTTPS only, so raw TCP to Postgres (5432 /
+6543) is blocked. R2 is unaffected — it is entirely HTTPS admin API — but **R3 migrations cannot be run
+from here**; they will need to run from a developer machine or CI.
 
 ## 5. Standing risks
 

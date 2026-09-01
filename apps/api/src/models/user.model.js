@@ -16,7 +16,13 @@ const userSchema = new mongoose.Schema(
   {
     username: { type: String, required: true },
     email: { type: String, required: true, unique: true },
+    // Retained through R2 so the legacy cookie path keeps working while both
+    // schemes run side by side, and so the import can be re-run idempotently.
+    // Dropped once every session is a Supabase one.
     passwordHash: { type: String, required: true },
+    // auth.users.id in Supabase. Sparse: users created before the import, and
+    // any created while it is running, simply do not have one yet.
+    supabaseUserId: { type: String, unique: true, sparse: true },
     phoneNumber: { type: String, required: false }, // Added phone number, not required
     cart: [cartItemSchema], // Embedded cart
     wishlist: [

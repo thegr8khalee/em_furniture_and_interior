@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@faker-js/faker": "^9.9.0",
+    "@supabase/supabase-js": "^2.112.4",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.7.0",
     "compression": "^1.8.1",
@@ -11,6 +12,7 @@
     "express-rate-limit": "^7.2.0",
     "googleapis": "^160.0.0",
     "helmet": "^8.1.0",
+    "jose": "^6.2.10",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.17.0",
     "mongoose": "^8.16.1",
@@ -31,7 +33,9 @@
     "start": "node src/index.js",
     "postinstall": "node node_modules/puppeteer/install.mjs",
     "seed": "node src/seed/seed.js",
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest"
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "auth:import": "node src/scripts/importUsersToSupabase.js",
+    "auth:import:dry": "node src/scripts/importUsersToSupabase.js --dry-run"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
