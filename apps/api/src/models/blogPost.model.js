@@ -18,6 +18,8 @@ const blogPostSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+blogPostSchema.index({ isPublished: 1, publishedAt: -1 });
+
 const BlogPost = mongoose.model('BlogPost', blogPostSchema);
 
 export default BlogPost;

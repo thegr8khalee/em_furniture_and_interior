@@ -25,22 +25,22 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       # Puppeteer pulls a ~150 MB Chromium in postinstall for PDF rendering.
       # Nothing in the test suite renders a PDF, so skip the download and keep
       # the job fast. Remove this once there are PDF tests to run.
       - name: Install dependencies
-        working-directory: backend
+        working-directory: apps/api
         env:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
         run: npm ci
 
       - name: Test
-        working-directory: backend
+        working-directory: apps/api
         run: npm test
 
-      # No backend lint step: backend/package.json declares no lint script and
+      # No API lint step: apps/api declares no lint script and
       # the workspace has no ESLint config. Adding both is tracked as part of
       # finding F-13 rather than bolted on here.
 
@@ -54,24 +54,24 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: frontend
+        working-directory: apps/storefront
         run: npm ci
 
-      # The frontend carries 68 pre-existing lint errors. Gating on zero would
+      # The storefront carries 68 pre-existing lint errors. Gating on zero would
       # make CI red on arrival, so the gate is a per-file ratchet: counts may
       # fall, never rise. See .github/lint-baseline.json.
       - name: Lint (ratchet)
-        run: node .github/scripts/lint-ratchet.mjs frontend
+        run: node .github/scripts/lint-ratchet.mjs apps/storefront
 
       - name: Test
-        working-directory: frontend
-        run: npx vitest run
+        working-directory: apps/storefront
+        run: npm test -w apps/storefront
 
       - name: Build
-        working-directory: frontend
+        working-directory: apps/storefront
         run: npm run build
 
   visual:
@@ -86,9 +86,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm ci --prefix frontend
+        run: npm ci
 
       # Pinned to the repo's Playwright version so the browser build matches the
       # one the committed baselines were captured with. A different Chromium

@@ -7,7 +7,6 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.0.0",
-    "em_furniture_and_interior": "file:..",
     "express": "^4.19.2",
     "express-rate-limit": "^7.2.0",
     "googleapis": "^160.0.0",
@@ -23,7 +22,7 @@
     "swagger-ui-express": "^5.0.1",
     "uuid": "^11.1.0"
   },
-  "name": "backend",
+  "name": "@em/api",
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
@@ -45,5 +44,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  }
 }

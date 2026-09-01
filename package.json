@@ -4,17 +4,24 @@
   "description": "EM Furniture and Interior - E-commerce Web Application (MVP)",
   "main": "index.js",
   "scripts": {
-    "dev": "npm run dev --prefix backend & npm run dev --prefix frontend",
-    "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
-    "start": "npm run start --prefix backend",
-    "test:visual": "npm --prefix frontend run build && playwright test --config e2e/playwright.config.js visual.spec.js",
-    "test:visual:update": "npm --prefix frontend run build && playwright test --config e2e/playwright.config.js visual.spec.js --update-snapshots=all",
-    "test:e2e": "npm --prefix frontend run build && playwright test --config e2e/playwright.config.js"
+    "dev": "npm run dev -w apps/api & npm run dev -w apps/storefront",
+    "build": "npm run build -w apps/storefront",
+    "start": "npm run start -w apps/api",
+    "test": "npm test -w apps/api && npm test -w apps/storefront",
+    "lint": "node .github/scripts/lint-ratchet.mjs apps/storefront",
+    "test:visual": "npm run build -w apps/storefront && playwright test --config e2e/playwright.config.js visual.spec.js",
+    "test:visual:update": "npm run build -w apps/storefront && playwright test --config e2e/playwright.config.js visual.spec.js --update-snapshots=all",
+    "test:e2e": "npm run build -w apps/storefront && playwright test --config e2e/playwright.config.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.62.1"
-  }
+  },
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }

@@ -61,7 +61,7 @@ const productSchema = new mongoose.Schema(
     seoSchemaJsonLd: { type: String, trim: true },
     stockQuantity: { type: Number, min: 0, default: 0 },
     lowStockThreshold: { type: Number, min: 0, default: 5 },
-    sku: { type: String, trim: true },
+    sku: { type: String, trim: true, unique: true, sparse: true },
     warehouseLocation: { type: String, trim: true },
   },
   { timestamps: true }
@@ -84,6 +84,15 @@ productSchema.pre('save', function (next) {
   }
   next();
 });
+
+// Finding F-12: this collection had no indexes at all, yet every shop page
+// filters it. `sparse` on the unique SKU index matters — most products have no
+// SKU today, and a plain unique index would reject all but the first of them.
+productSchema.index({ category: 1, style: 1 });
+productSchema.index({ createdAt: -1 });
+productSchema.index({ isBestSeller: 1 });
+productSchema.index({ isPromo: 1 });
+productSchema.index({ name: 'text', description: 'text' });
 
 const Product = mongoose.model('Product', productSchema);
 

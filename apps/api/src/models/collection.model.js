@@ -65,6 +65,9 @@ collectionSchema.pre('save', function (next) {
   next();
 });
 
+collectionSchema.index({ style: 1 });
+collectionSchema.index({ createdAt: -1 });
+
 const Collection = mongoose.model('Collection', collectionSchema);
 
 export default Collection;

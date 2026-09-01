@@ -14,6 +14,8 @@ const designerSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+designerSchema.index({ isActive: 1 });
+
 const Designer = mongoose.model('Designer', designerSchema);
 
 export default Designer;

@@ -27,8 +27,8 @@ const readJson = (relative) => {
   }
 };
 
-const spec = readJson('backend/docs/swagger.json');
-const postman = readJson('backend/docs/EM_Furniture_API.postman_collection.json');
+const spec = readJson('apps/api/docs/swagger.json');
+const postman = readJson('apps/api/docs/EM_Furniture_API.postman_collection.json');
 
 if (spec) {
   const paths = Object.keys(spec.paths ?? {});
@@ -40,7 +40,7 @@ if (spec) {
 
   // Every payments route must be documented.
   const routesSrc = readFileSync(
-    path.join(root, 'backend/src/routes/payments.routes.js'),
+    path.join(root, 'apps/api/src/routes/payments.routes.js'),
     'utf8'
   );
   const declared = [...routesSrc.matchAll(/router\.(get|post|put|patch|delete)\(\s*'([^']+)'/g)]

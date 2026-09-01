@@ -1,6 +1,6 @@
 {
   "_comment": "Maximum ESLint errors allowed per file. Counts may only fall. After fixing errors run: node .github/scripts/lint-ratchet.mjs <workspace> --update, and commit the result. See finding F-13 in context/05-erp-readiness-assessment.md.",
-  "frontend": {
+  "apps/storefront": {
     "files": {
       "src/__tests__/api.test.js": 2,
       "src/__tests__/setup.js": 2,
