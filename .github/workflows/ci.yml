@@ -16,8 +16,32 @@ env:
 
 jobs:
   backend:
-    name: Backend
+    name: API
     runs-on: ubuntu-latest
+
+    # A real PostgreSQL, not SQLite. The constraints this schema depends on for
+    # correctness — deferred constraint triggers, exclusion constraints, domain
+    # types — either do not exist or behave differently in SQLite, and a ledger
+    # that balances under one engine and not the other is the worst outcome
+    # available. See context/01-system-overview.md section 7.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: em
+          POSTGRES_PASSWORD: em
+          POSTGRES_DB: em_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      TEST_DATABASE_URL: postgresql://em:em@127.0.0.1:5432/em_test
+      DIRECT_DATABASE_URL: postgresql://em:em@127.0.0.1:5432/em_test
+
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +59,16 @@ jobs:
         env:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
         run: npm ci
+
+      # Applying the suite twice to a clean database must produce an identical
+      # result. Cheap to check, and it catches the class of migration bug that
+      # is otherwise found during a production cutover.
+      - name: Migrations are idempotent
+        working-directory: apps/api
+        run: |
+          node src/db/migrate.js
+          node src/db/migrate.js | tee /tmp/second.log
+          grep -q "Already up to date" /tmp/second.log
 
       - name: Test
         working-directory: apps/api
