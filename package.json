@@ -8,7 +8,7 @@
     "build": "npm run build -w apps/storefront",
     "start": "npm run start -w apps/api",
     "test": "npm test -w apps/api && npm test -w apps/storefront",
-    "lint": "node .github/scripts/lint-ratchet.mjs apps/storefront",
+    "lint": "node .github/scripts/lint-ratchet.mjs apps/storefront && node .github/scripts/lint-ratchet.mjs packages/ui",
     "test:visual": "npm run build -w apps/storefront && playwright test --config e2e/playwright.config.js visual.spec.js",
     "test:visual:update": "npm run build -w apps/storefront && playwright test --config e2e/playwright.config.js visual.spec.js --update-snapshots=all",
     "test:e2e": "npm run build -w apps/storefront && playwright test --config e2e/playwright.config.js"

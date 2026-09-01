@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Shield, Download, Trash2, Calendar, User, Activity } from 'lucide-react';
-import { axiosInstance } from '../../lib/axios';
+import { axiosInstance } from '@em/api-client';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
-import Button from '../../components/ui/Button';
-import Select from '../../components/ui/Select';
-import Input from '../../components/ui/Input';
-import Badge from '../../components/ui/Badge';
-import EmptyState from '../../components/ui/EmptyState';
-import Pagination from '../../components/ui/Pagination';
-import { SkeletonBlock } from '../../components/ui/Skeleton';
+import { Button } from '@em/ui';
+import { Select } from '@em/ui';
+import { Input } from '@em/ui';
+import { Badge } from '@em/ui';
+import { EmptyState } from '@em/ui';
+import { Pagination } from '@em/ui';
+import { SkeletonBlock } from '@em/ui';
 
 const SecurityLogs = () => {
   const [activeTab, setActiveTab] = useState('audit');

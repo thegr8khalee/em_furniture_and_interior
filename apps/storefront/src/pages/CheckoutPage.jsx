@@ -6,8 +6,8 @@ import { useOrderStore } from '../store/useOrderStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { Loader2, ShoppingBag, Truck, CreditCard, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { axiosInstance } from '../lib/axios';
-import { PageWrapper } from '../components/animations';
+import { axiosInstance } from '@em/api-client';
+import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 
 const CheckoutPage = () => {
@@ -64,7 +64,7 @@ const CheckoutPage = () => {
       }
 
       try {
-        const { axiosInstance } = await import('../lib/axios.js');
+        const { axiosInstance } = await import('@em/api-client');
         const productIds = cart.filter(item => item.itemType === 'Product').map(item => item.item);
         const collectionIds = cart.filter(item => item.itemType === 'Collection').map(item => item.item);
 

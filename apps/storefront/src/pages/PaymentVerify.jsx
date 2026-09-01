@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
-import { axiosInstance } from '../lib/axios';
+import { axiosInstance } from '@em/api-client';
 import { useCartStore } from '../store/useCartStore';
-import { PageWrapper } from '../components/animations';
+import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 
 const PaymentVerify = () => {

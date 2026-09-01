@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Palette, Upload } from 'lucide-react';
-import { axiosInstance } from '../lib/axios.js';
-import { PageWrapper, FadeIn, SectionReveal } from '../components/animations';
-import { Button, Card, Input, PageHeader, Select, Textarea } from '../components/ui';
+import { axiosInstance } from '@em/api-client';
+import { PageWrapper, FadeIn, SectionReveal } from '@em/ui';
+import { Button, Card, Input, PageHeader, Select, Textarea } from '@em/ui';
 import SEO from '../components/SEO';
 import { breadcrumbJsonLd } from '../lib/seo';
 

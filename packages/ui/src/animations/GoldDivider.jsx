@@ -1,7 +1,7 @@
 // src/components/animations/GoldDivider.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { elegantEase } from '../../lib/animations';
+import { elegantEase } from '../lib/animations.js';
 
 const GoldDivider = ({
   className = '',

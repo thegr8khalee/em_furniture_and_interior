@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAdminStore } from '../../store/useAdminStore';
 import { useProductsStore } from '../../store/useProductsStore';
 import { Eye, Pencil, Trash2, Star, X } from 'lucide-react';
-import Modal from '../ui/Modal';
-import Badge from '../ui/Badge';
+import { Modal } from '@em/ui';
+import { Badge } from '@em/ui';
 
 const formatPrice = (val) =>
   '₦' + Number(val).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

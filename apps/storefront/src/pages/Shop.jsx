@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { luxuryEase, elegantEase } from '../lib/animations';
-import { PageWrapper, SectionReveal, FadeIn } from '../components/animations';
+import { luxuryEase, elegantEase } from '@em/ui';
+import { PageWrapper, SectionReveal, FadeIn } from '@em/ui';
 import { useProductsStore } from '../store/useProductsStore';
 import { useCollectionStore } from '../store/useCollectionStore';
 import { useCartStore } from '../store/useCartStore';
@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'; // Added ChevronUp, Heart, ShoppingCart
 // import { toast } from 'react-hot-toast';
 import FilterModal from '../components/FilterModal';
-import { Button, EmptyState, ProductCardSkeleton } from '../components/ui';
+import { Button, EmptyState, ProductCardSkeleton } from '@em/ui';
 import SEO from '../components/SEO';
 import { breadcrumbJsonLd } from '../lib/seo';
 // import Hero1 from '../images/Hero1.png'; // Assuming your hero image path

@@ -2,8 +2,8 @@
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { luxuryEase } from '../lib/animations';
-import { PageWrapper, SectionReveal, SlideIn } from '../components/animations';
+import { luxuryEase } from '@em/ui';
+import { PageWrapper, SectionReveal, SlideIn } from '@em/ui';
 import {
   Loader2,
   ShoppingCart,
@@ -24,7 +24,7 @@ import { useWishlistStore } from '../store/useWishlistStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAdminStore } from '../store/useAdminStore';
 import { useMarketingStore } from '../store/useMarketingStore';
-import { axiosInstance } from '../lib/axios.js';
+import { axiosInstance } from '@em/api-client';
 import SEO from '../components/SEO';
 import {
   collectionJsonLd,

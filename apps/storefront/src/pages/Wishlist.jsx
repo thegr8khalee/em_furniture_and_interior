@@ -5,13 +5,13 @@ import { useWishlistStore } from '../store/useWishlistStore';
 import { useCartStore } from '../store/useCartStore'; // Import cart store for "Add to Cart"
 import { Loader2, Trash2, ShoppingCart, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { axiosInstance } from '../lib/axios.js'; // For fetching product/collection details
+import { axiosInstance } from '@em/api-client'; // For fetching product/collection details
 // import Hero1 from '../images/Hero1.png';
 import { useAuthStore } from '../store/useAuthStore.js';
 import { motion } from 'framer-motion';
-import { luxuryEase } from '../lib/animations';
-import { PageWrapper } from '../components/animations';
-import { Button, Card, EmptyState, ListItemSkeleton, PageHeader } from '../components/ui';
+import { luxuryEase } from '@em/ui';
+import { PageWrapper } from '@em/ui';
+import { Button, Card, EmptyState, ListItemSkeleton, PageHeader } from '@em/ui';
 import SEO from '../components/SEO';
 
 const WishlistPage = () => {

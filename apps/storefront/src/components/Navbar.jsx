@@ -12,10 +12,10 @@ import {
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { luxuryEase } from '../lib/animations';
+import { luxuryEase } from '@em/ui';
 
 void motion;
-import { Button } from './ui';
+import { Button } from '@em/ui';
 
 const getNavLinkClass = (isActive) =>
   `px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] transition-colors border-b ${

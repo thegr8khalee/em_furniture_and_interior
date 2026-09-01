@@ -1,7 +1,7 @@
 ﻿import React from 'react';
 import { motion } from 'framer-motion';
-import { luxuryEase, elegantEase } from '../lib/animations';
-import { PageWrapper, FadeIn } from '../components/animations';
+import { luxuryEase, elegantEase } from '@em/ui';
+import { PageWrapper, FadeIn } from '@em/ui';
 import SEO from '../components/SEO';
 import { breadcrumbJsonLd } from '../lib/seo';
 

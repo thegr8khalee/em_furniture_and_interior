@@ -2,9 +2,9 @@ import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useOrderStore } from '../store/useOrderStore';
 import { Package, Truck, CheckCircle, XCircle, Clock, Loader2, ShoppingBag, Download } from 'lucide-react';
-import { axiosInstance } from '../lib/axios';
+import { axiosInstance } from '@em/api-client';
 import { toast } from 'react-hot-toast';
-import { PageWrapper } from '../components/animations';
+import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 
 const OrderHistoryPage = () => {

@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { axiosInstance } from '../../lib/axios';
+import { axiosInstance } from '@em/api-client';
 import { Loader2, Calendar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
-import Select from '../../components/ui/Select';
-import Input from '../../components/ui/Input';
-import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
-import EmptyState from '../../components/ui/EmptyState';
-import Modal from '../../components/ui/Modal';
-import { SkeletonBlock } from '../../components/ui/Skeleton';
+import { Select } from '@em/ui';
+import { Input } from '@em/ui';
+import { Button } from '@em/ui';
+import { Badge } from '@em/ui';
+import { EmptyState } from '@em/ui';
+import { Modal } from '@em/ui';
+import { SkeletonBlock } from '@em/ui';
 
 const ConsultationManagement = () => {
   const [consultations, setConsultations] = useState([]);

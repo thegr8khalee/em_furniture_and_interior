@@ -17,15 +17,15 @@ import {
   AnimatedCard,
   GoldDivider,
   SlideIn,
-} from '../components/animations';
-import { ProductCardSkeleton } from '../components/ui';
+} from '@em/ui';
+import { ProductCardSkeleton } from '@em/ui';
 import {
   heroText,
   heroSubtext,
   heroButtons,
   elegantEase,
   luxuryEase,
-} from '../lib/animations';
+} from '@em/ui';
 import SEO from '../components/SEO';
 import {
   organizationJsonLd,

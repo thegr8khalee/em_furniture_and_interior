@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from '../store/useAuthStore'; // Import your Zustand auth store
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { PageWrapper } from '../components/animations';
+import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 
 const SignupPage = () => {

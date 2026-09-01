@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useOrderStore } from '../store/useOrderStore';
 import { CheckCircle, Package, Truck, MapPin, CreditCard, Loader2, Download } from 'lucide-react';
-import { axiosInstance } from '../lib/axios';
+import { axiosInstance } from '@em/api-client';
 import { toast } from 'react-hot-toast';
-import { PageWrapper } from '../components/animations';
+import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 
 const OrderConfirmationPage = () => {

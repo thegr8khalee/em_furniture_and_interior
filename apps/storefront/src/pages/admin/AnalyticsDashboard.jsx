@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, ShoppingCart, Users, Calendar, DollarSign, Package, Award, Target, BarChart3 } from 'lucide-react';
-import { axiosInstance } from '../../lib/axios';
+import { axiosInstance } from '@em/api-client';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
-import Input from '../../components/ui/Input';
-import EmptyState from '../../components/ui/EmptyState';
-import { SkeletonBlock } from '../../components/ui/Skeleton';
+import { Input } from '@em/ui';
+import { EmptyState } from '@em/ui';
+import { SkeletonBlock } from '@em/ui';
 
 const AnalyticsDashboard = () => {
   const [loading, setLoading] = useState(false);

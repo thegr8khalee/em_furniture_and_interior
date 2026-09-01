@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { axiosInstance } from '../lib/axios.js';
+import { axiosInstance } from '@em/api-client';
 
 const normalizeArrayResponse = (payload, key) => {
   if (Array.isArray(payload)) return payload;

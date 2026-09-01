@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { useProjectsStore } from '../../store/useProjectsStore';
 import { Loader2, Briefcase, Search, Plus, LayoutGrid, List } from 'lucide-react';
 import AdminProjectListCard from './ProjectList';
-import Button from '../ui/Button';
-import Pagination from '../ui/Pagination';
-import EmptyState from '../ui/EmptyState';
+import { Button } from '@em/ui';
+import { Pagination } from '@em/ui';
+import { EmptyState } from '@em/ui';
 
 const CATEGORIES = ['All', 'Residential', 'Commercial', 'Hospitality', 'Renovation'];
 

@@ -3,8 +3,8 @@ import { useProjectsStore } from '../store/useProjectsStore';
 import { Loader2 } from 'lucide-react';
 import ProjectCard from '../components/ProjectCard';
 import { motion } from 'framer-motion';
-import { luxuryEase, elegantEase } from '../lib/animations';
-import { PageWrapper, SectionReveal } from '../components/animations';
+import { luxuryEase, elegantEase } from '@em/ui';
+import { PageWrapper, SectionReveal } from '@em/ui';
 import SEO from '../components/SEO';
 import { breadcrumbJsonLd } from '../lib/seo';
 

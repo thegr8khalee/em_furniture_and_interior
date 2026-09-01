@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useOrderStore } from '../store/useOrderStore';
 import { Search, Package, Truck, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { PageWrapper } from '../components/animations';
+import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 
 const TrackOrderPage = () => {

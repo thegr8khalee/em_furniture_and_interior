@@ -3,13 +3,13 @@ import React, { useEffect, useState } from 'react';
 import { Clock3, Mail, MapPin, Phone } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { axiosInstance } from '../lib/axios.js';
+import { axiosInstance } from '@em/api-client';
 
 void motion;
 import { useAuthStore } from '../store/useAuthStore.js';
-import { PageWrapper, FadeIn, SlideIn } from '../components/animations';
-import { luxuryEase } from '../lib/animations';
-import { Button, Card, Input, PageHeader, Textarea } from '../components/ui';
+import { PageWrapper, FadeIn, SlideIn } from '@em/ui';
+import { luxuryEase } from '@em/ui';
+import { Button, Card, Input, PageHeader, Textarea } from '@em/ui';
 import SEO from '../components/SEO';
 import { localBusinessJsonLd, breadcrumbJsonLd } from '../lib/seo';
 

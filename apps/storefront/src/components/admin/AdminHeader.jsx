@@ -1,7 +1,7 @@
 import { useAuthStore } from '../../store/useAuthStore';
 import { useAdminStore } from '../../store/useAdminStore';
 import { Menu } from 'lucide-react';
-import Badge from '../ui/Badge';
+import { Badge } from '@em/ui';
 import AdminBreadcrumb from './AdminBreadcrumb';
 
 const AdminHeader = () => {

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Search, AlertTriangle, Edit2, Loader2 } from 'lucide-react';
-import { axiosInstance } from '../../lib/axios';
+import { axiosInstance } from '@em/api-client';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
-import Input from '../../components/ui/Input';
-import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
-import EmptyState from '../../components/ui/EmptyState';
-import Modal from '../../components/ui/Modal';
-import Pagination from '../../components/ui/Pagination';
-import { SkeletonBlock } from '../../components/ui/Skeleton';
+import { Input } from '@em/ui';
+import { Button } from '@em/ui';
+import { Badge } from '@em/ui';
+import { EmptyState } from '@em/ui';
+import { Modal } from '@em/ui';
+import { Pagination } from '@em/ui';
+import { SkeletonBlock } from '@em/ui';
 
 const InventoryManagement = () => {
   const [products, setProducts] = useState([]);

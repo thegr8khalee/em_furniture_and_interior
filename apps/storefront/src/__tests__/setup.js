@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 // Mock axios
-vi.mock('./lib/axios', () => ({
+vi.mock('@em/api-client', () => ({
   default: {
     get: vi.fn(),
     post: vi.fn(),

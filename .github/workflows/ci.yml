@@ -63,8 +63,13 @@ jobs:
       # The storefront carries 68 pre-existing lint errors. Gating on zero would
       # make CI red on arrival, so the gate is a per-file ratchet: counts may
       # fall, never rise. See .github/lint-baseline.json.
+      # Both workspaces are ratcheted. Linting only the app would let debt vanish
+      # by moving a file into the package, which is exactly what the R1
+      # extraction does.
       - name: Lint (ratchet)
-        run: node .github/scripts/lint-ratchet.mjs apps/storefront
+        run: |
+          node .github/scripts/lint-ratchet.mjs apps/storefront
+          node .github/scripts/lint-ratchet.mjs packages/ui
 
       - name: Test
         working-directory: apps/storefront

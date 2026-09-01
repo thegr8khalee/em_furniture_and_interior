@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { axiosInstance } from '../lib/axios';
+import { axiosInstance } from '@em/api-client';
 
 export const useNotificationStore = create((set) => ({
   notifications: [],

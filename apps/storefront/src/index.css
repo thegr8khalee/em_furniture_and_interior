@@ -1,4 +1,12 @@
 @import "tailwindcss";
+
+/* Tailwind v4 auto-detects sources from the project root, which stops at this
+   app. The shared component kit lives outside it, so without this its utility
+   classes are never emitted — the R1 extraction silently dropped `py-14` from
+   EmptyState and every empty-state page lost 40px of height. Caught by the
+   visual baselines; keep these in step with packages/*. */
+@source "../../../packages/ui/src";
+@source "../../../packages/api-client/src";
  @plugin "daisyui" {
   themes: light --default;
  }

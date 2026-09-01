@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { useFaqStore } from '../store/useFaqStore';
 import { motion } from 'framer-motion';
-import { luxuryEase } from '../lib/animations';
-import { PageWrapper, FadeIn } from '../components/animations';
+import { luxuryEase } from '@em/ui';
+import { PageWrapper, FadeIn } from '@em/ui';
 import SEO from '../components/SEO';
 import { faqJsonLd, breadcrumbJsonLd } from '../lib/seo';
 

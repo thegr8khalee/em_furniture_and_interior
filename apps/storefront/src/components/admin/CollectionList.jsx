@@ -4,8 +4,8 @@ import { Eye, Pencil, Trash2, Star, Gift, Tag } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAdminStore } from '../../store/useAdminStore';
 import { useCollectionStore } from '../../store/useCollectionStore';
-import Modal from '../ui/Modal';
-import Badge from '../ui/Badge';
+import { Modal } from '@em/ui';
+import { Badge } from '@em/ui';
 
 const formatPrice = (val) =>
   '₦' + Number(val).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

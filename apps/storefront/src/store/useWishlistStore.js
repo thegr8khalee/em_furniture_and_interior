@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 // src/store/useWishlistStore.js
 import { create } from 'zustand';
-import { axiosInstance } from '../lib/axios.js';
+import { axiosInstance } from '@em/api-client';
 import { toast } from 'react-hot-toast';
 import Cookies from 'js-cookie';
 import { useAuthStore } from './useAuthStore.js';

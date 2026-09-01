@@ -1,7 +1,7 @@
 // src/components/animations/StaggerItem.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { luxuryEase } from '../../lib/animations';
+import { luxuryEase } from '../lib/animations.js';
 
 const StaggerItem = ({
   children,

@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/useAuthStore';
 // import { usePasswordStore } from '../store/usePasswordStore'; // NEW: Import usePasswordStore
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 // import toast from 'react-hot-toast'; // Ensure toast is imported for local messages
-import { PageWrapper } from '../components/animations';
+import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 
 const LoginPage = () => {

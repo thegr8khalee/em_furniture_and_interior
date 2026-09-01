@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useProductsStore } from '../../store/useProductsStore';
 import { useCollectionStore } from '../../store/useCollectionStore';
 import { useProjectsStore } from '../../store/useProjectsStore';
-import { axiosInstance } from '../../lib/axios';
-import Card from '../ui/Card';
-import Button from '../ui/Button';
-import Badge from '../ui/Badge';
+import { axiosInstance } from '@em/api-client';
+import { Card } from '@em/ui';
+import { Button } from '@em/ui';
+import { Badge } from '@em/ui';
 import {
   Package,
   FolderOpen,

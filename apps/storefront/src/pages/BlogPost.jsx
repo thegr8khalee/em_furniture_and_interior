@@ -2,8 +2,8 @@ import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useBlogStore } from '../store/useBlogStore';
 import { motion } from 'framer-motion';
-import { elegantEase } from '../lib/animations';
-import { PageWrapper, FadeIn } from '../components/animations';
+import { elegantEase } from '@em/ui';
+import { PageWrapper, FadeIn } from '@em/ui';
 import SEO from '../components/SEO';
 import { articleJsonLd, breadcrumbJsonLd, truncate } from '../lib/seo';
 

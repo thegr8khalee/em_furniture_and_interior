@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, Loader2, MessageSquare } from 'lucide-react';
-import { axiosInstance } from '../../lib/axios';
+import { axiosInstance } from '@em/api-client';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
-import Select from '../../components/ui/Select';
-import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
-import EmptyState from '../../components/ui/EmptyState';
-import { SkeletonBlock } from '../../components/ui/Skeleton';
+import { Select } from '@em/ui';
+import { Button } from '@em/ui';
+import { Badge } from '@em/ui';
+import { EmptyState } from '@em/ui';
+import { SkeletonBlock } from '@em/ui';
 
 const ReviewModeration = () => {
   const [pending, setPending] = useState([]);

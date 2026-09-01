@@ -20,8 +20,8 @@ import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { motion } from 'framer-motion';
-import { luxuryEase, elegantEase } from '../lib/animations';
-import { PageWrapper } from '../components/animations';
+import { luxuryEase, elegantEase } from '@em/ui';
+import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 import { breadcrumbJsonLd } from '../lib/seo';
 

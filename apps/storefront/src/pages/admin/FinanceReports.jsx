@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Download, DollarSign, TrendingUp, Loader2 } from 'lucide-react';
-import { axiosInstance } from '../../lib/axios';
+import { axiosInstance } from '@em/api-client';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
-import Input from '../../components/ui/Input';
-import Button from '../../components/ui/Button';
-import EmptyState from '../../components/ui/EmptyState';
-import { SkeletonBlock } from '../../components/ui/Skeleton';
+import { Input } from '@em/ui';
+import { Button } from '@em/ui';
+import { EmptyState } from '@em/ui';
+import { SkeletonBlock } from '@em/ui';
 
 const FinanceReports = () => {
   const [summary, setSummary] = useState(null);

@@ -1,8 +1,8 @@
 // src/pages/Showroom.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { luxuryEase, elegantEase } from '../lib/animations';
-import { PageWrapper, SlideIn } from '../components/animations';
+import { luxuryEase, elegantEase } from '@em/ui';
+import { PageWrapper, SlideIn } from '@em/ui';
 import SEO from '../components/SEO';
 import { localBusinessJsonLd, breadcrumbJsonLd } from '../lib/seo';
 

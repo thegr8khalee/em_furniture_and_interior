@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLoyaltyStore } from '../store/useLoyaltyStore';
 import { Trophy, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
-import { PageWrapper } from '../components/animations';
+import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 
 const LoyaltyPage = () => {

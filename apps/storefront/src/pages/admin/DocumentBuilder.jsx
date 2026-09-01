@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { FileText, Plus, Trash2, Download, Loader2 } from 'lucide-react';
-import { axiosInstance } from '../../lib/axios';
+import { axiosInstance } from '@em/api-client';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
-import Input from '../../components/ui/Input';
-import Button from '../../components/ui/Button';
+import { Input } from '@em/ui';
+import { Button } from '@em/ui';
 
 const emptyItem = () => ({ description: '', quantity: 1, price: '' });
 const emptySection = () => ({ name: '', items: [emptyItem()] });

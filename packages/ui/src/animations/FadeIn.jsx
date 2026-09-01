@@ -1,7 +1,7 @@
 // src/components/animations/FadeIn.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { luxuryEase, elegantEase } from '../../lib/animations';
+import { luxuryEase, elegantEase } from '../lib/animations.js';
 
 const directionOffsets = {
   up: { y: 40, x: 0 },

@@ -4,9 +4,9 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Mail, MapPin, Phone } from 'lucide-react';
 
 void motion;
-import { StaggerContainer, StaggerItem } from './animations';
-import { luxuryEase } from '../lib/animations';
-import { Button } from './ui';
+import { StaggerContainer, StaggerItem } from '@em/ui';
+import { luxuryEase } from '@em/ui';
+import { Button } from '@em/ui';
 
 const Footer = () => {
   const navigate = useNavigate();

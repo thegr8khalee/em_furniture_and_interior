@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
-import { PageWrapper } from '../components/animations';
+import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 
 const ResetPasswordPage = () => {

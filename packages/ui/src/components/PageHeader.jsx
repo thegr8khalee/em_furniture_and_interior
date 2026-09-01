@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
-import { GoldDivider } from '../animations';
+import { GoldDivider } from '../animations/index.js';
 
 void motion;
-import { elegantEase, luxuryEase } from '../../lib/animations';
+import { elegantEase, luxuryEase } from '../lib/animations.js';
 
 const PageHeader = ({
   title,

@@ -1,7 +1,7 @@
 // src/components/animations/SectionReveal.jsx
 import React from 'react';
 import { motion } from 'framer-motion';
-import { elegantEase, luxuryEase } from '../../lib/animations';
+import { elegantEase, luxuryEase } from '../lib/animations.js';
 
 const SectionReveal = ({
   children,

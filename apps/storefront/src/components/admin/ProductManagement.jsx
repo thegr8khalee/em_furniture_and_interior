@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { useProductsStore } from '../../store/useProductsStore';
 import { Loader2, Package, Search, Plus, LayoutGrid, List } from 'lucide-react';
 import AdminProductListCard from './ProductList';
-import Button from '../ui/Button';
-import Pagination from '../ui/Pagination';
-import EmptyState from '../ui/EmptyState';
+import { Button } from '@em/ui';
+import { Pagination } from '@em/ui';
+import { EmptyState } from '@em/ui';
 
 const CATEGORIES = ['All', 'Living Room', 'Armchair', 'Bedroom', 'Dining', 'Office', 'Outdoor', 'Kids', 'Storage'];
 

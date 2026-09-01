@@ -16,7 +16,7 @@ import {
   Eye,
 } from 'lucide-react';
 import toast from 'react-hot-toast'; // Ensure toast is imported for local messages
-import { PageWrapper } from '../components/animations';
+import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 
 const ProfilePage = () => {

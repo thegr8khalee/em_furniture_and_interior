@@ -1,6 +1,6 @@
 import { Home, Search } from 'lucide-react';
-import { FadeIn, PageWrapper } from '../components/animations';
-import { Button, Card } from '../components/ui';
+import { FadeIn, PageWrapper } from '@em/ui';
+import { Button, Card } from '@em/ui';
 import SEO from '../components/SEO';
 
 const NotFoundPage = () => {

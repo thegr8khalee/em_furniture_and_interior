@@ -1,4 +1,4 @@
-import Card from '../ui/Card';
+import { Card } from '@em/ui';
 
 /**
  * Reusable admin table wrapper with consistent styling.

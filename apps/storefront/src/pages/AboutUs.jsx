@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { PageWrapper, FadeIn, SectionReveal, SlideIn, GoldDivider, StaggerContainer, StaggerItem } from '../components/animations';
-import { luxuryEase, elegantEase } from '../lib/animations';
+import { PageWrapper, FadeIn, SectionReveal, SlideIn, GoldDivider, StaggerContainer, StaggerItem } from '@em/ui';
+import { luxuryEase, elegantEase } from '@em/ui';
 import SEO from '../components/SEO';
 import { organizationJsonLd, breadcrumbJsonLd } from '../lib/seo';
 

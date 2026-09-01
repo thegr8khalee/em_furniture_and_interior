@@ -4,7 +4,7 @@ import { useNotificationStore } from '../store/useNotificationStore';
 import { Bell, CheckCircle, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../store/useAuthStore';
-import { PageWrapper } from '../components/animations';
+import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 
 const NotificationsPage = () => {

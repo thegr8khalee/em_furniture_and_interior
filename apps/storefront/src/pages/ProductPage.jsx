@@ -16,9 +16,9 @@ import {
   ShoppingCart,
   Trash2,
 } from 'lucide-react';
-import { luxuryEase } from '../lib/animations';
-import { FadeIn, PageWrapper, SectionReveal, SlideIn } from '../components/animations';
-import { Badge, Button, Card, EmptyState, Select, Textarea } from '../components/ui';
+import { luxuryEase } from '@em/ui';
+import { FadeIn, PageWrapper, SectionReveal, SlideIn } from '@em/ui';
+import { Badge, Button, Card, EmptyState, Select, Textarea } from '@em/ui';
 import { useProductsStore } from '../store/useProductsStore';
 // import whatsapp from '../images/whatsapp.png';
 import { useCartStore } from '../store/useCartStore';
@@ -27,7 +27,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useAdminStore } from '../store/useAdminStore';
 import { useCompareStore } from '../store/useCompareStore';
 import { useMarketingStore } from '../store/useMarketingStore';
-import { axiosInstance } from '../lib/axios.js';
+import { axiosInstance } from '@em/api-client';
 import SEO from '../components/SEO';
 import {
   productJsonLd,

@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useFaqStore } from '../../store/useFaqStore';
 import { HelpCircle, Edit2, Trash2 } from 'lucide-react';
-import Input from '../ui/Input';
-import Button from '../ui/Button';
-import Badge from '../ui/Badge';
-import EmptyState from '../ui/EmptyState';
-import { SkeletonBlock } from '../ui/Skeleton';
+import { Input } from '@em/ui';
+import { Button } from '@em/ui';
+import { Badge } from '@em/ui';
+import { EmptyState } from '@em/ui';
+import { SkeletonBlock } from '@em/ui';
 
 const emptyForm = {
   question: '',

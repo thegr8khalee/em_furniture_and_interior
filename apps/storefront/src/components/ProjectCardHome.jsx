@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { luxuryEase } from '../lib/animations';
+import { luxuryEase } from '@em/ui';
 
 const ProjectCardHome = ({ project }) => {
   const [isHovered, setIsHovered] = useState(false);
