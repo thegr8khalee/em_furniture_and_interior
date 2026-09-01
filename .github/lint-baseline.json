@@ -7,9 +7,6 @@
       "src/components/BottomNavbar.jsx": 1,
       "src/components/ProjectCard.jsx": 1,
       "src/components/ProjectCardHome.jsx": 1,
-      "src/components/admin/AdminDashboardContent.jsx": 1,
-      "src/components/admin/AdminLayout.jsx": 1,
-      "src/components/admin/ProjectManagement.jsx": 2,
       "src/pages/AboutUs.jsx": 1,
       "src/pages/Blog.jsx": 1,
       "src/pages/BlogPost.jsx": 1,
@@ -25,15 +22,6 @@
       "src/pages/ProjectsPage.jsx": 1,
       "src/pages/Showroom.jsx": 1,
       "src/pages/Terms.jsx": 1,
-      "src/pages/admin/ConsultationManagement.jsx": 2,
-      "src/pages/admin/CouponManagement.jsx": 1,
-      "src/pages/admin/DesignerManagement.jsx": 4,
-      "src/pages/admin/FinanceReports.jsx": 2,
-      "src/pages/admin/MarketingManagement.jsx": 1,
-      "src/pages/admin/OrderManagement.jsx": 5,
-      "src/pages/admin/ReviewModeration.jsx": 3,
-      "src/store/useBlogStore.js": 2,
-      "src/store/useFaqStore.js": 2,
       "src/store/useNotificationStore.js": 3,
       "src/store/useOrderStore.js": 1,
       "vitest.config.js": 1
@@ -51,6 +39,26 @@
       "src/animations/SlideIn.jsx": 1,
       "src/animations/StaggerContainer.jsx": 1,
       "src/animations/StaggerItem.jsx": 1
+    }
+  },
+  "apps/erp": {
+    "files": {
+      "src/components/admin/AdminDashboardContent.jsx": 1,
+      "src/components/admin/AdminLayout.jsx": 1,
+      "src/components/admin/ProjectManagement.jsx": 2,
+      "src/pages/admin/ConsultationManagement.jsx": 2,
+      "src/pages/admin/CouponManagement.jsx": 1,
+      "src/pages/admin/DesignerManagement.jsx": 4,
+      "src/pages/admin/FinanceReports.jsx": 2,
+      "src/pages/admin/MarketingManagement.jsx": 1,
+      "src/pages/admin/OrderManagement.jsx": 5,
+      "src/pages/admin/ReviewModeration.jsx": 3
+    }
+  },
+  "packages/domain": {
+    "files": {
+      "src/store/useBlogStore.js": 2,
+      "src/store/useFaqStore.js": 2
     }
   }
 }

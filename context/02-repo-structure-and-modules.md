@@ -4,9 +4,11 @@
 
 ---
 
-## 1. Current structure `[NOW]`
+## 1. Pre-split structure (historical)
 
-Two workspaces under a thin root `package.json`. 12,744 lines of backend, 26,378 of frontend.
+Before R1 the repository held two directories, `backend/` and `frontend/`, under a thin root
+`package.json` — 12,744 lines of backend and 26,378 of frontend, with the console living inside the
+storefront and shipped to it as lazy chunks.
 
 ```
 em_furniture_and_interior/
@@ -36,34 +38,47 @@ em_furniture_and_interior/
 └── changes.diff                     # 2.1 MB tracked artefact — delete [GAP]
 ```
 
-## 2. Target structure `[TARGET]`
+## 2. Workspace structure `[NOW]`
 
-npm workspaces. No Turborepo or Nx at this size — the shared surface is small and already identified.
+npm workspaces. No Turborepo or Nx — the shared surface is small and the build
+graph is two apps deep.
 
 ```
 em_furniture_and_interior/
 ├── apps/
-│   ├── api/            # Express — one deployment, two namespaces
-│   │   ├── src/
-│   │   │   ├── modules/<domain>/    # route + controller + service + schema, colocated
-│   │   │   ├── db/migrations/       # numbered, idempotent SQL
-│   │   │   ├── db/models/           # Sequelize models
-│   │   │   └── platform/            # auth, errors, logging, openapi generation
-│   │   └── test/                    # unit · integration · contract
-│   ├── storefront/     # public site → Vercel
+│   ├── api/            # Express — one deployment, serves both clients
+│   ├── storefront/     # public site        → Vercel
 │   └── erp/            # operations console → Vercel, access-restricted
 ├── packages/
-│   ├── ui/             # Button, Modal, Table, Badge, Pagination, Input, Select…
-│   ├── api-client/     # generated from openapi.json
-│   ├── domain/         # shared enums, permission constants, money helpers
-│   └── config/         # eslint, tailwind, tsconfig presets
-└── e2e/                # Playwright
+│   ├── ui/             # component kit + animation primitives + easing curves
+│   ├── domain/         # shared stores (auth, admin, catalog, content) + permissions
+│   ├── api-client/     # the axios instance both apps use
+│   └── config/         # theme.css — the single source of design tokens
+└── e2e/                # Playwright: visual baselines + structural checks
 ```
 
-**Why this split is cheap.** Every admin route in `App.jsx` is already `lazy()`-loaded, so public visitors
-never download console code today. The only shared surface the console actually uses is
-`components/ui/*` and `lib/axios` — both become packages. The split is a build and deploy
-reorganisation, not a rewrite.
+**What is shared and why.** `packages/domain` holds only stores both apps need —
+auth and admin session, and the catalog and content stores the console edits and
+the storefront reads. Cart, wishlist, compare, loyalty and checkout stay in the
+storefront; the console has no use for them, and moving them would make the
+package a dumping ground.
+
+`packages/config/theme.css` is the single definition of the design tokens.
+Duplicating it is how two applications drift apart visually, so neither app owns
+it — both import it.
+
+**Three things the split proved, all caught by verification rather than review:**
+
+1. Aliased workspace packages resolved their own copy of React and react-router,
+   so `useContext` returned null and the app rendered nothing. Fixed with
+   `resolve.dedupe`.
+2. Tailwind v4 auto-detects sources only from the importing project's root, so
+   classes used solely inside a package were never emitted — `py-14` vanished
+   from `EmptyState` and every empty-state page lost 40px. Fixed with `@source`
+   directives in the shared theme.
+3. `CookieConsentBanner` was never gated by `isAdminRoute`, so a public-web
+   cookie banner rendered on the staff console. It is deliberately not carried
+   into `apps/erp`; see `07-implementation-roadmap.md`.
 
 ---
 

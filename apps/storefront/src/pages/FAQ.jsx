@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useFaqStore } from '../store/useFaqStore';
+import { useFaqStore } from '@em/domain';
 import { motion } from 'framer-motion';
 import { luxuryEase } from '@em/ui';
 import { PageWrapper, FadeIn } from '@em/ui';

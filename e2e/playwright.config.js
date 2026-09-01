@@ -66,11 +66,22 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: 'npm run preview -- --port 4173 --strictPort',
-    cwd: '../apps/storefront',
-    url: 'http://127.0.0.1:4173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+  // Two servers: the apps are separately deployed after the R1 split, and the
+  // console must be exercised the way it actually ships.
+  webServer: [
+    {
+      command: 'npm run preview -- --port 4173 --strictPort',
+      cwd: '../apps/storefront',
+      url: 'http://127.0.0.1:4173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
+    {
+      command: 'npm run preview -- --port 4174 --strictPort',
+      cwd: '../apps/erp',
+      url: 'http://127.0.0.1:4174',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120000,
+    },
+  ],
 });

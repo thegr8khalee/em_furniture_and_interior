@@ -3,11 +3,9 @@ import React, { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
-import AdminProtectedRoute from './components/AdminProtectedRoutes';
-import { useAuthStore } from './store/useAuthStore';
-import AdminLoginProtectedRoute from './components/AdminLoginProtectedRoute';
-import { useProductsStore } from './store/useProductsStore';
-import { useCollectionStore } from './store/useCollectionStore';
+import { useAuthStore } from '@em/domain';
+import { useProductsStore } from '@em/domain';
+import { useCollectionStore } from '@em/domain';
 import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import BottomNavbar from './components/BottomNavbar';
@@ -50,27 +48,6 @@ const TrackOrderPage = lazy(() => import('./pages/TrackOrderPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const LoyaltyPage = lazy(() => import('./pages/LoyaltyPage'));
 
-// Admin — lazy so public visitors never download admin code
-const AdminLoginPage = lazy(() => import('./pages/AdminLoginPage'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const AdminAddProductPage = lazy(() => import('./pages/AddProductPage'));
-const AdminEditProductPage = lazy(() => import('./pages/EditProductPage'));
-const AddCollection = lazy(() => import('./pages/AddCollection'));
-const EditCollection = lazy(() => import('./pages/EditCollection'));
-const AdminAddProjectPage = lazy(() => import('./pages/AddProject'));
-const AdminEditProjectPage = lazy(() => import('./pages/EditProject'));
-const CouponManagement = lazy(() => import('./pages/admin/CouponManagement'));
-const OrderManagement = lazy(() => import('./pages/admin/OrderManagement'));
-const ReviewModeration = lazy(() => import('./pages/admin/ReviewModeration'));
-const ConsultationManagement = lazy(() => import('./pages/admin/ConsultationManagement'));
-const DesignerManagement = lazy(() => import('./pages/admin/DesignerManagement'));
-const MarketingManagement = lazy(() => import('./pages/admin/MarketingManagement'));
-const InventoryManagement = lazy(() => import('./pages/admin/InventoryManagement'));
-const FinanceReports = lazy(() => import('./pages/admin/FinanceReports'));
-const AnalyticsDashboard = lazy(() => import('./pages/admin/AnalyticsDashboard'));
-const SecurityLogs = lazy(() => import('./pages/admin/SecurityLogs'));
-const DocumentBuilder = lazy(() => import('./pages/admin/DocumentBuilder'));
-const AdminLayout = lazy(() => import('./components/admin/AdminLayout'));
 
 const RouteFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-base-100">
@@ -79,7 +56,7 @@ const RouteFallback = () => (
 );
 
 function App() {
-  const { checkAuth, authUser, isAdmin, isAuthReady } = useAuthStore();
+  const { checkAuth, authUser, isAuthReady } = useAuthStore();
   const { getProducts } = useProductsStore();
   const { getCollections } = useCollectionStore();
   // Initialize auth state when the component mounts
@@ -98,12 +75,11 @@ function App() {
   const whatsappLink = `https://wa.me/${whatsappPhoneNumber}?text=${presetMessage}`;
 
   const location = useLocation();
-  const isAdminRoute = location.pathname.startsWith('/admin');
 
   return (
     <div className="min-h-screen bg-base-100">
-      {!isAdminRoute && <Navbar />}
-      {!isAdminRoute && <BottomNavbar />}
+      <Navbar />
+      <BottomNavbar />
       <main className="">
         <AnimatePresence mode="wait">
         <Suspense fallback={<RouteFallback />}>
@@ -122,9 +98,7 @@ function App() {
           <Route
             path="/profile"
             element={
-              isAdmin ? (
-                <Navigate to="/admin/dashboard" />
-              ) : authUser ? (
+              authUser ? (
                 <ProfilePage />
               ) : (
                 <LoginPage />
@@ -162,41 +136,17 @@ function App() {
             element={<ResetPasswordPage />}
           />
 
-          <Route element={<AdminLoginProtectedRoute />}>
-            <Route path="/admin/login" element={<AdminLoginPage />} />
-          </Route>
-
-          {/* Admin Protected Routes — all wrapped in AdminLayout */}
-          <Route element={<AdminProtectedRoute />}>
-            <Route element={<AdminLayout />}>
-              <Route path="/admin/dashboard" element={<Dashboard />} />
-              <Route path="/admin/products/new" element={<AdminAddProductPage />} />
-              <Route path="/admin/products/edit/:productId" element={<AdminEditProductPage />} />
-              <Route path="/admin/collections/new" element={<AddCollection />} />
-              <Route path="/admin/collections/edit/:collectionId" element={<EditCollection />} />
-              <Route path="/admin/addProject" element={<AdminAddProjectPage />} />
-              <Route path="/admin/editProject/:projectId" element={<AdminEditProjectPage />} />
-              <Route path="/admin/coupons" element={<CouponManagement />} />
-              <Route path="/admin/orders" element={<OrderManagement />} />
-              <Route path="/admin/reviews" element={<ReviewModeration />} />
-              <Route path="/admin/consultations" element={<ConsultationManagement />} />
-              <Route path="/admin/designers" element={<DesignerManagement />} />
-              <Route path="/admin/marketing" element={<MarketingManagement />} />
-              <Route path="/admin/inventory" element={<InventoryManagement />} />
-              <Route path="/admin/finance" element={<FinanceReports />} />
-              <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
-              <Route path="/admin/security-logs" element={<SecurityLogs />} />
-              <Route path="/admin/documents" element={<DocumentBuilder />} />
-            </Route>
-          </Route>
+          {/* The operations console is a separate application (apps/erp),
+              deployed behind access control. Its /admin/* routes are no longer
+              served here, so a visitor hitting one gets the storefront's 404. */}
 
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
         </Suspense>
         </AnimatePresence>{' '}
       </main>
-      {!isAdminRoute && <Footer />}
-      {!isAdminRoute && (
+      <Footer />
+      {(
         <a
           href={whatsappLink}
           target="_blank"

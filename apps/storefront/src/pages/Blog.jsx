@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useBlogStore } from '../store/useBlogStore';
+import { useBlogStore } from '@em/domain';
 import { motion } from 'framer-motion';
 import { luxuryEase } from '@em/ui';
 import { PageWrapper, FadeIn } from '@em/ui';

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useProjectsStore } from '../store/useProjectsStore';
+import { useProjectsStore } from '@em/domain';
 import { Loader2 } from 'lucide-react';
 import ProjectCard from '../components/ProjectCard';
 import { motion } from 'framer-motion';

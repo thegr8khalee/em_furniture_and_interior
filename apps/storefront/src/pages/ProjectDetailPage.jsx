@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { luxuryEase } from '@em/ui';
 import { PageWrapper, SectionReveal, SlideIn } from '@em/ui';
-import { useProjectsStore } from '../store/useProjectsStore';
+import { useProjectsStore } from '@em/domain';
 import SEO from '../components/SEO';
 import { breadcrumbJsonLd, truncate, absoluteUrl, SITE_NAME } from '../lib/seo';
 

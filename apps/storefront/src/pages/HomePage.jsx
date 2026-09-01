@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 void motion;
 
-import { useProductsStore } from '../store/useProductsStore';
-import { useCollectionStore } from '../store/useCollectionStore';
+import { useProductsStore } from '@em/domain';
+import { useCollectionStore } from '@em/domain';
 import { useNavigate } from 'react-router-dom';
-import { useProjectsStore } from '../store/useProjectsStore';
+import { useProjectsStore } from '@em/domain';
 import ProjectCardHome from '../components/ProjectCardHome';
 import {
   PageWrapper,

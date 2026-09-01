@@ -7,7 +7,7 @@ import { Loader2, Trash2, ShoppingCart, Heart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { axiosInstance } from '@em/api-client'; // For fetching product/collection details
 // import Hero1 from '../images/Hero1.png';
-import { useAuthStore } from '../store/useAuthStore.js';
+import { useAuthStore } from '@em/domain';
 import { motion } from 'framer-motion';
 import { luxuryEase } from '@em/ui';
 import { PageWrapper } from '@em/ui';

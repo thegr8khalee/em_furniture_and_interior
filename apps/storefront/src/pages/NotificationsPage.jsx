@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { Bell, CheckCircle, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useAuthStore } from '../store/useAuthStore';
+import { useAuthStore } from '@em/domain';
 import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 

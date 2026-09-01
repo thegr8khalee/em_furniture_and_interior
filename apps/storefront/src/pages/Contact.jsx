@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { axiosInstance } from '@em/api-client';
 
 void motion;
-import { useAuthStore } from '../store/useAuthStore.js';
+import { useAuthStore } from '@em/domain';
 import { PageWrapper, FadeIn, SlideIn } from '@em/ui';
 import { luxuryEase } from '@em/ui';
 import { Button, Card, Input, PageHeader, Textarea } from '@em/ui';

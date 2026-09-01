@@ -79,5 +79,14 @@ snapshot — baselines are captured and compared with the same version.
 
 ## Coverage
 
-26 storefront routes × 2 viewports (desktop 1280×800, Pixel 7). Console routes
-need an authenticated admin and are added when the split introduces the ERP app.
+25 storefront routes × 2 viewports (desktop 1280×800, Pixel 7), plus the console
+login screen against the ERP app's own preview server on port 4174.
+
+`/admin/login` moved out of the storefront suite when R1 split the console into
+`apps/erp`; its baseline lives in `erp-visual.spec.js` now. The remaining
+console routes redirect without an authenticated admin session, so covering them
+needs seeded auth fixtures — deferred, and tracked in
+`context/07-implementation-roadmap.md`.
+
+Two preview servers run for the suite because the apps are separately deployed;
+exercising the console through the storefront would not be testing what ships.

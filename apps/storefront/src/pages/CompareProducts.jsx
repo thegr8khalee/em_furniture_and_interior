@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import { useCompareStore } from '../store/useCompareStore';
-import { useProductsStore } from '../store/useProductsStore';
+import { useProductsStore } from '@em/domain';
 import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 

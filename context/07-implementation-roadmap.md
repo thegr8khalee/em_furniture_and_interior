@@ -10,7 +10,7 @@
 | # | Phase | Effort | Cumulative |
 |---|---|---|---|
 | R0 | Payment webhooks — current stack ✅ **done** | 1 wk | 1 |
-| R1 | Monorepo split — *baselines captured, split pending* | 2–3 wks | 4 |
+| R1 | Monorepo split ✅ **done** | 2–3 wks | 4 |
 | R2 | Supabase Auth — still on MongoDB | 2–3 wks | 7 |
 | R3 | PostgreSQL + Sequelize | 6–8 wks | 15 |
 | R4 | Harden and document | 2–3 wks | 18 |
@@ -128,6 +128,23 @@ any files move, running in CI. See `e2e/README.md`.
 
 Still missing from the R4 target: migration idempotency and OpenAPI drift checks (both need R3), and a
 coverage floor (needs meaningful coverage first).
+
+## 4c. R1 outcome
+
+Complete. `apps/{api,storefront,erp}` and `packages/{ui,domain,api-client,config}`, verified against
+the visual baselines at every step: 58/58 with zero diffs after the workspace move, and again after the
+package extraction once two real defects were fixed (duplicate React instances; Tailwind not scanning
+the packages).
+
+**One deliberate visual change**, recorded because the parity constraint requires changes to be
+explicit rather than silent: the console no longer shows the cookie-consent banner. It appeared there
+only because `CookieConsentBanner` was never gated by `isAdminRoute` in the storefront's App — a
+public-web compliance element leaking into an internal staff tool. Nothing else about the console
+changed: the top 800px of the login screen are pixel-identical bar 0.1% in one small region, and every
+`/admin/*` path is unchanged so staff bookmarks still work.
+
+**Deferred:** console routes beyond the login screen need a seeded admin session before they can be
+baselined. Tracked for the pass that adds authenticated e2e fixtures.
 
 ## 5. Standing risks
 

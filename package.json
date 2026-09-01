@@ -4,14 +4,14 @@
   "description": "EM Furniture and Interior - E-commerce Web Application (MVP)",
   "main": "index.js",
   "scripts": {
-    "dev": "npm run dev -w apps/api & npm run dev -w apps/storefront",
-    "build": "npm run build -w apps/storefront",
+    "dev": "npm run dev -w apps/api & npm run dev -w apps/storefront & npm run dev -w apps/erp",
+    "build": "npm run build -w apps/storefront && npm run build -w apps/erp",
     "start": "npm run start -w apps/api",
     "test": "npm test -w apps/api && npm test -w apps/storefront",
-    "lint": "node .github/scripts/lint-ratchet.mjs apps/storefront && node .github/scripts/lint-ratchet.mjs packages/ui",
-    "test:visual": "npm run build -w apps/storefront && playwright test --config e2e/playwright.config.js visual.spec.js",
-    "test:visual:update": "npm run build -w apps/storefront && playwright test --config e2e/playwright.config.js visual.spec.js --update-snapshots=all",
-    "test:e2e": "npm run build -w apps/storefront && playwright test --config e2e/playwright.config.js"
+    "lint": "node .github/scripts/lint-ratchet.mjs apps/storefront && node .github/scripts/lint-ratchet.mjs apps/erp && node .github/scripts/lint-ratchet.mjs packages/ui && node .github/scripts/lint-ratchet.mjs packages/domain",
+    "test:visual": "npm run build && playwright test --config e2e/playwright.config.js visual.spec.js erp-visual.spec.js",
+    "test:visual:update": "npm run build && playwright test --config e2e/playwright.config.js visual.spec.js erp-visual.spec.js --update-snapshots=all",
+    "test:e2e": "npm run build && playwright test --config e2e/playwright.config.js"
   },
   "keywords": [],
   "author": "",

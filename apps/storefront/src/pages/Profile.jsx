@@ -1,7 +1,7 @@
 // src/pages/ProfilePage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/useAuthStore';
+import { useAuthStore } from '@em/domain';
 // import { usePasswordStore } from '../store/usePasswordStore'; // NEW: Import usePasswordStore
 import {
   Loader2,

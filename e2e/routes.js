@@ -35,5 +35,14 @@ export const PUBLIC_ROUTES = [
   { name: 'terms', path: '/terms' },
   { name: 'privacy', path: '/privacy' },
   { name: 'not-found', path: '/this-route-does-not-exist' },
-  { name: 'admin-login', path: '/admin/login' },
+];
+
+/**
+ * Console routes. The ERP app is a separate deployment, so these are captured
+ * against its own preview server (see erp-visual.spec.js). Only the login
+ * screen renders without an authenticated admin session; the rest redirect,
+ * and covering them needs a seeded session — tracked for a later pass.
+ */
+export const ERP_ROUTES = [
+  { name: 'erp-login', path: '/admin/login' },
 ];

@@ -5,11 +5,11 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { luxuryEase, elegantEase } from '@em/ui';
 import { PageWrapper, SectionReveal, FadeIn } from '@em/ui';
-import { useProductsStore } from '../store/useProductsStore';
-import { useCollectionStore } from '../store/useCollectionStore';
+import { useProductsStore } from '@em/domain';
+import { useCollectionStore } from '@em/domain';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
-import { useAuthStore } from '../store/useAuthStore';
+import { useAuthStore } from '@em/domain';
 import { useCompareStore } from '../store/useCompareStore';
 import { useMarketingStore } from '../store/useMarketingStore';
 import {

@@ -44,8 +44,8 @@ jobs:
       # the workspace has no ESLint config. Adding both is tracked as part of
       # finding F-13 rather than bolted on here.
 
-  frontend:
-    name: Frontend
+  clients:
+    name: Storefront & console
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,16 +67,12 @@ jobs:
       # by moving a file into the package, which is exactly what the R1
       # extraction does.
       - name: Lint (ratchet)
-        run: |
-          node .github/scripts/lint-ratchet.mjs apps/storefront
-          node .github/scripts/lint-ratchet.mjs packages/ui
+        run: npm run lint
 
       - name: Test
-        working-directory: apps/storefront
         run: npm test -w apps/storefront
 
-      - name: Build
-        working-directory: apps/storefront
+      - name: Build both apps
         run: npm run build
 
   visual:

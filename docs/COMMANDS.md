@@ -7,6 +7,23 @@
 
 ## 1. Current `[NOW]`
 
+Post-R1 the repository is an npm workspace: `apps/{api,storefront,erp}` and
+`packages/{ui,domain,api-client,config}`. `npm ci` at the root installs everything;
+there is one lockfile.
+
+| Purpose | Command |
+|---|---|
+| Install everything | `npm ci` |
+| Run all three tiers | `npm run dev` |
+| Build both clients | `npm run build` |
+| API tests | `npm test -w apps/api` |
+| Storefront tests | `npm test -w apps/storefront` |
+| Lint (ratchet, all workspaces) | `npm run lint` |
+| Visual baselines | `npm run test:visual` |
+| Everything Playwright runs | `npm run test:e2e` |
+
+### Legacy two-directory layout
+
 | Purpose | Command | Notes |
 |---|---|---|
 | Install everything | `npm run build` (root) | Installs backend + frontend, builds frontend |

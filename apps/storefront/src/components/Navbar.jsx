@@ -29,13 +29,13 @@ const getIconButtonClass = (hasItems = false) =>
     hasItems ? 'border-secondary/40 text-secondary' : 'border-base-300 text-neutral/75'
   }`;
 
-import { useAuthStore } from '../store/useAuthStore';
-import { useAdminStore } from '../store/useAdminStore';
+import { useAuthStore } from '@em/domain';
+import { useAdminStore } from '@em/domain';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { useMarketingStore } from '../store/useMarketingStore';
-import { PERMISSIONS } from '../lib/permissions';
+import { PERMISSIONS } from '@em/domain';
 
 const Navbar = () => {
   const location = useLocation();

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
 import { useCouponStore } from '../store/useCouponStore';
 import { useOrderStore } from '../store/useOrderStore';
-import { useAuthStore } from '../store/useAuthStore';
+import { useAuthStore } from '@em/domain';
 import { Loader2, ShoppingBag, Truck, CreditCard, CheckCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { axiosInstance } from '@em/api-client';

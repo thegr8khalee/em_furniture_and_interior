@@ -14,15 +14,15 @@ import {
   Pen,
   Trash2,
 } from 'lucide-react';
-// import { useAdminStore } from '../store/useAdminStore'; // To get collection details
-import { useProductsStore } from '../store/useProductsStore'; // To get all products and filter them
-import { useCollectionStore } from '../store/useCollectionStore';
+// import { useAdminStore } from '@em/domain'; // To get collection details
+import { useProductsStore } from '@em/domain'; // To get all products and filter them
+import { useCollectionStore } from '@em/domain';
 // import whatsapp from '../images/whatsapp.png';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
-// import { useAdminStore } from '../store/useAdminStore';
-import { useAuthStore } from '../store/useAuthStore';
-import { useAdminStore } from '../store/useAdminStore';
+// import { useAdminStore } from '@em/domain';
+import { useAuthStore } from '@em/domain';
+import { useAdminStore } from '@em/domain';
 import { useMarketingStore } from '../store/useMarketingStore';
 import { axiosInstance } from '@em/api-client';
 import SEO from '../components/SEO';

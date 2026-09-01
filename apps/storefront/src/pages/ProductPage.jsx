@@ -19,12 +19,12 @@ import {
 import { luxuryEase } from '@em/ui';
 import { FadeIn, PageWrapper, SectionReveal, SlideIn } from '@em/ui';
 import { Badge, Button, Card, EmptyState, Select, Textarea } from '@em/ui';
-import { useProductsStore } from '../store/useProductsStore';
+import { useProductsStore } from '@em/domain';
 // import whatsapp from '../images/whatsapp.png';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
-import { useAuthStore } from '../store/useAuthStore';
-import { useAdminStore } from '../store/useAdminStore';
+import { useAuthStore } from '@em/domain';
+import { useAdminStore } from '@em/domain';
 import { useCompareStore } from '../store/useCompareStore';
 import { useMarketingStore } from '../store/useMarketingStore';
 import { axiosInstance } from '@em/api-client';

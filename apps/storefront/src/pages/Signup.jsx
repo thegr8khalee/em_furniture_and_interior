@@ -1,7 +1,7 @@
 // src/pages/AdminSignupPage.jsx
 import React, { useState } from 'react';
 // import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/useAuthStore'; // Import your Zustand auth store
+import { useAuthStore } from '@em/domain'; // Import your Zustand auth store
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageWrapper } from '@em/ui';

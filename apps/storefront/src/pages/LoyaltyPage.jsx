@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLoyaltyStore } from '../store/useLoyaltyStore';
 import { Trophy, Loader2 } from 'lucide-react';
-import { useAuthStore } from '../store/useAuthStore';
+import { useAuthStore } from '@em/domain';
 import { PageWrapper } from '@em/ui';
 import SEO from '../components/SEO';
 

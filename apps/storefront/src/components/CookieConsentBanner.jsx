@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// import { useAuthStore } from '../store/useAuthStore';
+// import { useAuthStore } from '@em/domain';
 // Please verify this path carefully based on your actual file structure.
 // If CookieConsentBanner.jsx is in 'src/components/' and useAuthStore.js is in 'src/store/',
 // then '../store/useAuthStore' is the correct relative path.

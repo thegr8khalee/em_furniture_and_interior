@@ -11,14 +11,14 @@ import {
   Heart,
 } from 'lucide-react';
 import FilterModal from '../components/FilterModal';
-import { useProductsStore } from '../store/useProductsStore';
+import { useProductsStore } from '@em/domain';
 // import Hero1 from '../images/Hero1.png';
 // import whatsapp from '../images/whatsapp.png';
-import { useCollectionStore } from '../store/useCollectionStore';
+import { useCollectionStore } from '@em/domain';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
-import { useAuthStore } from '../store/useAuthStore';
+import { useAuthStore } from '@em/domain';
 import { motion } from 'framer-motion';
 import { luxuryEase, elegantEase } from '@em/ui';
 import { PageWrapper } from '@em/ui';

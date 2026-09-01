@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { axiosInstance } from '@em/api-client';
 import { toast } from 'react-hot-toast';
 import Cookies from 'js-cookie';
-import { useAuthStore } from './useAuthStore.js';
+import { useAuthStore } from '@em/domain';
 
 // Key for local storage cart
 const LOCAL_STORAGE_CART_KEY = 'localCart';
