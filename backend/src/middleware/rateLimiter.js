@@ -97,3 +97,20 @@ export const searchLimiter = rateLimit({
     });
   },
 });
+
+// Gateway callbacks. Set high enough that a webhook retry burst is never
+// dropped — a missed charge.success costs a real order — but bounded so a flood
+// of forged payloads can't be free. Forged requests fail signature verification
+// before they reach the database, so this is a backstop, not the defence.
+export const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({
+      error: 'Too many requests',
+      message: 'Webhook rate limit exceeded.',
+    });
+  },
+});

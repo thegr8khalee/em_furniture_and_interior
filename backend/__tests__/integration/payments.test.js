@@ -1,306 +1,191 @@
 import { jest } from '@jest/globals';
+import crypto from 'crypto';
 import { calculateTax } from '../../src/controllers/tax.controller.js';
 import {
-  mockFetch,
-  mockPaystackSuccessResponse,
-  mockPaystackVerifySuccess,
-  mockFlutterwaveSuccessResponse,
-  mockFlutterwaveVerifySuccess,
-  mockStripeSuccessResponse,
-  mockStripeVerifySuccess,
-  createMockOrder,
-} from '../helpers/mockData.js';
+  verifyPaystackSignature,
+  chargeMatchesOrder,
+  toMinorUnit,
+} from '../../src/controllers/payments.controller.js';
 
-// Mock environment variables
-process.env.PAYSTACK_SECRET_KEY = 'test_paystack_secret';
-process.env.FLUTTERWAVE_SECRET_KEY = 'test_flutterwave_secret';
-process.env.STRIPE_SECRET_KEY = 'test_stripe_secret';
+const WEBHOOK_SECRET = 'sk_test_paystack_secret';
+
+process.env.PAYSTACK_SECRET_KEY = WEBHOOK_SECRET;
 process.env.TAX_RATE_PERCENTAGE = '7.5';
 process.env.FRONTEND_URL = 'http://localhost:5173';
 
-describe('Payment Integration Tests', () => {
-  beforeEach(() => {
-    mockFetch.mockClear();
+/** Signs a payload the way Paystack does, so the tests exercise the real path. */
+const sign = (rawBody, secret = WEBHOOK_SECRET) =>
+  crypto.createHmac('sha512', secret).update(rawBody).digest('hex');
+
+const chargePayload = (overrides = {}) =>
+  Buffer.from(
+    JSON.stringify({
+      event: 'charge.success',
+      data: {
+        reference: 'EM-ORD-12345678-001-1700000000000',
+        status: 'success',
+        amount: 150000,
+        currency: 'NGN',
+        ...overrides,
+      },
+    })
+  );
+
+describe('Paystack webhook signature verification', () => {
+  test('accepts a body signed with the configured secret', () => {
+    const body = chargePayload();
+    expect(verifyPaystackSignature(body, sign(body))).toBe(true);
   });
 
-  describe('Paystack Integration', () => {
-    test('should initialize Paystack payment successfully', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockPaystackSuccessResponse,
-      });
-
-      const mockOrder = createMockOrder({
-        _id: '507f1f77bcf86cd799439011',
-        totalAmount: 1000,
-      });
-
-      const mockReq = {
-        body: { orderId: mockOrder._id },
-        user: null,
-        guestSession: { anonymousId: 'test-guest-123' },
-        ip: '127.0.0.1',
-        get: jest.fn().mockReturnValue('Mozilla/5.0'),
-      };
-
-      const mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-      };
-
-      // Simulate payment initialization logic
-      expect(mockFetch).toHaveBeenCalledTimes(0);
-    });
-
-    test('should verify Paystack payment successfully', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockPaystackVerifySuccess,
-      });
-
-      const mockReq = {
-        query: { reference: 'test_reference' },
-      };
-
-      const mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-      };
-
-      // Simulate verification logic
-      expect(mockPaystackVerifySuccess.data.status).toBe('success');
-    });
-
-    test('should handle Paystack initialization failure', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({
-          status: false,
-          message: 'Invalid API key',
-        }),
-      });
-
-      const mockReq = {
-        body: { orderId: '507f1f77bcf86cd799439011' },
-      };
-
-      const mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-      };
-
-      // Simulate error handling
-      expect(true).toBe(true);
-    });
+  test('accepts the Buffer that express.raw() delivers', () => {
+    const body = chargePayload();
+    expect(Buffer.isBuffer(body)).toBe(true);
+    expect(verifyPaystackSignature(body, sign(body))).toBe(true);
   });
 
-  describe('Flutterwave Integration', () => {
-    test('should initialize Flutterwave payment successfully', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockFlutterwaveSuccessResponse,
-      });
+  test('rejects a body tampered with after signing', () => {
+    const original = chargePayload();
+    const signature = sign(original);
+    // An attacker inflating the amount on a payload they intercepted.
+    const tampered = chargePayload({ amount: 1 });
 
-      const mockOrder = createMockOrder({
-        _id: '507f1f77bcf86cd799439011',
-        totalAmount: 1000,
-      });
-
-      expect(mockFlutterwaveSuccessResponse.status).toBe('success');
-    });
-
-    test('should verify Flutterwave payment successfully', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockFlutterwaveVerifySuccess,
-      });
-
-      const mockReq = {
-        query: { tx_ref: 'test_tx_ref' },
-      };
-
-      const mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-      };
-
-      expect(mockFlutterwaveVerifySuccess.data.status).toBe('successful');
-    });
+    expect(verifyPaystackSignature(tampered, signature)).toBe(false);
   });
 
-  describe('Stripe Integration', () => {
-    test('should initialize Stripe payment successfully', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockStripeSuccessResponse,
-      });
-
-      const mockOrder = createMockOrder({
-        _id: '507f1f77bcf86cd799439011',
-        totalAmount: 1000,
-      });
-
-      expect(mockStripeSuccessResponse.id).toContain('cs_test');
-    });
-
-    test('should verify Stripe payment successfully', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockStripeVerifySuccess,
-      });
-
-      const mockReq = {
-        query: { session_id: 'cs_test_123' },
-      };
-
-      const mockRes = {
-        status: jest.fn().mockReturnThis(),
-        json: jest.fn(),
-      };
-
-      expect(mockStripeVerifySuccess.payment_status).toBe('paid');
-    });
+  test('rejects a signature produced with a different secret', () => {
+    const body = chargePayload();
+    expect(verifyPaystackSignature(body, sign(body, 'sk_test_wrong_secret'))).toBe(false);
   });
 
-  describe('Bank Transfer Proof Upload', () => {
-    test('should upload bank transfer proof successfully', async () => {
-      const mockCloudinary = {
-        uploader: {
-          upload: jest.fn().mockResolvedValue({
-            secure_url: 'https://res.cloudinary.com/test/proof.jpg',
-            public_id: 'bank_transfers/proof123',
-          }),
-        },
-      };
+  test('rejects a forged signature of the correct length', () => {
+    const body = chargePayload();
+    const forged = 'a'.repeat(sign(body).length);
 
-      const proofData = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';
-      const mockOrder = createMockOrder({
-        _id: '507f1f77bcf86cd799439011',
-      });
+    expect(verifyPaystackSignature(body, forged)).toBe(false);
+  });
 
-      expect(proofData).toContain('data:image/jpeg');
-    });
+  test('rejects a signature of the wrong length without throwing', () => {
+    const body = chargePayload();
+    // crypto.timingSafeEqual throws on length mismatch — the length guard in the
+    // implementation is what stops this becoming a 500 on every junk request.
+    expect(() => verifyPaystackSignature(body, 'too-short')).not.toThrow();
+    expect(verifyPaystackSignature(body, 'too-short')).toBe(false);
+  });
 
-    test('should reject invalid proof format', async () => {
-      const invalidProof = 'not-a-valid-image';
-      expect(invalidProof).not.toContain('data:image');
-    });
+  test('rejects a missing signature header', () => {
+    const body = chargePayload();
+    expect(verifyPaystackSignature(body, undefined)).toBe(false);
+    expect(verifyPaystackSignature(body, '')).toBe(false);
+  });
+
+  test('rejects everything when PAYSTACK_SECRET_KEY is missing', () => {
+    // A deploy without the key must reject every webhook, never accept them.
+    const body = chargePayload();
+    const signature = sign(body);
+    const configured = process.env.PAYSTACK_SECRET_KEY;
+
+    delete process.env.PAYSTACK_SECRET_KEY;
+    try {
+      expect(verifyPaystackSignature(body, signature)).toBe(false);
+    } finally {
+      process.env.PAYSTACK_SECRET_KEY = configured;
+    }
+
+    expect(verifyPaystackSignature(body, signature, '')).toBe(false);
+  });
+
+  test('is sensitive to whitespace, so a re-serialised body will not verify', () => {
+    const body = chargePayload();
+    const signature = sign(body);
+    const reserialised = Buffer.from(JSON.stringify(JSON.parse(body.toString()), null, 2));
+
+    expect(verifyPaystackSignature(reserialised, signature)).toBe(false);
   });
 });
 
-describe('Tax Calculation Tests', () => {
-  beforeEach(() => {
-    mockFetch.mockClear();
-    process.env.TAX_RATE_PERCENTAGE = '10'; // Set default for tests
+describe('Charge amount verification', () => {
+  test('converts naira to kobo', () => {
+    expect(toMinorUnit(1500)).toBe(150000);
+    expect(toMinorUnit(0)).toBe(0);
   });
 
-  test('should calculate tax successfully based on configured percentage', async () => {
-    const mockReq = {
+  test('converts fractional amounts without floating-point drift', () => {
+    expect(toMinorUnit(19.99)).toBe(1999);
+    expect(toMinorUnit(1234.56)).toBe(123456);
+    expect(toMinorUnit(0.1 + 0.2)).toBe(30);
+  });
+
+  test('accepts a charge matching the order total exactly', () => {
+    expect(chargeMatchesOrder({ amount: 150000, currency: 'NGN' }, { totalAmount: 1500 })).toBe(true);
+  });
+
+  test('rejects an underpayment', () => {
+    expect(chargeMatchesOrder({ amount: 100, currency: 'NGN' }, { totalAmount: 1500 })).toBe(false);
+  });
+
+  test('rejects an overpayment', () => {
+    expect(chargeMatchesOrder({ amount: 999999, currency: 'NGN' }, { totalAmount: 1500 })).toBe(false);
+  });
+
+  test('rejects a charge in the wrong currency', () => {
+    expect(chargeMatchesOrder({ amount: 150000, currency: 'USD' }, { totalAmount: 1500 })).toBe(false);
+  });
+
+  test('accepts the currency code in any case', () => {
+    expect(chargeMatchesOrder({ amount: 150000, currency: 'ngn' }, { totalAmount: 1500 })).toBe(true);
+  });
+
+  test('rejects a malformed charge', () => {
+    expect(chargeMatchesOrder({}, { totalAmount: 1500 })).toBe(false);
+    expect(chargeMatchesOrder({ amount: null, currency: 'NGN' }, { totalAmount: 1500 })).toBe(false);
+    expect(chargeMatchesOrder({ amount: 150000, currency: 'NGN' }, {})).toBe(false);
+  });
+
+  test('matches on a total with kobo precision', () => {
+    expect(chargeMatchesOrder({ amount: 123456, currency: 'NGN' }, { totalAmount: 1234.56 })).toBe(true);
+    expect(chargeMatchesOrder({ amount: 123455, currency: 'NGN' }, { totalAmount: 1234.56 })).toBe(false);
+  });
+});
+
+describe('Tax calculation', () => {
+  beforeEach(() => {
+    process.env.TAX_RATE_PERCENTAGE = '10';
+  });
+
+  test('calculates tax from the configured percentage', async () => {
+    const req = {
       body: {
-        items: [
-          { id: 'prod1', quantity: 1, price: 1000 },
-        ],
+        items: [{ id: 'prod1', quantity: 1, price: 1000 }],
         amount: 1000,
         currency: 'NGN',
       },
     };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
 
-    const mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
-    };
+    await calculateTax(req, res);
 
-    await calculateTax(mockReq, mockRes);
-
-    expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-      success: true,
-      tax: expect.objectContaining({
-        amountToCollect: 100, // 10% of 1000
-        rate: 0.1,
-        taxableAmount: 1000,
-      }),
-      currency: 'NGN'
-    }));
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        tax: expect.objectContaining({
+          amountToCollect: 100,
+          rate: 0.1,
+          taxableAmount: 1000,
+        }),
+        currency: 'NGN',
+      })
+    );
   });
 
-  test('should handle validation errors', async () => {
-    const mockReq = {
-      body: {
-        // Missing items
-        amount: 1000,
-      },
-    };
+  test('rejects a request with no items', async () => {
+    const req = { body: { amount: 1000 } };
+    const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };
 
-    const mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
-    };
+    await calculateTax(req, res);
 
-    await calculateTax(mockReq, mockRes);
-
-    expect(mockRes.status).toHaveBeenCalledWith(400);
-    expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-      message: expect.stringMatching(/items are required/i)
-    }));
-  });
-});
-
-describe('Order Document Generation Tests', () => {
-  test('should generate invoice PDF with correct metadata', () => {
-    const mockOrder = createMockOrder({
-      orderNumber: 'ORD-12345678-001',
-      createdAt: new Date('2026-02-12'),
-      status: 'confirmed',
-      paymentStatus: 'paid',
-    });
-
-    const documentType = 'invoice';
-    expect(documentType).toBe('invoice');
-    expect(mockOrder.orderNumber).toBe('ORD-12345678-001');
-  });
-
-  test('should generate receipt PDF only for paid orders', () => {
-    const paidOrder = createMockOrder({
-      paymentStatus: 'paid',
-    });
-
-    const pendingOrder = createMockOrder({
-      paymentStatus: 'pending',
-    });
-
-    expect(paidOrder.paymentStatus).toBe('paid');
-    expect(pendingOrder.paymentStatus).toBe('pending');
-  });
-
-  test('should generate quotation PDF with validity period', () => {
-    const mockOrder = createMockOrder({
-      createdAt: new Date('2026-02-12'),
-    });
-
-    const validUntil = new Date(mockOrder.createdAt);
-    validUntil.setDate(validUntil.getDate() + 14);
-
-    expect(validUntil.getDate()).toBeGreaterThan(new Date(mockOrder.createdAt).getDate());
-  });
-
-  test('should include discount in document when coupon applied', () => {
-    const mockOrder = createMockOrder({
-      discount: 100,
-      couponCode: 'SAVE10',
-    });
-
-    expect(mockOrder.discount).toBeGreaterThan(0);
-    expect(mockOrder.couponCode).toBe('SAVE10');
-  });
-
-  test('should include tracking information when available', () => {
-    const mockOrder = createMockOrder({
-      trackingNumber: 'TRACK123',
-      carrier: 'DHL',
-      estimatedDeliveryDate: new Date('2026-02-20'),
-    });
-
-    expect(mockOrder.trackingNumber).toBeTruthy();
-    expect(mockOrder.carrier).toBe('DHL');
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringMatching(/items are required/i) })
+    );
   });
 });

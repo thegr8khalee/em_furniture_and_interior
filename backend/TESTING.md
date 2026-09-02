@@ -1,228 +1,65 @@
-# Unit Testing Summary
+# Backend Tests
 
-## Overview
-Comprehensive unit test suite for the E&M Furniture and Interior backend application. All tests use mocked external APIs to avoid requiring actual API keys.
-
-## Test Statistics
-- **Total Test Suites:** 3
-- **Total Tests:** 73
-- **Status:** ✅ All Passing
-- **Execution Time:** ~9.6 seconds
-
-## Test Coverage
-
-### 1. Payment Integration Tests (`__tests__/integration/payments.test.js`)
-**17 tests** covering payment gateway integrations and tax calculation:
-
-#### Paystack Integration (3 tests)
-- ✅ Initialize payment successfully
-- ✅ Verify payment successfully
-- ✅ Handle initialization failure
-
-#### Flutterwave Integration (2 tests)
-- ✅ Initialize payment successfully
-- ✅ Verify payment successfully
-
-#### Stripe Integration (2 tests)
-- ✅ Initialize payment successfully
-- ✅ Verify payment successfully
-
-#### Bank Transfer Proof Upload (2 tests)
-- ✅ Upload bank transfer proof successfully
-- ✅ Reject invalid proof format
-
-#### Tax Calculation (3 tests)
-- ✅ Calculate tax successfully with TaxJar
-- ✅ Handle missing shipping address
-- ✅ Handle TaxJar API failure gracefully
-
-#### Order Document Generation (5 tests)
-- ✅ Generate invoice PDF with correct metadata
-- ✅ Generate receipt PDF only for paid orders
-- ✅ Generate quotation PDF with validity period
-- ✅ Include discount when coupon applied
-- ✅ Include tracking information when available
-
-### 2. Feature Tests (`__tests__/integration/features.test.js`)
-**33 tests** covering coupons, consultations, analytics, and orders:
-
-#### Coupon Controller (7 tests)
-- ✅ Validate coupon successfully for valid cart
-- ✅ Reject expired coupon
-- ✅ Reject coupon below minimum purchase
-- ✅ Calculate percentage discount correctly
-- ✅ Calculate fixed discount correctly
-- ✅ Cap discount at maximum discount value
-- ✅ Track coupon usage correctly
-
-#### Consultation Controller (7 tests)
-- ✅ Create consultation request successfully
-- ✅ Upload room photos to Cloudinary
-- ✅ Upload floor plan to Cloudinary
-- ✅ Validate required fields
-- ✅ Assign preferred designer when valid ID provided
-- ✅ Default to calendly meeting type
-- ✅ Send email notification on new consultation request
-
-#### Analytics Controller (8 tests)
-- ✅ Calculate sales by category correctly
-- ✅ Calculate sales by region correctly
-- ✅ Parse date range correctly
-- ✅ Reject invalid date range
-- ✅ Calculate total revenue correctly
-- ✅ Exclude cancelled and refunded orders from analytics
-- ✅ Calculate average order value
-- ✅ Identify top-selling products
-
-#### Order Controller Additional (5 tests)
-- ✅ Create order with multiple items
-- ✅ Track order status history
-- ✅ Calculate loyalty points earned
-- ✅ Handle guest orders correctly
-- ✅ Handle registered user orders correctly
-
-### 3. Core Feature Tests (`__tests__/integration/core.test.js`)
-**27 tests** covering authentication, cart, wishlist, and products:
-
-#### Auth Controller (9 tests)
-- ✅ Signup new user with valid credentials
-- ✅ Reject signup with duplicate email
-- ✅ Hash password securely
-- ✅ Login with correct credentials
-- ✅ Reject login with incorrect password
-- ✅ Merge guest data on signup with anonymousId
-- ✅ Generate JWT token on successful login
-- ✅ Validate required fields on signup
-- ✅ Validate required fields on login
-
-#### Cart Controller (9 tests)
-- ✅ Get cart for authenticated user
-- ✅ Get cart for guest user
-- ✅ Add item to cart
-- ✅ Update item quantity in cart
-- ✅ Remove item from cart
-- ✅ Clean cart by removing deleted products
-- ✅ Return empty cart for non-existent user
-- ✅ Handle cart with collections
-- ✅ Separate products and collections in cart
-
-#### Wishlist Controller (4 tests)
-- ✅ Add item to wishlist
-- ✅ Remove item from wishlist
-- ✅ Prevent duplicate items in wishlist
-- ✅ Get all wishlist items
-
-#### Product Controller (7 tests)
-- ✅ Fetch all products with pagination
-- ✅ Filter products by category
-- ✅ Filter products by price range
-- ✅ Search products by name
-- ✅ Get product by ID
-- ✅ Sort products by price ascending
-- ✅ Sort products by price descending
-
-## Mocked External APIs
-
-All external service API calls are mocked to avoid requiring actual API keys:
-
-### Payment Gateways
-- **Paystack**: Mocked initialization and verification responses
-- **Flutterwave**: Mocked hosted link and verification responses
-- **Stripe**: Mocked checkout session creation and retrieval
-
-### Tax Service
-- **TaxJar**: Mocked tax calculation responses with realistic data
-
-### File Upload
-- **Cloudinary**: Mocked upload responses for bank transfer proofs
-
-## Test Infrastructure
-
-### Configuration Files
-- **jest.config.js**: Jest configuration with Node environment, test matching pattern, and coverage settings
-- **package.json**: Test script using `cross-env` for cross-platform compatibility
-
-### Helper Files
-- **__tests__/helpers/mockData.js**: Centralized mock data factory including:
-  - Mock API responses for all payment gateways
-  - Mock TaxJar responses
-  - Mock Cloudinary responses
-  - Order factory function with sensible defaults
-  - Database cleanup utilities
-
-### Test Structure
-All tests follow a consistent structure:
-1. Arrange: Set up mock data and conditions
-2. Act: Execute the function or logic under test
-3. Assert: Verify expected outcomes using Jest matchers
-
-## Running Tests
+## Running
 
 ```bash
-# Run all tests
-npm test
-
-# Run tests with coverage report
-npm test -- --coverage
-
-# Run specific test file
-npm test payments.test.js
-
-# Run tests in watch mode
-npm test -- --watch
+npm test                  # all suites
+npm test -- --coverage    # with coverage
+npm test payments         # one file
+npm test -- --watch       # watch mode
 ```
 
-## Test Categories
+## Honest state of the suite
 
-### Unit Tests
-Focus on testing individual functions and logic in isolation with mocked dependencies.
+Read this before trusting a green run.
 
-### Integration Tests
-Test the interaction between multiple components while still mocking external services.
+| Suite | Tests real code? | Notes |
+| --- | --- | --- |
+| `__tests__/integration/payments.test.js` | **Yes** | Imports `verifyPaystackSignature`, `chargeMatchesOrder`, `toMinorUnit` and `calculateTax` and asserts against them. |
+| `__tests__/integration/core.test.js` | **No** | Placebo. Builds literal objects and asserts on them — tests nothing in `src/`. |
+| `__tests__/integration/features.test.js` | **No** | Placebo, same pattern. |
 
-## Best Practices Implemented
+`core.test.js` and `features.test.js` contain assertions like
+`expect(mockUser.username).toBe('John Doe')` against an object the test itself
+just wrote. They pass whatever the application does, so they will stay green
+through a refactor that breaks production. They are scheduled for deletion and
+replacement with Supertest integration tests against a real Postgres instance
+as part of the database migration — until then, treat their result as
+meaningless rather than reassuring.
 
-1. **Mocked External Dependencies**: All external API calls are mocked to ensure tests are:
-   - Fast (no network calls)
-   - Reliable (no external service failures)
-   - Secure (no API keys needed)
+Do not add new tests in that style.
 
-2. **Isolated Tests**: Each test is independent and doesn't rely on other tests
+## What is genuinely covered
 
-3. **Descriptive Test Names**: Clear, action-oriented test descriptions
+**Paystack webhook signature verification** — the security boundary for payment
+confirmation. Covers a correctly signed body, a body tampered with after
+signing, a signature from the wrong secret, a forged signature of the correct
+length, a short signature (which would throw inside `crypto.timingSafeEqual`
+without the length guard), a missing header, a missing `PAYSTACK_SECRET_KEY`,
+and a re-serialised body (which must fail — proof that the raw bytes matter).
 
-4. **Realistic Mock Data**: Mock responses match actual API response structures
+**Charge amount verification** — a charge is only applied when the gateway's
+reported amount equals the order total in kobo and the currency is NGN. Covers
+underpayment, overpayment, wrong currency, malformed payloads, and kobo-level
+precision on fractional totals.
 
-5. **Comprehensive Coverage**: Tests cover:
-   - Happy paths (successful operations)
-   - Error paths (validation failures, API errors)
-   - Edge cases (expired coupons, missing data)
+**Tax calculation** — rate applied from `TAX_RATE_PERCENTAGE`, and the
+validation error when no items are supplied.
 
-## Future Test Enhancements
+## Conventions for new tests
 
-Consider adding tests for:
-- **Loyalty Program**: Points calculation, tier upgrades, redemption
-- **Notifications**: Email/SMS notification delivery
-- **Marketing**: Campaign performance tracking
-- **Inventory**: Stock level updates, low stock alerts
-- **Finance**: Revenue reports, expense tracking
-- **Designers**: Designer assignment, availability
-- **Reviews**: Rating calculation, review moderation
-- **Collections**: Collection creation, product association
-- **Blog**: Post creation, publishing workflow
-- **FAQ**: Question categorization, search functionality
+1. Import the thing under test from `src/`. If a test file has no `src/` import,
+   it is not testing the application.
+2. Assert on the return value or the mocked `res` of a real call, never on a
+   literal the test just constructed.
+3. Mock at the boundary — `fetch`, Cloudinary, the mailer — not the module under
+   test.
+4. Cover the failure path. For anything touching money or auth, cover the
+   hostile path too.
 
-## Continuous Integration
+## Manual webhook check
 
-These tests can be integrated into CI/CD pipelines:
-- Run on every pull request
-- Block merges if tests fail
-- Generate coverage reports
-- Track test performance over time
-
-## Notes
-
-- Tests use Jest with experimental VM modules for ESM support
-- Cross-env ensures compatibility across Windows, macOS, and Linux
-- Mock data is realistic and matches actual API response structures
-- All tests pass consistently without external dependencies
+The Postman collection (`docs/EM_Furniture_API.postman_collection.json`) has a
+**Paystack Webhook (charge.success)** request whose pre-request script signs the
+body with `paystackSecretKey`. Clear that variable to confirm the endpoint
+answers 401; edit the body after signing to confirm it rejects tampering.

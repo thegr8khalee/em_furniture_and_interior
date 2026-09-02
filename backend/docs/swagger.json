@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "EM Furniture & Interior API",
-    "description": "REST API for EM Furniture and Interior e-commerce platform. Supports user and guest authentication, product/collection management, orders, payments (Paystack, Flutterwave, Stripe, bank transfer), consultations, loyalty, marketing, and admin operations.",
+    "description": "REST API for EM Furniture and Interior e-commerce platform. Supports user and guest authentication, product/collection management, orders, payments (Paystack and bank transfer), consultations, loyalty, marketing, and admin operations.",
     "version": "1.0.0",
     "contact": {
       "name": "EM Furniture & Interior"
@@ -1475,69 +1475,33 @@
         }
       }
     },
-    "/api/payments/flutterwave/initialize": {
+    "/api/payments/paystack/webhook": {
       "post": {
         "tags": ["Payments"],
-        "summary": "Initialize Flutterwave payment",
+        "summary": "Paystack webhook (charge.success)",
+        "description": "Server-to-server callback from Paystack, and the source of truth for payment confirmation — the redirect callback (GET /api/payments/paystack/verify) is only a fast path for customers who make it back to the site. Both converge on the same idempotent handler, so a charge confirmed twice is applied once.\n\nThe body is verified with HMAC-SHA512 over the raw bytes, keyed on PAYSTACK_SECRET_KEY, compared in constant time against the x-paystack-signature header. The reported amount and currency must match the order total or the charge is rejected.\n\nRegister the URL under Settings → API Keys & Webhooks in the Paystack dashboard. Events other than charge.success are acknowledged with 200 and ignored; a 5xx tells Paystack to retry.",
+        "security": [],
+        "parameters": [{ "name": "x-paystack-signature", "in": "header", "required": true, "description": "HMAC-SHA512 of the raw request body, keyed on the Paystack secret key.", "schema": { "type": "string" } }],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["orderId"],
                 "properties": {
-                  "orderId": { "type": "string" }
+                  "event": { "type": "string", "example": "charge.success" },
+                  "data": { "type": "object", "properties": { "reference": { "type": "string" }, "status": { "type": "string" }, "amount": { "type": "integer", "description": "Amount in kobo. Must equal the order total or the charge is rejected." }, "currency": { "type": "string" } } }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Payment initialized", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "authorizationUrl": { "type": "string" }, "reference": { "type": "string" }, "transactionId": { "type": "string" }, "orderId": { "type": "string" } } } } } }
-        }
-      }
-    },
-    "/api/payments/flutterwave/verify": {
-      "get": {
-        "tags": ["Payments"],
-        "summary": "Verify Flutterwave payment",
-        "parameters": [{ "name": "tx_ref", "in": "query", "required": true, "schema": { "type": "string" } }],
-        "responses": {
-          "200": { "description": "Payment status", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "status": { "type": "string" }, "orderId": { "type": "string" }, "orderNumber": { "type": "string" }, "amount": { "type": "number" } } } } } }
-        }
-      }
-    },
-    "/api/payments/stripe/initialize": {
-      "post": {
-        "tags": ["Payments"],
-        "summary": "Initialize Stripe payment",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["orderId"],
-                "properties": {
-                  "orderId": { "type": "string" }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Payment initialized", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "authorizationUrl": { "type": "string" }, "reference": { "type": "string" }, "transactionId": { "type": "string" }, "orderId": { "type": "string" } } } } } }
-        }
-      }
-    },
-    "/api/payments/stripe/verify": {
-      "get": {
-        "tags": ["Payments"],
-        "summary": "Verify Stripe payment",
-        "parameters": [{ "name": "session_id", "in": "query", "required": true, "schema": { "type": "string" } }],
-        "responses": {
-          "200": { "description": "Payment status", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "status": { "type": "string" }, "orderId": { "type": "string" }, "orderNumber": { "type": "string" }, "amount": { "type": "number" } } } } } }
+          "200": { "description": "Event acknowledged — applied if it was a charge.success for a known reference, ignored otherwise" },
+          "400": { "description": "Signature valid but body is not parseable JSON" },
+          "401": { "description": "Missing or invalid signature" },
+          "429": { "description": "Webhook rate limit exceeded" },
+          "500": { "description": "Processing failed — Paystack should retry" }
         }
       }
     },

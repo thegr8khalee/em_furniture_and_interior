@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import Order from '../models/order.model.js';
 import PaymentTransaction from '../models/paymentTransaction.model.js';
 import GuestSession from '../models/guest.model.js';
@@ -5,44 +6,64 @@ import User from '../models/user.model.js';
 import cloudinary from '../lib/cloudinary.js';
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
-const FLUTTERWAVE_BASE_URL = 'https://api.flutterwave.com/v3';
-const STRIPE_BASE_URL = 'https://api.stripe.com/v1';
+const PAYSTACK_CURRENCY = 'NGN';
 
-const getPaystackHeaders = () => {
+const getPaystackSecret = () => {
   const secretKey = process.env.PAYSTACK_SECRET_KEY;
   if (!secretKey) {
     throw new Error('PAYSTACK_SECRET_KEY is not configured');
   }
-
-  return {
-    Authorization: `Bearer ${secretKey}`,
-    'Content-Type': 'application/json',
-  };
+  return secretKey;
 };
 
-const getFlutterwaveHeaders = () => {
-  const secretKey = process.env.FLUTTERWAVE_SECRET_KEY;
-  if (!secretKey) {
-    throw new Error('FLUTTERWAVE_SECRET_KEY is not configured');
+const getPaystackHeaders = () => ({
+  Authorization: `Bearer ${getPaystackSecret()}`,
+  'Content-Type': 'application/json',
+});
+
+/** Paystack works in the currency's minor unit (kobo for NGN). */
+export const toMinorUnit = (amount) => Math.round(Number(amount) * 100);
+
+/**
+ * Paystack signs the raw request body with HMAC-SHA512 keyed on the secret key.
+ * Compared in constant time so a wrong signature can't be narrowed down by
+ * timing the response.
+ */
+export const verifyPaystackSignature = (
+  rawBody,
+  signature,
+  secret = process.env.PAYSTACK_SECRET_KEY
+) => {
+  if (!secret || !signature || rawBody == null) {
+    return false;
   }
 
-  return {
-    Authorization: `Bearer ${secretKey}`,
-    'Content-Type': 'application/json',
-  };
-};
+  const expected = crypto
+    .createHmac('sha512', secret)
+    .update(rawBody)
+    .digest('hex');
+  const provided = String(signature);
 
-const getStripeHeaders = () => {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
-  if (!secretKey) {
-    throw new Error('STRIPE_SECRET_KEY is not configured');
+  // timingSafeEqual throws on length mismatch, so length is checked first. The
+  // digest length is fixed and public, so this leaks nothing useful.
+  if (provided.length !== expected.length) {
+    return false;
   }
 
-  return {
-    Authorization: `Bearer ${secretKey}`,
-    'Content-Type': 'application/x-www-form-urlencoded',
-  };
+  return crypto.timingSafeEqual(
+    Buffer.from(expected, 'utf8'),
+    Buffer.from(provided, 'utf8')
+  );
 };
+
+/**
+ * The gateway's reported amount must match what we asked it to charge. Without
+ * this, a caller who can influence the charge (or a replayed event from a
+ * different order) could mark an order paid for the wrong sum.
+ */
+export const chargeMatchesOrder = (charge, order) =>
+  Number(charge?.amount) === toMinorUnit(order?.totalAmount) &&
+  String(charge?.currency).toUpperCase() === PAYSTACK_CURRENCY;
 
 const resolveOrderForRequester = async (req, orderId) => {
   const order = await Order.findById(orderId);
@@ -68,6 +89,135 @@ const resolveOrderForRequester = async (req, orderId) => {
   return { error: 'Authentication required' };
 };
 
+const clearRequesterCart = async (order) => {
+  if (order.user) {
+    await User.findByIdAndUpdate(order.user, { cart: [] });
+  } else if (order.guest) {
+    await GuestSession.findByIdAndUpdate(order.guest, { cart: [] });
+  }
+};
+
+/**
+ * Marks a transaction and its order as paid.
+ *
+ * Both the redirect callback and the webhook land here, often for the same
+ * charge and sometimes at the same moment, so the transaction is claimed with a
+ * conditional update — only the first caller through does the work, everyone
+ * else gets `already_applied` and changes nothing.
+ */
+const applySuccessfulCharge = async (transaction, charge, source) => {
+  const order = await Order.findById(transaction.order);
+  if (!order) {
+    console.error(
+      `Paystack ${source}: transaction ${transaction._id} points at missing order ${transaction.order}`
+    );
+    return { outcome: 'order_not_found' };
+  }
+
+  if (!chargeMatchesOrder(charge, order)) {
+    await PaymentTransaction.updateOne(
+      { _id: transaction._id },
+      {
+        $set: {
+          status: 'failed',
+          verified: false,
+          gatewayResponse: charge,
+          verificationNotes:
+            `Amount/currency mismatch via ${source}: gateway reported ` +
+            `${charge?.amount} ${charge?.currency}, order expects ` +
+            `${toMinorUnit(order.totalAmount)} ${PAYSTACK_CURRENCY}`,
+        },
+      }
+    );
+    console.error(
+      `Paystack ${source}: REJECTED charge ${charge?.reference} for order ${order.orderNumber} — ` +
+        `reported ${charge?.amount} ${charge?.currency}, expected ${toMinorUnit(order.totalAmount)} ${PAYSTACK_CURRENCY}`
+    );
+    return { outcome: 'amount_mismatch', order };
+  }
+
+  const claimed = await PaymentTransaction.findOneAndUpdate(
+    { _id: transaction._id, status: { $ne: 'success' } },
+    {
+      $set: {
+        status: 'success',
+        verified: true,
+        verifiedAt: new Date(),
+        gatewayResponse: charge,
+        verificationNotes: `Confirmed via ${source}`,
+      },
+    },
+    { new: true }
+  );
+
+  if (!claimed) {
+    return { outcome: 'already_applied', order };
+  }
+
+  // findOneAndUpdate skips the model's save hooks, so the status-history entry
+  // the pre('save') hook would have written is pushed explicitly here.
+  const update = { $set: { paymentStatus: 'paid', paymentMethod: 'paystack' } };
+  if (order.status === 'pending') {
+    update.$set.status = 'confirmed';
+    update.$push = {
+      statusHistory: {
+        status: 'confirmed',
+        timestamp: new Date(),
+        note: `Payment confirmed via Paystack (${source})`,
+      },
+    };
+  }
+
+  await Order.updateOne({ _id: order._id }, update);
+  await clearRequesterCart(order);
+
+  console.log(
+    `Paystack ${source}: order ${order.orderNumber} marked paid (${charge.reference})`
+  );
+
+  return { outcome: 'applied', order };
+};
+
+const markChargeFailed = async (transaction, charge, source) => {
+  await PaymentTransaction.updateOne(
+    { _id: transaction._id, status: { $nin: ['success', 'refunded'] } },
+    {
+      $set: {
+        status: 'failed',
+        verified: false,
+        gatewayResponse: charge,
+        verificationNotes: `Gateway reported "${charge?.status}" via ${source}`,
+      },
+    }
+  );
+};
+
+/**
+ * Shared entry point for a Paystack charge payload, whichever path delivered it.
+ */
+const processPaystackCharge = async (charge, source) => {
+  const reference = charge?.reference;
+  if (!reference) {
+    return { outcome: 'no_reference' };
+  }
+
+  const transaction = await PaymentTransaction.findOne({ gatewayReference: reference });
+  if (!transaction) {
+    // Not a reference we issued — another environment sharing the key, or a
+    // charge created outside checkout. Nothing to reconcile.
+    console.warn(`Paystack ${source}: no transaction found for reference ${reference}`);
+    return { outcome: 'unknown_reference' };
+  }
+
+  if (charge.status !== 'success') {
+    await markChargeFailed(transaction, charge, source);
+    return { outcome: 'not_successful', transaction };
+  }
+
+  const result = await applySuccessfulCharge(transaction, charge, source);
+  return { ...result, transaction };
+};
+
 export const initializePaystackPayment = async (req, res) => {
   try {
     const { orderId } = req.body;
@@ -85,23 +235,29 @@ export const initializePaystackPayment = async (req, res) => {
       return res.status(400).json({ message: 'Order already paid' });
     }
 
+    // Reuse an in-flight attempt so a customer who goes back and retries keeps
+    // one reference — but only while it still bills the current order total.
     const pendingTransaction = await PaymentTransaction.findOne({
       order: order._id,
       paymentMethod: 'paystack',
       status: { $in: ['pending', 'processing'] },
     });
 
-    if (pendingTransaction?.gatewayReference) {
+    if (
+      pendingTransaction?.gatewayReference &&
+      pendingTransaction.metadata?.authorizationUrl &&
+      pendingTransaction.amount === order.totalAmount
+    ) {
       return res.json({
         success: true,
-        authorizationUrl: pendingTransaction.metadata?.authorizationUrl,
+        authorizationUrl: pendingTransaction.metadata.authorizationUrl,
         reference: pendingTransaction.gatewayReference,
+        transactionId: pendingTransaction._id,
         orderId: order._id,
       });
     }
 
-    const userEmail = order?.shippingAddress?.email || order?.billingAddress?.email;
-    let customerEmail = userEmail;
+    let customerEmail = order?.shippingAddress?.email || order?.billingAddress?.email;
 
     if (!customerEmail && order.user) {
       const user = await User.findById(order.user);
@@ -115,8 +271,8 @@ export const initializePaystackPayment = async (req, res) => {
     const reference = `EM-${order.orderNumber}-${Date.now()}`;
     const payload = {
       email: customerEmail,
-      amount: Math.round(order.totalAmount * 100),
-      currency: 'NGN',
+      amount: toMinorUnit(order.totalAmount),
+      currency: PAYSTACK_CURRENCY,
       reference,
       callback_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/verify`,
       metadata: {
@@ -146,7 +302,7 @@ export const initializePaystackPayment = async (req, res) => {
       user: order.user || null,
       guest: order.guest || null,
       amount: order.totalAmount,
-      currency: 'NGN',
+      currency: PAYSTACK_CURRENCY,
       paymentMethod: 'paystack',
       gateway: 'paystack',
       gatewayReference: reference,
@@ -154,6 +310,7 @@ export const initializePaystackPayment = async (req, res) => {
       metadata: {
         authorizationUrl: data.data.authorization_url,
         accessCode: data.data.access_code,
+        expectedAmountMinor: toMinorUnit(order.totalAmount),
       },
       ipAddress: req.ip || req.connection?.remoteAddress,
       userAgent: req.get('user-agent'),
@@ -162,7 +319,7 @@ export const initializePaystackPayment = async (req, res) => {
     res.json({
       success: true,
       authorizationUrl: data.data.authorization_url,
-      reference: reference,
+      reference,
       transactionId: transaction._id,
       orderId: order._id,
     });
@@ -172,6 +329,14 @@ export const initializePaystackPayment = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/payments/paystack/verify
+ *
+ * The fast path: the customer lands back on the site and we confirm immediately
+ * rather than waiting for the webhook. The webhook remains the source of truth
+ * for anyone who closes the tab, so this endpoint is an optimisation, not the
+ * only route to a confirmed order.
+ */
 export const verifyPaystackPayment = async (req, res) => {
   try {
     const { reference } = req.query;
@@ -180,10 +345,10 @@ export const verifyPaystackPayment = async (req, res) => {
       return res.status(400).json({ message: 'Payment reference is required' });
     }
 
-    const response = await fetch(`${PAYSTACK_BASE_URL}/transaction/verify/${reference}`, {
-      method: 'GET',
-      headers: getPaystackHeaders(),
-    });
+    const response = await fetch(
+      `${PAYSTACK_BASE_URL}/transaction/verify/${encodeURIComponent(reference)}`,
+      { method: 'GET', headers: getPaystackHeaders() }
+    );
 
     const data = await response.json();
 
@@ -194,40 +359,28 @@ export const verifyPaystackPayment = async (req, res) => {
       });
     }
 
-    const transaction = await PaymentTransaction.findOne({ gatewayReference: reference });
-    if (!transaction) {
+    const result = await processPaystackCharge(data.data, 'redirect');
+
+    if (result.outcome === 'unknown_reference' || result.outcome === 'no_reference') {
       return res.status(404).json({ message: 'Payment transaction not found' });
     }
 
-    transaction.gatewayResponse = data.data;
-    transaction.status = data.data.status === 'success' ? 'success' : 'failed';
-    transaction.verified = data.data.status === 'success';
-    transaction.verifiedAt = data.data.status === 'success' ? new Date() : null;
-    await transaction.save();
-
-    const order = await Order.findById(transaction.order);
-    if (order && data.data.status === 'success') {
-      order.paymentStatus = 'paid';
-      order.paymentMethod = 'paystack';
-      if (order.status === 'pending') {
-        order.status = 'confirmed';
-      }
-      await order.save();
-
-      // Clear cart after confirmed payment
-      if (order.user) {
-        await User.findByIdAndUpdate(order.user, { cart: [] });
-      } else if (order.guest) {
-        await GuestSession.findByIdAndUpdate(order.guest, { cart: [] });
-      }
+    if (result.outcome === 'amount_mismatch') {
+      return res.status(409).json({
+        message:
+          'The amount received does not match this order. Your payment is safe — please contact support.',
+        status: 'mismatch',
+      });
     }
+
+    const paid = result.outcome === 'applied' || result.outcome === 'already_applied';
 
     res.json({
       success: true,
-      status: data.data.status,
-      orderId: order?._id,
-      orderNumber: order?.orderNumber,
-      amount: transaction.amount,
+      status: paid ? 'success' : 'failed',
+      orderId: result.order?._id,
+      orderNumber: result.order?.orderNumber,
+      amount: result.transaction?.amount,
     });
   } catch (error) {
     console.error('Paystack verification error:', error);
@@ -235,351 +388,43 @@ export const verifyPaystackPayment = async (req, res) => {
   }
 };
 
-export const initializeFlutterwavePayment = async (req, res) => {
-  try {
-    const { orderId } = req.body;
-
-    if (!orderId) {
-      return res.status(400).json({ message: 'Order ID is required' });
-    }
-
-    const { order, error } = await resolveOrderForRequester(req, orderId);
-    if (error) {
-      return res.status(403).json({ message: error });
-    }
-
-    if (order.paymentStatus === 'paid') {
-      return res.status(400).json({ message: 'Order already paid' });
-    }
-
-    const pendingTransaction = await PaymentTransaction.findOne({
-      order: order._id,
-      paymentMethod: 'flutterwave',
-      status: { $in: ['pending', 'processing'] },
-    });
-
-    if (pendingTransaction?.gatewayReference) {
-      return res.json({
-        success: true,
-        authorizationUrl: pendingTransaction.metadata?.authorizationUrl,
-        reference: pendingTransaction.gatewayReference,
-        orderId: order._id,
-      });
-    }
-
-    const userEmail = order?.shippingAddress?.email || order?.billingAddress?.email;
-    let customerEmail = userEmail;
-
-    if (!customerEmail && order.user) {
-      const user = await User.findById(order.user);
-      customerEmail = user?.email;
-    }
-
-    if (!customerEmail) {
-      return res.status(400).json({ message: 'Customer email is required for payment' });
-    }
-
-    const txRef = `EM-FLW-${order.orderNumber}-${Date.now()}`;
-    const payload = {
-      tx_ref: txRef,
-      amount: order.totalAmount,
-      currency: process.env.FLUTTERWAVE_CURRENCY || 'NGN',
-      redirect_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/verify`,
-      customer: {
-        email: customerEmail,
-        name: order?.shippingAddress?.fullName || 'Customer',
-      },
-      meta: {
-        orderId: order._id.toString(),
-        orderNumber: order.orderNumber,
-      },
-    };
-
-    const response = await fetch(`${FLUTTERWAVE_BASE_URL}/payments`, {
-      method: 'POST',
-      headers: getFlutterwaveHeaders(),
-      body: JSON.stringify(payload),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || data?.status !== 'success') {
-      return res.status(400).json({
-        message: data?.message || 'Failed to initialize Flutterwave payment',
-        error: data,
-      });
-    }
-
-    const transaction = await PaymentTransaction.create({
-      order: order._id,
-      orderNumber: order.orderNumber,
-      user: order.user || null,
-      guest: order.guest || null,
-      amount: order.totalAmount,
-      currency: process.env.FLUTTERWAVE_CURRENCY || 'NGN',
-      paymentMethod: 'flutterwave',
-      gateway: 'flutterwave',
-      gatewayReference: txRef,
-      status: 'pending',
-      metadata: {
-        authorizationUrl: data.data?.link,
-      },
-      ipAddress: req.ip || req.connection?.remoteAddress,
-      userAgent: req.get('user-agent'),
-    });
-
-    res.json({
-      success: true,
-      authorizationUrl: data.data?.link,
-      reference: txRef,
-      transactionId: transaction._id,
-      orderId: order._id,
-    });
-  } catch (error) {
-    console.error('Flutterwave initialize error:', error);
-    res.status(500).json({ message: 'Failed to initialize payment' });
-  }
-};
-
-export const verifyFlutterwavePayment = async (req, res) => {
-  try {
-    const { tx_ref: txRef } = req.query;
-
-    if (!txRef) {
-      return res.status(400).json({ message: 'Payment reference is required' });
-    }
-
-    const response = await fetch(
-      `${FLUTTERWAVE_BASE_URL}/transactions/verify_by_reference?tx_ref=${encodeURIComponent(txRef)}`,
-      {
-        method: 'GET',
-        headers: getFlutterwaveHeaders(),
-      }
+/**
+ * POST /api/payments/paystack/webhook
+ *
+ * Mounted in index.js ahead of every body parser, because the HMAC covers the
+ * exact bytes Paystack sent — a re-serialised JSON object will not match.
+ */
+export const handlePaystackWebhook = async (req, res) => {
+  if (!Buffer.isBuffer(req.body)) {
+    console.error(
+      'Paystack webhook: body is not raw — the route must be mounted with express.raw() before any JSON parser'
     );
-
-    const data = await response.json();
-
-    if (!response.ok || data?.status !== 'success') {
-      return res.status(400).json({
-        message: data?.message || 'Failed to verify Flutterwave payment',
-        error: data,
-      });
-    }
-
-    const transaction = await PaymentTransaction.findOne({ gatewayReference: txRef });
-    if (!transaction) {
-      return res.status(404).json({ message: 'Payment transaction not found' });
-    }
-
-    const paymentSuccessful = data.data?.status === 'successful';
-    transaction.gatewayResponse = data.data;
-    transaction.status = paymentSuccessful ? 'success' : 'failed';
-    transaction.verified = paymentSuccessful;
-    transaction.verifiedAt = paymentSuccessful ? new Date() : null;
-    await transaction.save();
-
-    const order = await Order.findById(transaction.order);
-    if (order && paymentSuccessful) {
-      order.paymentStatus = 'paid';
-      order.paymentMethod = 'flutterwave';
-      if (order.status === 'pending') {
-        order.status = 'confirmed';
-      }
-      await order.save();
-
-      // Clear cart after confirmed payment
-      if (order.user) {
-        await User.findByIdAndUpdate(order.user, { cart: [] });
-      } else if (order.guest) {
-        await GuestSession.findByIdAndUpdate(order.guest, { cart: [] });
-      }
-    }
-
-    res.json({
-      success: true,
-      status: paymentSuccessful ? 'success' : 'failed',
-      orderId: order?._id,
-      orderNumber: order?.orderNumber,
-      amount: transaction.amount,
-    });
-  } catch (error) {
-    console.error('Flutterwave verification error:', error);
-    res.status(500).json({ message: 'Failed to verify payment' });
+    return res.status(500).json({ message: 'Webhook misconfigured' });
   }
-};
 
-export const initializeStripePayment = async (req, res) => {
-  try {
-    const { orderId } = req.body;
-
-    if (!orderId) {
-      return res.status(400).json({ message: 'Order ID is required' });
-    }
-
-    const { order, error } = await resolveOrderForRequester(req, orderId);
-    if (error) {
-      return res.status(403).json({ message: error });
-    }
-
-    if (order.paymentStatus === 'paid') {
-      return res.status(400).json({ message: 'Order already paid' });
-    }
-
-    const pendingTransaction = await PaymentTransaction.findOne({
-      order: order._id,
-      paymentMethod: 'stripe',
-      status: { $in: ['pending', 'processing'] },
-    });
-
-    if (pendingTransaction?.gatewayReference) {
-      return res.json({
-        success: true,
-        authorizationUrl: pendingTransaction.metadata?.authorizationUrl,
-        reference: pendingTransaction.gatewayReference,
-        orderId: order._id,
-      });
-    }
-
-    const userEmail = order?.shippingAddress?.email || order?.billingAddress?.email;
-    let customerEmail = userEmail;
-
-    if (!customerEmail && order.user) {
-      const user = await User.findById(order.user);
-      customerEmail = user?.email;
-    }
-
-    if (!customerEmail) {
-      return res.status(400).json({ message: 'Customer email is required for payment' });
-    }
-
-    const currency = (process.env.STRIPE_CURRENCY || 'NGN').toLowerCase();
-    const amount = Math.round(order.totalAmount * 100);
-
-    const params = new URLSearchParams();
-    params.append('mode', 'payment');
-    params.append('customer_email', customerEmail);
-    params.append(
-      'success_url',
-      `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/verify?session_id={CHECKOUT_SESSION_ID}`
-    );
-    params.append(
-      'cancel_url',
-      `${process.env.FRONTEND_URL || 'http://localhost:5173'}/checkout?cancelled=1`
-    );
-    params.append('line_items[0][price_data][currency]', currency);
-    params.append('line_items[0][price_data][product_data][name]', `Order ${order.orderNumber}`);
-    params.append('line_items[0][price_data][unit_amount]', amount.toString());
-    params.append('line_items[0][quantity]', '1');
-    params.append('metadata[orderId]', order._id.toString());
-    params.append('metadata[orderNumber]', order.orderNumber);
-
-    const response = await fetch(`${STRIPE_BASE_URL}/checkout/sessions`, {
-      method: 'POST',
-      headers: getStripeHeaders(),
-      body: params.toString(),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data?.id) {
-      return res.status(400).json({
-        message: data?.error?.message || 'Failed to initialize Stripe payment',
-        error: data,
-      });
-    }
-
-    const transaction = await PaymentTransaction.create({
-      order: order._id,
-      orderNumber: order.orderNumber,
-      user: order.user || null,
-      guest: order.guest || null,
-      amount: order.totalAmount,
-      currency: currency.toUpperCase(),
-      paymentMethod: 'stripe',
-      gateway: 'stripe',
-      gatewayReference: data.id,
-      status: 'pending',
-      metadata: {
-        authorizationUrl: data.url,
-      },
-      ipAddress: req.ip || req.connection?.remoteAddress,
-      userAgent: req.get('user-agent'),
-    });
-
-    res.json({
-      success: true,
-      authorizationUrl: data.url,
-      reference: data.id,
-      transactionId: transaction._id,
-      orderId: order._id,
-    });
-  } catch (error) {
-    console.error('Stripe initialize error:', error);
-    res.status(500).json({ message: 'Failed to initialize payment' });
+  if (!verifyPaystackSignature(req.body, req.get('x-paystack-signature'))) {
+    console.warn(`Paystack webhook: rejected unsigned or mis-signed request from ${req.ip}`);
+    return res.status(401).json({ message: 'Invalid signature' });
   }
-};
 
-export const verifyStripePayment = async (req, res) => {
+  let event;
   try {
-    const { session_id: sessionId } = req.query;
+    event = JSON.parse(req.body.toString('utf8'));
+  } catch {
+    return res.status(400).json({ message: 'Malformed webhook payload' });
+  }
 
-    if (!sessionId) {
-      return res.status(400).json({ message: 'Stripe session ID is required' });
+  try {
+    if (event?.event === 'charge.success') {
+      await processPaystackCharge(event.data, 'webhook');
     }
-
-    const response = await fetch(`${STRIPE_BASE_URL}/checkout/sessions/${sessionId}`, {
-      method: 'GET',
-      headers: getStripeHeaders(),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data?.id) {
-      return res.status(400).json({
-        message: data?.error?.message || 'Failed to verify Stripe payment',
-        error: data,
-      });
-    }
-
-    const transaction = await PaymentTransaction.findOne({ gatewayReference: sessionId });
-    if (!transaction) {
-      return res.status(404).json({ message: 'Payment transaction not found' });
-    }
-
-    const paymentSuccessful = data.payment_status === 'paid';
-    transaction.gatewayResponse = data;
-    transaction.status = paymentSuccessful ? 'success' : 'failed';
-    transaction.verified = paymentSuccessful;
-    transaction.verifiedAt = paymentSuccessful ? new Date() : null;
-    await transaction.save();
-
-    const order = await Order.findById(transaction.order);
-    if (order && paymentSuccessful) {
-      order.paymentStatus = 'paid';
-      order.paymentMethod = 'stripe';
-      if (order.status === 'pending') {
-        order.status = 'confirmed';
-      }
-      await order.save();
-
-      // Clear cart after confirmed payment
-      if (order.user) {
-        await User.findByIdAndUpdate(order.user, { cart: [] });
-      } else if (order.guest) {
-        await GuestSession.findByIdAndUpdate(order.guest, { cart: [] });
-      }
-    }
-
-    res.json({
-      success: true,
-      status: paymentSuccessful ? 'success' : 'failed',
-      orderId: order?._id,
-      orderNumber: order?.orderNumber,
-      amount: transaction.amount,
-    });
+    // Every other event type is acknowledged and ignored: replying non-2xx
+    // makes Paystack retry for days over something we were never going to act on.
+    return res.sendStatus(200);
   } catch (error) {
-    console.error('Stripe verification error:', error);
-    res.status(500).json({ message: 'Failed to verify payment' });
+    // A genuine failure (database down mid-charge) SHOULD retry, so fail loudly.
+    console.error('Paystack webhook processing error:', error);
+    return res.status(500).json({ message: 'Webhook processing failed' });
   }
 };
 
@@ -616,7 +461,7 @@ export const uploadBankTransferProof = async (req, res) => {
         user: order.user || null,
         guest: order.guest || null,
         amount: order.totalAmount,
-        currency: 'NGN',
+        currency: PAYSTACK_CURRENCY,
         paymentMethod: 'bank_transfer',
         gateway: 'manual',
         status: 'pending',
@@ -632,9 +477,6 @@ export const uploadBankTransferProof = async (req, res) => {
     );
 
     order.paymentMethod = 'bank_transfer';
-    if (order.paymentStatus === 'pending') {
-      order.paymentStatus = 'pending';
-    }
     await order.save();
 
     res.json({

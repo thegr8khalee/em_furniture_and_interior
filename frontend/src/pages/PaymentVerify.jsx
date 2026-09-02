@@ -17,25 +17,17 @@ const PaymentVerify = () => {
     const verifyPayment = async () => {
       const params = new URLSearchParams(location.search);
       const reference = params.get('reference');
-      const txRef = params.get('tx_ref');
-      const sessionId = params.get('session_id');
 
-      if (!reference && !txRef && !sessionId) {
+      if (!reference) {
         setStatus('failed');
         setMessage('Missing payment reference.');
         return;
       }
 
       try {
-        let response;
-
-        if (sessionId) {
-          response = await axiosInstance.get(`/payments/stripe/verify?session_id=${sessionId}`);
-        } else if (txRef) {
-          response = await axiosInstance.get(`/payments/flutterwave/verify?tx_ref=${txRef}`);
-        } else {
-          response = await axiosInstance.get(`/payments/paystack/verify?reference=${reference}`);
-        }
+        const response = await axiosInstance.get(
+          `/payments/paystack/verify?reference=${encodeURIComponent(reference)}`
+        );
 
         if (response.data?.status === 'success') {
           setStatus('success');
@@ -53,7 +45,9 @@ const PaymentVerify = () => {
           }, 2000);
         } else {
           setStatus('failed');
-          setMessage('Payment verification failed. Please contact support.');
+          setMessage(
+            'We could not confirm this payment yet. If you were debited, it will be confirmed automatically within a few minutes.'
+          );
         }
       } catch (error) {
         console.error('Payment verification error:', error);

@@ -170,7 +170,7 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ['cash_on_delivery', 'bank_transfer', 'card', 'whatsapp', 'paystack', 'flutterwave', 'stripe', 'download_invoice'],
+      enum: ['cash_on_delivery', 'bank_transfer', 'card', 'whatsapp', 'paystack', 'download_invoice'],
       default: 'whatsapp'
     },
     // Tracking

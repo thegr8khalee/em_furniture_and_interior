@@ -26,47 +26,6 @@ describe('Payment Integration Tests', () => {
     });
   });
 
-  describe('Flutterwave Payment', () => {
-    it('should prepare Flutterwave checkout data', () => {
-      const orderData = {
-        tx_ref: 'FLW-TEST-123',
-        amount: 1000,
-        currency: 'NGN',
-        redirectUrl: 'http://localhost:5173/payment-verify',
-      };
-
-      expect(orderData.tx_ref).toContain('FLW');
-      expect(orderData.currency).toBe('NGN');
-    });
-
-    it('should validate Flutterwave transaction reference', () => {
-      const txRef = 'FLW-TEST-123';
-      const isValid = txRef && txRef.startsWith('FLW');
-
-      expect(isValid).toBe(true);
-    });
-  });
-
-  describe('Stripe Payment', () => {
-    it('should prepare Stripe checkout data', () => {
-      const orderData = {
-        orderId: '507f1f77bcf86cd799439011',
-        amount: 1000,
-        currency: 'ngn',
-      };
-
-      expect(orderData.amount).toBe(1000);
-      expect(orderData.currency).toBe('ngn');
-    });
-
-    it('should validate Stripe session ID', () => {
-      const sessionId = 'cs_test_123';
-      const isValid = sessionId && sessionId.startsWith('cs_');
-
-      expect(isValid).toBe(true);
-    });
-  });
-
   describe('Bank Transfer Proof Upload', () => {
     it('should validate image data format', () => {
       const validImage = 'data:image/jpeg;base64,/9j/4AAQSkZJRg...';

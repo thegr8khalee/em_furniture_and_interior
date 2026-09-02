@@ -34,8 +34,6 @@ const paymentTransactionSchema = new mongoose.Schema(
       required: true,
       enum: [
         'paystack',
-        'flutterwave',
-        'stripe',
         'bank_transfer',
         'cash_on_delivery',
         'whatsapp',
@@ -44,7 +42,7 @@ const paymentTransactionSchema = new mongoose.Schema(
     // Gateway-specific fields
     gateway: {
       type: String,
-      enum: ['paystack', 'flutterwave', 'stripe', 'manual'],
+      enum: ['paystack', 'manual'],
     },
     gatewayReference: {
       type: String, // External payment reference from gateway

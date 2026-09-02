@@ -382,7 +382,7 @@ const seedDB = async () => {
     console.log('Seeding orders...');
     const statuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
     const paymentStatuses = ['pending', 'paid'];
-    const paymentMethods = ['paystack', 'flutterwave', 'bank_transfer', 'whatsapp'];
+    const paymentMethods = ['paystack', 'bank_transfer', 'whatsapp'];
 
     const orders = [];
     for (let i = 0; i < 10; i++) {

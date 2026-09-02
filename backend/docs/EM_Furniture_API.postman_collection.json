@@ -10,6 +10,8 @@
     { "key": "collectionId", "value": "", "type": "string" },
     { "key": "orderId", "value": "", "type": "string" },
     { "key": "orderNumber", "value": "", "type": "string" },
+    { "key": "paystackSecretKey", "value": "", "type": "string" },
+    { "key": "paystackReference", "value": "EM-REF-HERE", "type": "string" },
     { "key": "anonymousId", "value": "", "type": "string" },
     { "key": "couponId", "value": "", "type": "string" },
     { "key": "projectId", "value": "", "type": "string" },
@@ -622,35 +624,14 @@
           }
         },
         {
-          "name": "Initialize Flutterwave Payment",
+          "name": "Paystack Webhook (charge.success)",
+          "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["// Signs the request body exactly as Paystack does, so this exercises the real", "// signature check. Set `paystackSecretKey` first \u2014 it is the same secret key", "// used to call the Paystack API. Clear it to confirm the endpoint answers 401.", "const secret = pm.variables.get('paystackSecretKey');", "if (!secret) { console.warn('paystackSecretKey is not set \u2014 the webhook will answer 401.'); }", "const raw = pm.variables.replaceIn(pm.request.body.raw);", "const signature = CryptoJS.HmacSHA512(raw, secret || '').toString(CryptoJS.enc.Hex);", "pm.request.headers.upsert({ key: 'x-paystack-signature', value: signature });"] } }],
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/payments/flutterwave/initialize", "host": ["{{baseUrl}}"], "path": ["api", "payments", "flutterwave", "initialize"] }
-          }
-        },
-        {
-          "name": "Verify Flutterwave Payment",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/payments/flutterwave/verify?tx_ref=EM-FLW-REF-HERE", "host": ["{{baseUrl}}"], "path": ["api", "payments", "flutterwave", "verify"], "query": [{ "key": "tx_ref", "value": "EM-FLW-REF-HERE" }] }
-          }
-        },
-        {
-          "name": "Initialize Stripe Payment",
-          "request": {
-            "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/payments/stripe/initialize", "host": ["{{baseUrl}}"], "path": ["api", "payments", "stripe", "initialize"] }
-          }
-        },
-        {
-          "name": "Verify Stripe Payment",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/payments/stripe/verify?session_id=cs_SESSION_HERE", "host": ["{{baseUrl}}"], "path": ["api", "payments", "stripe", "verify"], "query": [{ "key": "session_id", "value": "cs_SESSION_HERE" }] }
+            "body": { "mode": "raw", "raw": "{\n  \"event\": \"charge.success\",\n  \"data\": {\n    \"reference\": \"{{paystackReference}}\",\n    \"status\": \"success\",\n    \"amount\": 150000,\n    \"currency\": \"NGN\"\n  }\n}" },
+            "description": "Server-to-server callback from Paystack and the source of truth for payment confirmation. The pre-request script signs the body with paystackSecretKey. Edit the body after signing to confirm tampering is rejected. The handler is idempotent, so replaying against an already-paid order changes nothing.",
+            "url": { "raw": "{{baseUrl}}/api/payments/paystack/webhook", "host": ["{{baseUrl}}"], "path": ["api", "payments", "paystack", "webhook"] }
           }
         },
         {

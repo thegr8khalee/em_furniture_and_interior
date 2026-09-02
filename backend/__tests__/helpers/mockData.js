@@ -34,47 +34,6 @@ export const mockPaystackVerifySuccess = {
   },
 };
 
-export const mockFlutterwaveSuccessResponse = {
-  status: 'success',
-  message: 'Hosted Link',
-  data: {
-    link: 'https://ravemodal-dev.herokuapp.com/v3/hosted/pay/test123',
-  },
-};
-
-export const mockFlutterwaveVerifySuccess = {
-  status: 'success',
-  message: 'Transaction fetched successfully',
-  data: {
-    id: 12345,
-    tx_ref: 'test_tx_ref',
-    flw_ref: 'FLW12345',
-    amount: 1000,
-    currency: 'NGN',
-    charged_amount: 1000,
-    status: 'successful',
-    payment_type: 'card',
-    created_at: '2026-02-12T09:55:00.000Z',
-  },
-};
-
-export const mockStripeSuccessResponse = {
-  id: 'cs_test_123',
-  object: 'checkout.session',
-  url: 'https://checkout.stripe.com/c/pay/test123',
-  payment_status: 'unpaid',
-  amount_total: 100000,
-  currency: 'ngn',
-};
-
-export const mockStripeVerifySuccess = {
-  id: 'cs_test_123',
-  object: 'checkout.session',
-  payment_status: 'paid',
-  amount_total: 100000,
-  currency: 'ngn',
-};
-
 export const mockCloudinaryResponse = {
   secure_url: 'https://res.cloudinary.com/test/image/upload/v123/test.jpg',
   public_id: 'test/test123',

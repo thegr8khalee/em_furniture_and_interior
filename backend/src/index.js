@@ -12,7 +12,8 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import path from 'path';
 import { connectDB } from './lib/db.js';
-import { apiLimiter } from './middleware/rateLimiter.js';
+import { apiLimiter, webhookLimiter } from './middleware/rateLimiter.js';
+import { handlePaystackWebhook } from './controllers/payments.controller.js';
 
 import authRoutes from './routes/auth.routes.js';
 import guestRoutes from './routes/guest.routes.js';
@@ -69,7 +70,27 @@ app.use(
 app.use(compression());
 app.use(cookieParser());
 
-// Body parsing — 1mb default, image-upload routes opt in to higher limits
+// Paystack signs the exact bytes it sends, so the webhook has to see the body
+// before anything parses it. Mounted ahead of CORS too — this is a
+// server-to-server call, and ahead of the global API limiter, which it replaces
+// with a limiter sized for gateway retry bursts.
+app.post(
+  '/api/payments/paystack/webhook',
+  webhookLimiter,
+  express.raw({ type: '*/*', limit: '1mb' }),
+  handlePaystackWebhook
+);
+
+// Body parsing. Routes taking base64 image payloads opt into a higher limit and
+// must be registered BEFORE the global parser: the first parser to run claims
+// the body, and any later one is a no-op.
+const largeBodyParser = express.json({ limit: '50mb' });
+const largeUrlencoded = express.urlencoded({ limit: '50mb', extended: true });
+app.use('/api/admin', largeBodyParser, largeUrlencoded);
+app.use('/api/consultations', largeBodyParser, largeUrlencoded);
+app.use('/api/designers', largeBodyParser, largeUrlencoded);
+app.use('/api/payments', largeBodyParser, largeUrlencoded);
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
@@ -85,14 +106,6 @@ if (process.env.NODE_ENV === 'production') {
 } else {
   app.use(cors({ origin: true, credentials: true, exposedHeaders: ['Content-Disposition'] }));
 }
-
-// Higher body limit for image-upload routes (base64 payloads)
-const largeBodyParser = express.json({ limit: '50mb' });
-const largeUrlencoded = express.urlencoded({ limit: '50mb', extended: true });
-app.use('/api/admin', largeBodyParser, largeUrlencoded);
-app.use('/api/consultations', largeBodyParser, largeUrlencoded);
-app.use('/api/designers', largeBodyParser, largeUrlencoded);
-app.use('/api/payments', largeBodyParser, largeUrlencoded);
 
 // Apply global rate limiter to all API routes
 app.use('/api', apiLimiter);
