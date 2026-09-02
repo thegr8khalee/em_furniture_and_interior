@@ -18,11 +18,15 @@
     "nodemailer": "^8.0.5",
     "nodemon": "^3.1.10",
     "pdfkit": "^0.17.2",
+    "pg": "^8.23.0",
+    "pg-hstore": "^2.3.4",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
     "puppeteer": "^24.40.0",
     "resend": "^6.1.1",
+    "sequelize": "^6.37.8",
     "swagger-ui-express": "^5.0.1",
+    "umzug": "^3.8.3",
     "uuid": "^11.1.0"
   },
   "name": "@em/api",
@@ -33,6 +37,7 @@
     "dev": "nodemon ./src/index.js",
     "start": "node src/index.js",
     "seed": "node src/seed/seed.js",
+    "migrate": "node src/db/migrate.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "devDependencies": {

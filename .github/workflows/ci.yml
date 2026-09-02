@@ -19,6 +19,25 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
 
+    # The schema tests assert that PostgreSQL rejects bad data. A fake or
+    # in-memory substitute enforces none of it, so it would report a pass for
+    # constraints nobody verified — the exact failure this migration removes.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+
     steps:
       - uses: actions/checkout@v4
 
@@ -34,6 +53,23 @@ jobs:
 
       - name: Test all workspaces
         run: npm test --workspaces --if-present
+
+      - name: Migrations apply cleanly from scratch, and are idempotent
+        working-directory: apps/api
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/migration_check
+        run: |
+          set -e
+          psql "postgres://postgres:postgres@127.0.0.1:5432/postgres" -c 'CREATE DATABASE migration_check'
+          npm run migrate
+          before=$(psql "$DATABASE_URL" -tAc "SELECT count(*) FROM schema_migrations")
+          npm run migrate
+          after=$(psql "$DATABASE_URL" -tAc "SELECT count(*) FROM schema_migrations")
+          if [ "$before" != "$after" ]; then
+            echo "::error::a second migration run changed the schema — migrations are not idempotent"
+            exit 1
+          fi
+          echo "migrations idempotent ($before applied)"
 
       # Reported, not enforced. The tree carries pre-existing violations, and
       # gating on lint today would mean a CI that is red on arrival and
