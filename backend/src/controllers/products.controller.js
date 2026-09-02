@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Product from '../models/product.model.js';
+import { logger } from '../lib/logger.js';
 
 const filterApprovedReviews = (productDoc) => {
   const product = productDoc.toObject();
@@ -85,7 +86,7 @@ export const getProducts = async (req, res) => {
       hasMore,
     });
   } catch (error) {
-    console.error('Error in getProducts controller: ', error.message);
+    logger.error({ err: error }, 'Error in getProducts controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -99,7 +100,7 @@ export const getProductsCount = async (req, res) => {
       totalProducts, // Returns the total count of products
     });
   } catch (error) {
-    console.error('Error in getProducts controller: ', error.message);
+    logger.error({ err: error }, 'Error in getProducts controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -122,7 +123,7 @@ export const getProductById = async (req, res) => {
 
     res.status(200).json(filterApprovedReviews(product));
   } catch (error) {
-    console.error('Error in getProductById controller: ', error.message);
+    logger.error({ err: error }, 'Error in getProductById controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -157,7 +158,7 @@ export const getProductsByIds = async (req, res) => {
 
     res.status(200).json({ products: orderedProducts });
   } catch (error) {
-    console.error('Error in getProductsByIds controller: ', error.message);
+    logger.error({ err: error }, 'Error in getProductsByIds controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };

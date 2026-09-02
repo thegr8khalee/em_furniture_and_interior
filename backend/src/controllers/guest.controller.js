@@ -5,6 +5,7 @@ import User from '../models/user.model.js'; // To interact with User's embedded 
 import Product from '../models/product.model.js'; // For product validation
 import Collection from '../models/collection.model.js'; // For collection validation
 import mongoose from 'mongoose'; // For ObjectId validation
+import { logger } from '../lib/logger.js';
 
 /**
  * Helper function to get or create a GuestSession.
@@ -49,7 +50,7 @@ export const getGuestSession = async (req, res) => {
 
     res.status(200).json(guestSession);
   } catch (error) {
-    console.error('Error in getGuestSession controller: ', error.message);
+    logger.error({ err: error }, 'Error in getGuestSession controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -99,7 +100,7 @@ export const addGuestCartItem = async (req, res) => {
 
     res.status(200).json(guestSession.cart);
   } catch (error) {
-    console.error('Error in addGuestCartItem controller: ', error.message);
+    logger.error({ err: error }, 'Error in addGuestCartItem controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -149,10 +150,7 @@ export const updateGuestCartItemQuantity = async (req, res) => {
       res.status(404).json({ message: 'Item not found in cart.' });
     }
   } catch (error) {
-    console.error(
-      'Error in updateGuestCartItemQuantity controller: ',
-      error.message
-    );
+    logger.error({ message: error.message }, 'Error in updateGuestCartItemQuantity controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -190,7 +188,7 @@ export const removeGuestCartItem = async (req, res) => {
       res.status(404).json({ message: 'Item not found in cart.' });
     }
   } catch (error) {
-    console.error('Error in removeGuestCartItem controller: ', error.message);
+    logger.error({ err: error }, 'Error in removeGuestCartItem controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -253,7 +251,7 @@ export const addGuestWishlistItem = async (req, res) => {
 
     res.status(200).json(guestSession.wishlist);
   } catch (error) {
-    console.error('Error in addGuestWishlistItem controller: ', error.message);
+    logger.error({ err: error }, 'Error in addGuestWishlistItem controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -305,10 +303,7 @@ export const removeGuestWishlistItem = async (req, res) => {
       res.status(404).json({ message: 'Item not found in wishlist.' });
     }
   } catch (error) {
-    console.error(
-      'Error in removeGuestWishlistItem controller: ',
-      error.message
-    );
+    logger.error({ message: error.message }, 'Error in removeGuestWishlistItem controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -321,9 +316,7 @@ export const removeGuestWishlistItem = async (req, res) => {
  */
 export const mergeGuestDataToUser = async (userId, anonymousId) => {
   if (!userId || !anonymousId) {
-    console.warn(
-      'mergeGuestDataToUser called with missing userId or anonymousId.'
-    );
+    logger.warn('mergeGuestDataToUser called with missing userId or anonymousId.');
     return; // Cannot merge without both IDs
   }
 
@@ -332,16 +325,12 @@ export const mergeGuestDataToUser = async (userId, anonymousId) => {
     const guestSession = await GuestSession.findOne({ anonymousId });
 
     if (!user) {
-      console.error(
-        `User with ID ${userId} not found during guest data merge.`
-      );
+      logger.error(`User with ID ${userId} not found during guest data merge.`);
       return;
     }
 
     if (!guestSession) {
-      console.log(
-        `No guest session found for anonymousId: ${anonymousId}. No merge needed.`
-      );
+      logger.info(`No guest session found for anonymousId: ${anonymousId}. No merge needed.`);
       return;
     }
 
@@ -377,11 +366,9 @@ export const mergeGuestDataToUser = async (userId, anonymousId) => {
 
     await user.save();
     await GuestSession.deleteOne({ anonymousId }); // Delete the guest session after merging
-    console.log(
-      `Guest data merged for user ${userId} from anonymous session ${anonymousId}`
-    );
+    logger.info(`Guest data merged for user ${userId} from anonymous session ${anonymousId}`);
   } catch (error) {
-    console.error('Error merging guest data to user: ', error.message);
+    logger.error({ err: error }, 'Error merging guest data to user');
     // Important: Do not block login/signup if merge fails. Log the error.
   }
 };

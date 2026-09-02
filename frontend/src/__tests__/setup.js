@@ -7,9 +7,11 @@ afterEach(() => {
   cleanup();
 });
 
-// Mock axios
-vi.mock('./lib/axios', () => ({
-  default: {
+// Mock axios. src/lib/axios.js exports `axiosInstance` as a named export and has
+// no default, so the mock has to provide the same shape or every import is
+// undefined at call time.
+vi.mock('../lib/axios', () => ({
+  axiosInstance: {
     get: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),

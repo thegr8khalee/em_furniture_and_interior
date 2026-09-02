@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger.js';
 export const calculateTax = async (req, res) => {
   try {
     const { items, amount, currency = 'NGN' } = req.body;
@@ -64,7 +65,7 @@ export const calculateTax = async (req, res) => {
       currency,
     });
   } catch (error) {
-    console.error('Tax calculation error:', error);
+    logger.error({ err: error }, 'Tax calculation error');
     res.status(500).json({ message: 'Failed to calculate tax' });
   }
 };

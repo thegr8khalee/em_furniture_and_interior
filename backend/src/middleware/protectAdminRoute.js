@@ -2,6 +2,7 @@
 import jwt from 'jsonwebtoken';
 import Admin from '../models/admin.model.js'; // Ensure correct path to your Admin model
 import { resolvePermissions } from '../lib/permissions.js';
+import { logger } from '../lib/logger.js';
 
 /**
  * @desc Middleware to protect admin routes
@@ -56,7 +57,7 @@ export const protectAdminRoute = async (req, res, next) => {
     req.adminRole = admin.role;
     next(); // Proceed to the next middleware or route handler
   } catch (error) {
-    console.error('Error in protectAdminRoute middleware: ', error.message);
+    logger.error({ err: error }, 'Error in protectAdminRoute middleware');
     // Handle different JWT errors (e.g., TokenExpiredError, JsonWebTokenError)
     if (error.name === 'TokenExpiredError') {
       return res

@@ -1,4 +1,5 @@
 import BlogPost from '../models/blogPost.model.js';
+import { logger } from '../lib/logger.js';
 
 const slugify = (value) => {
   return value
@@ -41,7 +42,7 @@ export const getBlogPosts = async (req, res) => {
 
     res.status(200).json({ items, total, page, limit });
   } catch (error) {
-    console.error('Error fetching blog posts:', error);
+    logger.error({ err: error }, 'Error fetching blog posts');
     res.status(500).json({ message: 'Failed to fetch blog posts.' });
   }
 };
@@ -57,7 +58,7 @@ export const getBlogPostBySlug = async (req, res) => {
 
     res.status(200).json(post);
   } catch (error) {
-    console.error('Error fetching blog post:', error);
+    logger.error({ err: error }, 'Error fetching blog post');
     res.status(500).json({ message: 'Failed to fetch blog post.' });
   }
 };
@@ -79,7 +80,7 @@ export const adminListBlogPosts = async (req, res) => {
 
     res.status(200).json({ items, total, page, limit });
   } catch (error) {
-    console.error('Error fetching admin blog list:', error);
+    logger.error({ err: error }, 'Error fetching admin blog list');
     res.status(500).json({ message: 'Failed to fetch blog posts.' });
   }
 };
@@ -109,7 +110,7 @@ export const createBlogPost = async (req, res) => {
 
     res.status(201).json(post);
   } catch (error) {
-    console.error('Error creating blog post:', error);
+    logger.error({ err: error }, 'Error creating blog post');
     res.status(500).json({ message: 'Failed to create blog post.' });
   }
 };
@@ -149,7 +150,7 @@ export const updateBlogPost = async (req, res) => {
 
     res.status(200).json(post);
   } catch (error) {
-    console.error('Error updating blog post:', error);
+    logger.error({ err: error }, 'Error updating blog post');
     res.status(500).json({ message: 'Failed to update blog post.' });
   }
 };
@@ -165,7 +166,7 @@ export const deleteBlogPost = async (req, res) => {
 
     res.status(200).json({ message: 'Blog post deleted successfully.' });
   } catch (error) {
-    console.error('Error deleting blog post:', error);
+    logger.error({ err: error }, 'Error deleting blog post');
     res.status(500).json({ message: 'Failed to delete blog post.' });
   }
 };

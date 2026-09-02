@@ -1,4 +1,5 @@
 import ActivityLog from '../models/activityLog.model.js';
+import { logger } from '../lib/logger.js';
 
 /**
  * Middleware to track user activity
@@ -48,10 +49,10 @@ export const trackActivity = (activityType, resourceType = null) => {
 
       // Don't await - fire and forget to not slow down the request
       ActivityLog.create(activityData).catch((error) => {
-        console.error('Activity tracking error:', error);
+        logger.error({ err: error }, 'Activity tracking error');
       });
     } catch (error) {
-      console.error('Activity tracking middleware error:', error);
+      logger.error({ err: error }, 'Activity tracking middleware error');
     }
 
     next();
@@ -90,6 +91,6 @@ export const logActivity = async ({
       page,
     });
   } catch (error) {
-    console.error('Failed to log activity:', error);
+    logger.error({ err: error }, 'Failed to log activity');
   }
 };

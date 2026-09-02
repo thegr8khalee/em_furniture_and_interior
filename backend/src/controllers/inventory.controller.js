@@ -1,5 +1,6 @@
 import Product from '../models/product.model.js';
 import InventoryAdjustment from '../models/inventoryAdjustment.model.js';
+import { logger } from '../lib/logger.js';
 
 export const getInventoryProducts = async (req, res) => {
   try {
@@ -40,7 +41,7 @@ export const getInventoryProducts = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching inventory products:', error.message);
+    logger.error({ err: error }, 'Error fetching inventory products');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -103,7 +104,7 @@ export const adjustInventory = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error adjusting inventory:', error.message);
+    logger.error({ err: error }, 'Error adjusting inventory');
     res.status(500).json({ message: 'Server error' });
   }
 };

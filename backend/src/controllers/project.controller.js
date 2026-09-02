@@ -1,4 +1,5 @@
 import Project from '../models/project.model.js';
+import { logger } from '../lib/logger.js';
 
 export const getProjects = async (req, res) => {
   // 1. Get and sanitize pagination parameters from query
@@ -42,7 +43,7 @@ export const getProjects = async (req, res) => {
       message: 'Projects retrieved successfully.',
     });
   } catch (error) {
-    console.error('Error in getProjects controller: ', error.message);
+    logger.error({ err: error }, 'Error in getProjects controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };

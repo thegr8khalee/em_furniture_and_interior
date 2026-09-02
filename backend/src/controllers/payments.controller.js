@@ -4,6 +4,7 @@ import PaymentTransaction from '../models/paymentTransaction.model.js';
 import GuestSession from '../models/guest.model.js';
 import User from '../models/user.model.js';
 import cloudinary from '../lib/cloudinary.js';
+import { logger } from '../lib/logger.js';
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 const PAYSTACK_CURRENCY = 'NGN';
@@ -108,9 +109,7 @@ const clearRequesterCart = async (order) => {
 const applySuccessfulCharge = async (transaction, charge, source) => {
   const order = await Order.findById(transaction.order);
   if (!order) {
-    console.error(
-      `Paystack ${source}: transaction ${transaction._id} points at missing order ${transaction.order}`
-    );
+    logger.error(`Paystack ${source}: transaction ${transaction._id} points at missing order ${transaction.order}`);
     return { outcome: 'order_not_found' };
   }
 
@@ -129,10 +128,7 @@ const applySuccessfulCharge = async (transaction, charge, source) => {
         },
       }
     );
-    console.error(
-      `Paystack ${source}: REJECTED charge ${charge?.reference} for order ${order.orderNumber} — ` +
-        `reported ${charge?.amount} ${charge?.currency}, expected ${toMinorUnit(order.totalAmount)} ${PAYSTACK_CURRENCY}`
-    );
+    logger.error(`Paystack ${source}: REJECTED charge ${charge?.reference} for order ${order.orderNumber} — ` + `reported ${charge?.amount} ${charge?.currency}, expected ${toMinorUnit(order.totalAmount)} ${PAYSTACK_CURRENCY}`);
     return { outcome: 'amount_mismatch', order };
   }
 
@@ -171,9 +167,7 @@ const applySuccessfulCharge = async (transaction, charge, source) => {
   await Order.updateOne({ _id: order._id }, update);
   await clearRequesterCart(order);
 
-  console.log(
-    `Paystack ${source}: order ${order.orderNumber} marked paid (${charge.reference})`
-  );
+  logger.info(`Paystack ${source}: order ${order.orderNumber} marked paid (${charge.reference})`);
 
   return { outcome: 'applied', order };
 };
@@ -205,7 +199,7 @@ const processPaystackCharge = async (charge, source) => {
   if (!transaction) {
     // Not a reference we issued — another environment sharing the key, or a
     // charge created outside checkout. Nothing to reconcile.
-    console.warn(`Paystack ${source}: no transaction found for reference ${reference}`);
+    logger.warn(`Paystack ${source}: no transaction found for reference ${reference}`);
     return { outcome: 'unknown_reference' };
   }
 
@@ -324,7 +318,7 @@ export const initializePaystackPayment = async (req, res) => {
       orderId: order._id,
     });
   } catch (error) {
-    console.error('Paystack initialize error:', error);
+    logger.error({ err: error }, 'Paystack initialize error');
     res.status(500).json({ message: 'Failed to initialize payment' });
   }
 };
@@ -383,7 +377,7 @@ export const verifyPaystackPayment = async (req, res) => {
       amount: result.transaction?.amount,
     });
   } catch (error) {
-    console.error('Paystack verification error:', error);
+    logger.error({ err: error }, 'Paystack verification error');
     res.status(500).json({ message: 'Failed to verify payment' });
   }
 };
@@ -396,14 +390,12 @@ export const verifyPaystackPayment = async (req, res) => {
  */
 export const handlePaystackWebhook = async (req, res) => {
   if (!Buffer.isBuffer(req.body)) {
-    console.error(
-      'Paystack webhook: body is not raw — the route must be mounted with express.raw() before any JSON parser'
-    );
+    logger.error('Paystack webhook: body is not raw — the route must be mounted with express.raw() before any JSON parser');
     return res.status(500).json({ message: 'Webhook misconfigured' });
   }
 
   if (!verifyPaystackSignature(req.body, req.get('x-paystack-signature'))) {
-    console.warn(`Paystack webhook: rejected unsigned or mis-signed request from ${req.ip}`);
+    logger.warn(`Paystack webhook: rejected unsigned or mis-signed request from ${req.ip}`);
     return res.status(401).json({ message: 'Invalid signature' });
   }
 
@@ -423,7 +415,7 @@ export const handlePaystackWebhook = async (req, res) => {
     return res.sendStatus(200);
   } catch (error) {
     // A genuine failure (database down mid-charge) SHOULD retry, so fail loudly.
-    console.error('Paystack webhook processing error:', error);
+    logger.error({ err: error }, 'Paystack webhook processing error');
     return res.status(500).json({ message: 'Webhook processing failed' });
   }
 };
@@ -486,7 +478,7 @@ export const uploadBankTransferProof = async (req, res) => {
       proofUrl: uploadResponse.secure_url,
     });
   } catch (error) {
-    console.error('Bank transfer proof upload error:', error);
+    logger.error({ err: error }, 'Bank transfer proof upload error');
     res.status(500).json({ message: 'Failed to upload proof of payment' });
   }
 };

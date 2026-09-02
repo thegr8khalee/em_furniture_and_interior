@@ -1,4 +1,5 @@
 import Notification from '../models/notification.model.js';
+import { logger } from '../lib/logger.js';
 
 export const createNotification = async ({
   userId,
@@ -47,7 +48,7 @@ export const getMyNotifications = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching notifications:', error);
+    logger.error({ err: error }, 'Error fetching notifications');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -68,7 +69,7 @@ export const markAsRead = async (req, res) => {
 
     res.json({ success: true, notification });
   } catch (error) {
-    console.error('Error marking notification as read:', error);
+    logger.error({ err: error }, 'Error marking notification as read');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -82,7 +83,7 @@ export const markAllRead = async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Error marking all notifications as read:', error);
+    logger.error({ err: error }, 'Error marking all notifications as read');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -102,7 +103,7 @@ export const deleteNotification = async (req, res) => {
 
     res.json({ success: true });
   } catch (error) {
-    console.error('Error deleting notification:', error);
+    logger.error({ err: error }, 'Error deleting notification');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };

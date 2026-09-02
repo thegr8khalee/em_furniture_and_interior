@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js'; // Import User model to check authenticated users
 import GuestSession from '../models/guest.model.js'; // Import GuestSession model for anonymous users
 import { v4 as uuidv4 } from 'uuid'; // For generating unique anonymous IDs
+import { logger } from '../lib/logger.js';
 
 
 export const identifyGuest = async (req, res, next) => {
@@ -20,7 +21,7 @@ export const identifyGuest = async (req, res, next) => {
                 }
             } catch (jwtError) {
                 // Token is invalid or expired, clear the cookie and proceed to guest identification
-                console.warn('Invalid or expired JWT detected:', jwtError.message);
+                logger.warn({ err: jwtError }, 'Invalid or expired JWT detected');
                 res.clearCookie('jwt', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' });
             }
         }
@@ -40,7 +41,7 @@ export const identifyGuest = async (req, res, next) => {
                 return next(); // Proceed to the next middleware/route handler for guest user
             } else {
                 // Anonymous ID cookie exists but no corresponding session in DB (e.g., DB session expired/deleted)
-                console.warn('Anonymous ID cookie found but no matching guest session in database. Creating a new one.');
+                logger.warn('Anonymous ID cookie found but no matching guest session in database. Creating a new one.');
                 res.clearCookie('anonymousId', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' });
                 anonymousId = undefined; // Force creation of a new anonymous ID
             }
@@ -62,13 +63,13 @@ export const identifyGuest = async (req, res, next) => {
             guestSession = new GuestSession({ anonymousId });
             await guestSession.save();
             req.guestSession = { anonymousId: guestSession.anonymousId }; // Populate req.guestSession
-            console.log('New guest session created with ID:', anonymousId);
+            logger.info({ anonymousId }, 'New guest session created');
         }
 
         next(); // Always call next() to pass control to the subsequent middleware or route handler
 
     } catch (error) {
-        console.error('Error in identifyGuest middleware:', error.message);
+        logger.error({ err: error }, 'Error in identifyGuest middleware');
         // Handle unexpected errors gracefully
         res.status(500).json({ message: 'Internal Server Error during session identification.' });
     }

@@ -8,6 +8,7 @@ import LoyaltyTransaction from '../models/loyaltyTransaction.model.js';
 import { generateInvoicePDF, generateOrderDocumentPDF } from '../lib/invoiceGenerator.js';
 import { createNotification } from './notification.controller.js';
 import { sendEmail } from '../services/gmail.service.js';
+import { logger } from '../lib/logger.js';
 
 // Create a new order (for authenticated users and guests)
 export const createOrder = async (req, res) => {
@@ -169,7 +170,7 @@ export const createOrder = async (req, res) => {
           `,
         });
       } catch (emailError) {
-        console.error('Failed to send order confirmation email:', emailError);
+        logger.error({ err: emailError }, 'Failed to send order confirmation email');
       }
     }
 
@@ -179,7 +180,7 @@ export const createOrder = async (req, res) => {
       order
     });
   } catch (error) {
-    console.error('Error creating order:', error);
+    logger.error({ err: error }, 'Error creating order');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -246,7 +247,7 @@ export const getMyOrders = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching orders:', error);
+    logger.error({ err: error }, 'Error fetching orders');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -284,7 +285,7 @@ export const getOrderById = async (req, res) => {
       order
     });
   } catch (error) {
-    console.error('Error fetching order:', error);
+    logger.error({ err: error }, 'Error fetching order');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -313,7 +314,7 @@ export const getOrderByNumber = async (req, res) => {
       order
     });
   } catch (error) {
-    console.error('Error tracking order:', error);
+    logger.error({ err: error }, 'Error tracking order');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -364,7 +365,7 @@ export const getAllOrders = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching all orders:', error);
+    logger.error({ err: error }, 'Error fetching all orders');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -436,7 +437,7 @@ export const updateOrderStatus = async (req, res) => {
           `,
         });
       } catch (emailError) {
-        console.error('Failed to send order status email:', emailError);
+        logger.error({ err: emailError }, 'Failed to send order status email');
       }
     }
 
@@ -471,7 +472,7 @@ export const updateOrderStatus = async (req, res) => {
       order
     });
   } catch (error) {
-    console.error('Error updating order:', error);
+    logger.error({ err: error }, 'Error updating order');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -516,7 +517,7 @@ export const updatePaymentStatus = async (req, res) => {
       order
     });
   } catch (error) {
-    console.error('Error updating payment status:', error);
+    logger.error({ err: error }, 'Error updating payment status');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -537,7 +538,7 @@ export const deleteOrder = async (req, res) => {
       message: 'Order deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting order:', error);
+    logger.error({ err: error }, 'Error deleting order');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -557,7 +558,7 @@ export const generateInvoice = async (req, res) => {
     // Generate and stream the PDF
     await generateInvoicePDF(order, res);
   } catch (error) {
-    console.error('Error generating invoice:', error);
+    logger.error({ err: error }, 'Error generating invoice');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -580,7 +581,7 @@ export const generateReceipt = async (req, res) => {
 
     await generateOrderDocumentPDF(order, res, 'receipt');
   } catch (error) {
-    console.error('Error generating receipt:', error);
+    logger.error({ err: error }, 'Error generating receipt');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -599,7 +600,7 @@ export const generateQuotation = async (req, res) => {
 
     await generateOrderDocumentPDF(order, res, 'quotation');
   } catch (error) {
-    console.error('Error generating quotation:', error);
+    logger.error({ err: error }, 'Error generating quotation');
     res.status(500).json({ message: 'Server error' });
   }
 };

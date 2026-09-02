@@ -1,5 +1,6 @@
 import LoyaltyTransaction from '../models/loyaltyTransaction.model.js';
 import User from '../models/user.model.js';
+import { logger } from '../lib/logger.js';
 
 export const getLoyaltySummary = async (req, res) => {
   try {
@@ -29,7 +30,7 @@ export const getLoyaltySummary = async (req, res) => {
       totalRedeemed,
     });
   } catch (error) {
-    console.error('Error fetching loyalty summary:', error);
+    logger.error({ err: error }, 'Error fetching loyalty summary');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -58,7 +59,7 @@ export const getLoyaltyHistory = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching loyalty history:', error);
+    logger.error({ err: error }, 'Error fetching loyalty history');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };

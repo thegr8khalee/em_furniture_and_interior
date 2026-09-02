@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Collection from '../models/collection.model.js';
+import { logger } from '../lib/logger.js';
 
 const filterApprovedReviews = (collectionDoc) => {
   const collection = collectionDoc.toObject();
@@ -69,7 +70,7 @@ export const getCollections = async (req, res) => {
       hasMore,
     });
   } catch (error) {
-    console.error('Error in getCollections controller: ', error.message);
+    logger.error({ err: error }, 'Error in getCollections controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -83,7 +84,7 @@ export const getCollectionsCount = async (req, res) => {
       totalCollections, // Returns only the total count
     });
   } catch (error) {
-    console.error('Error in getCollections controller: ', error.message);
+    logger.error({ err: error }, 'Error in getCollections controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -108,7 +109,7 @@ export const getCollectionById = async (req, res) => {
 
     res.status(200).json(filterApprovedReviews(collection));
   } catch (error) {
-    console.error('Error in getCollectionById controller: ', error.message);
+    logger.error({ err: error }, 'Error in getCollectionById controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };

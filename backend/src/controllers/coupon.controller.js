@@ -1,5 +1,6 @@
 import Coupon from '../models/coupon.model.js';
 import mongoose from 'mongoose';
+import { logger } from '../lib/logger.js';
 
 export const validateCoupon = async (req, res) => {
   const { code, cartItems, subtotal } = req.body;
@@ -41,7 +42,7 @@ export const validateCoupon = async (req, res) => {
       finalTotal: Math.max(0, subtotal - discount),
     });
   } catch (error) {
-    console.error('Error in validateCoupon controller:', error.message);
+    logger.error({ err: error }, 'Error in validateCoupon controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -76,7 +77,7 @@ export const applyCoupon = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error in applyCoupon controller:', error.message);
+    logger.error({ err: error }, 'Error in applyCoupon controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -132,7 +133,7 @@ export const createCoupon = async (req, res) => {
 
     res.status(201).json(savedCoupon);
   } catch (error) {
-    console.error('Error in createCoupon controller:', error.message);
+    logger.error({ err: error }, 'Error in createCoupon controller');
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map((err) => err.message);
       return res.status(400).json({ message: 'Validation failed', errors });
@@ -164,7 +165,7 @@ export const updateCoupon = async (req, res) => {
     const updatedCoupon = await coupon.save();
     res.status(200).json(updatedCoupon);
   } catch (error) {
-    console.error('Error in updateCoupon controller:', error.message);
+    logger.error({ err: error }, 'Error in updateCoupon controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -184,7 +185,7 @@ export const deleteCoupon = async (req, res) => {
 
     res.status(200).json({ message: 'Coupon deleted successfully.' });
   } catch (error) {
-    console.error('Error in deleteCoupon controller:', error.message);
+    logger.error({ err: error }, 'Error in deleteCoupon controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -213,7 +214,7 @@ export const getCoupons = async (req, res) => {
       hasMore: page * limit < totalCoupons,
     });
   } catch (error) {
-    console.error('Error in getCoupons controller:', error.message);
+    logger.error({ err: error }, 'Error in getCoupons controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -238,7 +239,7 @@ export const getCouponById = async (req, res) => {
 
     res.status(200).json(coupon);
   } catch (error) {
-    console.error('Error in getCouponById controller:', error.message);
+    logger.error({ err: error }, 'Error in getCouponById controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };

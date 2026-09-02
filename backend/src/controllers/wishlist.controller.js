@@ -5,6 +5,7 @@ import GuestSession from '../models/guest.model.js'; // Import GuestSession mode
 import Product from '../models/product.model.js'; // Import Product model to check existence
 import Collection from '../models/collection.model.js'; // Import Collection model to check existence
 import mongoose from 'mongoose';
+import { logger } from '../lib/logger.js';
 
 export const getWishlist = async (req, res) => {
     try {
@@ -96,7 +97,7 @@ export const getWishlist = async (req, res) => {
         // Send the cleaned, but UNPOPULATED, wishlist back to the frontend
         res.status(200).json({ message: 'Wishlist retrieved successfully.', wishlist: cleanedRawWishlist });
     } catch (error) {
-        console.error('Error in getWishlist controller: ', error.message);
+        logger.error({ err: error }, 'Error in getWishlist controller');
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
@@ -199,7 +200,7 @@ export const addToWishlist = async (req, res) => {
         .json({ message: 'Unauthorized: No user or guest session found.' });
     }
   } catch (error) {
-    console.error('Error in addToWishlist controller: ', error.message);
+    logger.error({ err: error }, 'Error in addToWishlist controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -207,7 +208,6 @@ export const addToWishlist = async (req, res) => {
 export const removeFromWishlist = async (req, res) => {
   const { itemId } = req.body;
 
-  console.log(itemId);
 
   if (!mongoose.Types.ObjectId.isValid(itemId)) {
     return res.status(400).json({ message: 'Invalid Item ID format.' });
@@ -270,7 +270,7 @@ export const removeFromWishlist = async (req, res) => {
         .json({ message: 'Unauthorized: No user or guest session found.' });
     }
   } catch (error) {
-    console.error('Error in removeFromWishlist controller: ', error.message);
+    logger.error({ err: error }, 'Error in removeFromWishlist controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -320,12 +320,10 @@ export const clearWishlist = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error in clearWishlist controller:', error);
+    logger.error({ err: error }, 'Error in clearWishlist controller');
     // Check if headers have already been sent before attempting to send response
     if (res.headersSent) {
-      console.warn(
-        'Headers already sent, cannot send error response from clearWishlist catch block.'
-      );
+      logger.warn('Headers already sent, cannot send error response from clearWishlist catch block.');
       return;
     }
     res.status(500).json({

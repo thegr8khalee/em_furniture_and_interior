@@ -1,6 +1,7 @@
 // backend/controllers/contact.controller.js
 import dotenv from 'dotenv';
 import { sendEmail } from '../services/gmail.service.js';
+import { logger } from '../lib/logger.js';
 
 dotenv.config();
 
@@ -56,10 +57,10 @@ ${message}
       from: `"${name}" <emfurnitureandinterior@gmail.com>`,
     });
 
-    console.log('✅ Contact email sent successfully:', result.messageId);
+    logger.info({ messageId: result.messageId }, '✅ Contact email sent successfully');
     res.status(200).json({ message: 'Message sent successfully!' });
   } catch (error) {
-    console.error('❌ Error sending contact email:', error);
+    logger.error({ err: error }, '❌ Error sending contact email');
     res.status(500).json({
       message: 'Failed to send message. Please try again later.'
     });

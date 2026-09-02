@@ -60,11 +60,14 @@ export const useAuthStore = create((set, get) => ({
   logout: async () => {
     try {
       await axiosInstance.post('/auth/logout');
-      set({ authUser: null, permissions: [], isAdmin: false });
       toast.success('Logged out successfully');
-      get().disconnectSocket();
     } catch (error) {
-      toast.error(error.response.data.message);
+      // A failed logout request must still end the session on this device —
+      // leaving the user "logged in" against a server that disagrees is worse
+      // than a silent success.
+      toast.error(error?.response?.data?.message || 'Could not reach the server. Signed out locally.');
+    } finally {
+      set({ authUser: null, permissions: [], isAdmin: false });
     }
   },
 

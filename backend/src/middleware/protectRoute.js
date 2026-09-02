@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/user.model.js';
+import { logger } from '../lib/logger.js';
 
 export const protectRoute = async (req, res, next) => {
     try {
@@ -31,7 +32,7 @@ export const protectRoute = async (req, res, next) => {
         next(); // Proceed to the next middleware/controller
 
     } catch (error) {
-        console.log('Error in protectRoute middleware: ', error.message);
+        logger.info({ err: error }, 'Error in protectRoute middleware');
         // Clear expired/invalid token cookie
         res.clearCookie('jwt', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' });
 

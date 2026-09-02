@@ -1,6 +1,7 @@
 // services/gmail.service.js
 import { google } from 'googleapis';
 import dotenv from 'dotenv';
+import { logger } from '../lib/logger.js';
 
 dotenv.config();
 
@@ -70,21 +71,21 @@ export const sendEmail = async ({ to, subject, text, html, from }) => {
       },
     });
 
-    console.log('✅ Email sent successfully:', response.data.id);
+    logger.info({ id: response.data.id }, '✅ Email sent successfully');
     return {
       success: true,
       messageId: response.data.id,
       threadId: response.data.threadId,
     };
   } catch (error) {
-    console.error('❌ Gmail API error:', error.message);
+    logger.error({ err: error }, '❌ Gmail API error');
     
     if (error.code === 401) {
-      console.error('Authentication failed - check OAuth2 tokens');
+      logger.error('Authentication failed - check OAuth2 tokens');
     } else if (error.code === 403) {
-      console.error('Permission denied - check Gmail API is enabled');
+      logger.error('Permission denied - check Gmail API is enabled');
     } else if (error.code === 429) {
-      console.error('Rate limit exceeded - too many requests');
+      logger.error('Rate limit exceeded - too many requests');
     }
     
     throw error;
@@ -97,10 +98,10 @@ export const sendEmail = async ({ to, subject, text, html, from }) => {
 export const verifyConnection = async () => {
   try {
     const response = await gmail.users.getProfile({ userId: 'me' });
-    console.log('✅ Gmail API connected:', response.data.emailAddress);
+    logger.info({ emailAddress: response.data.emailAddress }, '✅ Gmail API connected');
     return true;
   } catch (error) {
-    console.error('❌ Gmail API connection failed:', error.message);
+    logger.error({ err: error }, '❌ Gmail API connection failed');
     return false;
   }
 };

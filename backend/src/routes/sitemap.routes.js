@@ -3,6 +3,7 @@ import Product from '../models/product.model.js';
 import Collection from '../models/collection.model.js';
 import Project from '../models/project.model.js';
 import BlogPost from '../models/blogPost.model.js';
+import { logger } from '../lib/logger.js';
 
 const router = express.Router();
 
@@ -116,7 +117,7 @@ router.get('/sitemap.xml', async (_req, res) => {
     res.setHeader('Cache-Control', 'public, max-age=3600');
     res.status(200).send(xml);
   } catch (err) {
-    console.error('Sitemap generation error:', err);
+    logger.error({ err: err }, 'Sitemap generation error');
     res.status(500).send('Error generating sitemap');
   }
 });

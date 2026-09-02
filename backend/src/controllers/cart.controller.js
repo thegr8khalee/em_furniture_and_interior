@@ -5,6 +5,7 @@ import GuestSession from '../models/guest.model.js'; // Import GuestSession mode
 import Product from '../models/product.model.js'; // Import Product model to check existence
 import Collection from '../models/collection.model.js'; // Import Collection model to check existence
 import mongoose from 'mongoose';
+import { logger } from '../lib/logger.js';
 
 export const getCart = async (req, res) => {
   try {
@@ -104,7 +105,7 @@ export const getCart = async (req, res) => {
       .status(200)
       .json({ message: 'Cart retrieved successfully.', cart: cleanedRawCart });
   } catch (error) {
-    console.error('Error in getCart controller: ', error.message);
+    logger.error({ err: error }, 'Error in getCart controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -207,7 +208,7 @@ export const addToCart = async (req, res) => {
         .json({ message: 'Unauthorized: No user or guest session found.' });
     }
   } catch (error) {
-    console.error('Error in addToCart controller: ', error.message);
+    logger.error({ err: error }, 'Error in addToCart controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -276,7 +277,7 @@ export const removeFromCart = async (req, res) => {
         .json({ message: 'Unauthorized: No user or guest session found.' });
     }
   } catch (error) {
-    console.error('Error in removeFromCart controller: ', error.message);
+    logger.error({ err: error }, 'Error in removeFromCart controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -320,12 +321,10 @@ export const clearCart = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Error in clearCart controller:', error.message); // Log only message for cleaner output
+    logger.error({ err: error }, 'Error in clearCart controller'); // Log only message for cleaner output
     // Check if headers have already been sent before attempting to send response
     if (res.headersSent) {
-      console.warn(
-        'Headers already sent, cannot send error response from clearCart catch block.'
-      );
+      logger.warn('Headers already sent, cannot send error response from clearCart catch block.');
       return;
     }
     res
@@ -404,12 +403,10 @@ export const updateCartItemQuantity = async (req, res) => {
       cart: cartOwner.cart, // Send back the raw cart array
     });
   } catch (error) {
-    console.error('Error in updateCartItemQuantity controller:', error);
+    logger.error({ err: error }, 'Error in updateCartItemQuantity controller');
     // Check if headers have already been sent before attempting to send response
     if (res.headersSent) {
-      console.warn(
-        'Headers already sent, cannot send error response from updateCartItemQuantity catch block.'
-      );
+      logger.warn('Headers already sent, cannot send error response from updateCartItemQuantity catch block.');
       return;
     }
     res
@@ -447,7 +444,7 @@ export const checkItemExistence = async (req, res) => {
       existingCollectionIds: Array.from(existingCollectionMap),
     });
   } catch (error) {
-    console.error('Error checking item existence:', error.message);
+    logger.error({ err: error }, 'Error checking item existence');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -461,7 +458,7 @@ export const getDetailsByIds = async (req, res) => {
 
     res.status(200).json({ products, collections });
   } catch (error) {
-    console.error('Error fetching item details by IDs:', error);
+    logger.error({ err: error }, 'Error fetching item details by IDs');
     res.status(500).json({ message: 'Failed to fetch item details.' });
   }
 };

@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import Product from '../models/product.model.js';
 import Collection from '../models/collection.model.js';
 import Order from '../models/order.model.js';
+import { logger } from '../lib/logger.js';
 
 const hasPurchasedItem = async ({ userId, itemId, itemType }) => {
   const eligibleStatuses = ['confirmed', 'processing', 'shipped', 'delivered'];
@@ -93,7 +94,7 @@ export const addReviewToProduct = async (req, res) => {
       averageRating: populatedProduct.averageRating,
     });
   } catch (error) {
-    console.error('Error in addReviewToProduct controller: ', error.message);
+    logger.error({ err: error }, 'Error in addReviewToProduct controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -171,7 +172,7 @@ export const addReviewToCollection = async (req, res) => {
       averageRating: populatedCollection.averageRating,
     });
   } catch (error) {
-    console.error('Error in addReviewToCollection controller: ', error.message);
+    logger.error({ err: error }, 'Error in addReviewToCollection controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -198,7 +199,7 @@ export const getPendingProductReviews = async (req, res) => {
 
     res.status(200).json({ pending });
   } catch (error) {
-    console.error('Error in getPendingProductReviews: ', error.message);
+    logger.error({ err: error }, 'Error in getPendingProductReviews');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -225,7 +226,7 @@ export const getPendingCollectionReviews = async (req, res) => {
 
     res.status(200).json({ pending });
   } catch (error) {
-    console.error('Error in getPendingCollectionReviews: ', error.message);
+    logger.error({ err: error }, 'Error in getPendingCollectionReviews');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -249,7 +250,7 @@ export const approveProductReview = async (req, res) => {
 
     res.status(200).json({ message: 'Review approved.' });
   } catch (error) {
-    console.error('Error in approveProductReview: ', error.message);
+    logger.error({ err: error }, 'Error in approveProductReview');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -273,7 +274,7 @@ export const rejectProductReview = async (req, res) => {
 
     res.status(200).json({ message: 'Review rejected and removed.' });
   } catch (error) {
-    console.error('Error in rejectProductReview: ', error.message);
+    logger.error({ err: error }, 'Error in rejectProductReview');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -297,7 +298,7 @@ export const approveCollectionReview = async (req, res) => {
 
     res.status(200).json({ message: 'Review approved.' });
   } catch (error) {
-    console.error('Error in approveCollectionReview: ', error.message);
+    logger.error({ err: error }, 'Error in approveCollectionReview');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -321,7 +322,7 @@ export const rejectCollectionReview = async (req, res) => {
 
     res.status(200).json({ message: 'Review rejected and removed.' });
   } catch (error) {
-    console.error('Error in rejectCollectionReview: ', error.message);
+    logger.error({ err: error }, 'Error in rejectCollectionReview');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };

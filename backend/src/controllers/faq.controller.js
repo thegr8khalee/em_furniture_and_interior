@@ -1,4 +1,5 @@
 import FAQ from '../models/faq.model.js';
+import { logger } from '../lib/logger.js';
 
 export const getFAQs = async (req, res) => {
   try {
@@ -8,7 +9,7 @@ export const getFAQs = async (req, res) => {
 
     res.status(200).json(faqs);
   } catch (error) {
-    console.error('Error fetching FAQs:', error);
+    logger.error({ err: error }, 'Error fetching FAQs');
     res.status(500).json({ message: 'Failed to fetch FAQs.' });
   }
 };
@@ -18,7 +19,7 @@ export const adminListFAQs = async (req, res) => {
     const faqs = await FAQ.find({}).sort({ order: 1, createdAt: 1 }).lean();
     res.status(200).json(faqs);
   } catch (error) {
-    console.error('Error fetching admin FAQs:', error);
+    logger.error({ err: error }, 'Error fetching admin FAQs');
     res.status(500).json({ message: 'Failed to fetch FAQs.' });
   }
 };
@@ -42,7 +43,7 @@ export const createFAQ = async (req, res) => {
 
     res.status(201).json(faq);
   } catch (error) {
-    console.error('Error creating FAQ:', error);
+    logger.error({ err: error }, 'Error creating FAQ');
     res.status(500).json({ message: 'Failed to create FAQ.' });
   }
 };
@@ -66,7 +67,7 @@ export const updateFAQ = async (req, res) => {
 
     res.status(200).json(faq);
   } catch (error) {
-    console.error('Error updating FAQ:', error);
+    logger.error({ err: error }, 'Error updating FAQ');
     res.status(500).json({ message: 'Failed to update FAQ.' });
   }
 };
@@ -82,7 +83,7 @@ export const deleteFAQ = async (req, res) => {
 
     res.status(200).json({ message: 'FAQ deleted successfully.' });
   } catch (error) {
-    console.error('Error deleting FAQ:', error);
+    logger.error({ err: error }, 'Error deleting FAQ');
     res.status(500).json({ message: 'Failed to delete FAQ.' });
   }
 };

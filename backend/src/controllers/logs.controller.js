@@ -1,5 +1,6 @@
 import AuditLog from '../models/auditLog.model.js';
 import ActivityLog from '../models/activityLog.model.js';
+import { logger } from '../lib/logger.js';
 
 // Get audit logs with filtering and pagination
 export const getAuditLogs = async (req, res) => {
@@ -51,7 +52,7 @@ export const getAuditLogs = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching audit logs:', error);
+    logger.error({ err: error }, 'Error fetching audit logs');
     res.status(500).json({ message: 'Failed to fetch audit logs' });
   }
 };
@@ -107,7 +108,7 @@ export const getAuditLogStats = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching audit log stats:', error);
+    logger.error({ err: error }, 'Error fetching audit log stats');
     res.status(500).json({ message: 'Failed to fetch audit log statistics' });
   }
 };
@@ -160,7 +161,7 @@ export const getActivityLogs = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching activity logs:', error);
+    logger.error({ err: error }, 'Error fetching activity logs');
     res.status(500).json({ message: 'Failed to fetch activity logs' });
   }
 };
@@ -240,7 +241,7 @@ export const getActivityLogStats = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching activity log stats:', error);
+    logger.error({ err: error }, 'Error fetching activity log stats');
     res.status(500).json({ message: 'Failed to fetch activity log statistics' });
   }
 };
@@ -263,7 +264,7 @@ export const cleanupAuditLogs = async (req, res) => {
       deletedCount: result.deletedCount,
     });
   } catch (error) {
-    console.error('Error cleaning up audit logs:', error);
+    logger.error({ err: error }, 'Error cleaning up audit logs');
     res.status(500).json({ message: 'Failed to cleanup audit logs' });
   }
 };

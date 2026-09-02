@@ -1,5 +1,6 @@
 import PromoBanner from '../models/promoBanner.model.js';
 import FlashSale from '../models/flashSale.model.js';
+import { logger } from '../lib/logger.js';
 
 const isWithinWindow = (doc, now) => {
   if (!doc.isActive) return false;
@@ -14,7 +15,7 @@ export const getAdminBanners = async (req, res) => {
     const banners = await PromoBanner.find().sort({ priority: -1, createdAt: -1 });
     res.json({ success: true, banners });
   } catch (error) {
-    console.error('Error fetching promo banners:', error.message);
+    logger.error({ err: error }, 'Error fetching promo banners');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -26,7 +27,7 @@ export const getActiveBanners = async (req, res) => {
     const activeBanners = banners.filter((banner) => isWithinWindow(banner, now));
     res.json({ success: true, banners: activeBanners });
   } catch (error) {
-    console.error('Error fetching active promo banners:', error.message);
+    logger.error({ err: error }, 'Error fetching active promo banners');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -67,7 +68,7 @@ export const createBanner = async (req, res) => {
 
     res.status(201).json({ success: true, banner });
   } catch (error) {
-    console.error('Error creating promo banner:', error.message);
+    logger.error({ err: error }, 'Error creating promo banner');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -94,7 +95,7 @@ export const updateBanner = async (req, res) => {
 
     res.json({ success: true, banner });
   } catch (error) {
-    console.error('Error updating promo banner:', error.message);
+    logger.error({ err: error }, 'Error updating promo banner');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -110,7 +111,7 @@ export const deleteBanner = async (req, res) => {
 
     res.json({ success: true, message: 'Promo banner deleted.' });
   } catch (error) {
-    console.error('Error deleting promo banner:', error.message);
+    logger.error({ err: error }, 'Error deleting promo banner');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -121,7 +122,7 @@ export const getAdminFlashSales = async (req, res) => {
     const flashSales = await FlashSale.find().sort({ startDate: -1 });
     res.json({ success: true, flashSales });
   } catch (error) {
-    console.error('Error fetching flash sales:', error.message);
+    logger.error({ err: error }, 'Error fetching flash sales');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -133,7 +134,7 @@ export const getActiveFlashSales = async (req, res) => {
     const activeSales = flashSales.filter((sale) => isWithinWindow(sale, now));
     res.json({ success: true, flashSales: activeSales });
   } catch (error) {
-    console.error('Error fetching active flash sales:', error.message);
+    logger.error({ err: error }, 'Error fetching active flash sales');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -180,7 +181,7 @@ export const createFlashSale = async (req, res) => {
 
     res.status(201).json({ success: true, flashSale });
   } catch (error) {
-    console.error('Error creating flash sale:', error.message);
+    logger.error({ err: error }, 'Error creating flash sale');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -206,7 +207,7 @@ export const updateFlashSale = async (req, res) => {
 
     res.json({ success: true, flashSale });
   } catch (error) {
-    console.error('Error updating flash sale:', error.message);
+    logger.error({ err: error }, 'Error updating flash sale');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -222,7 +223,7 @@ export const deleteFlashSale = async (req, res) => {
 
     res.json({ success: true, message: 'Flash sale deleted.' });
   } catch (error) {
-    console.error('Error deleting flash sale:', error.message);
+    logger.error({ err: error }, 'Error deleting flash sale');
     res.status(500).json({ message: 'Server error' });
   }
 };

@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 import cloudinary from '../lib/cloudinary.js';
 import Project from '../models/project.model.js';
 import { resolvePermissions } from '../lib/permissions.js';
+import { logger } from '../lib/logger.js';
 
 export const adminSignup = async (req, res) => {
   const { username, email, password } = req.body;
@@ -63,7 +64,7 @@ export const adminSignup = async (req, res) => {
       message: 'Admin registered successfully.',
     });
   } catch (error) {
-    console.error('Error in adminSignup controller: ', error.message);
+    logger.error({ err: error }, 'Error in adminSignup controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -71,7 +72,6 @@ export const adminSignup = async (req, res) => {
 export const adminLogin = async (req, res) => {
   const { email, password } = req.body;
 
-  console.log(email);
 
   try {
     // Input validation
@@ -119,7 +119,7 @@ export const adminLogin = async (req, res) => {
       message: 'Admin logged in successfully.',
     });
   } catch (error) {
-    console.error('Error in adminLogin controller: ', error.message);
+    logger.error({ err: error }, 'Error in adminLogin controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -135,7 +135,7 @@ export const adminLogout = (req, res) => {
     });
     res.status(200).json({ message: 'Admin logged out successfully.' });
   } catch (error) {
-    console.error('Error in adminLogout controller: ', error.message);
+    logger.error({ err: error }, 'Error in adminLogout controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -281,7 +281,7 @@ export const addProduct = async (req, res) => {
           typeof imageData !== 'string' ||
           !imageData.startsWith('data:image')
         ) {
-          console.warn('Skipping invalid image data:', imageData);
+          logger.warn({ imageData }, 'Skipping invalid image data');
           continue;
         }
         const uploadResponse = await cloudinary.uploader.upload(imageData, {
@@ -343,20 +343,16 @@ export const addProduct = async (req, res) => {
         if (!collection.productIds.includes(savedProduct._id)) {
           collection.productIds.push(savedProduct._id);
           await collection.save();
-          console.log(
-            `Product ${savedProduct._id} added to collection ${collectionId}.`
-          );
+          logger.info(`Product ${savedProduct._id} added to collection ${collectionId}.`);
         } else {
-          console.log(
-            `Product ${savedProduct._id} already exists in collection ${collectionId}.`
-          );
+          logger.info(`Product ${savedProduct._id} already exists in collection ${collectionId}.`);
         }
       }
     }
 
     res.status(201).json(savedProduct);
   } catch (error) {
-    console.error('Error in addProduct controller: ', error.message);
+    logger.error({ err: error }, 'Error in addProduct controller');
     // Check for Mongoose validation errors
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map((err) => err.message);
@@ -519,9 +515,7 @@ export const updateProduct = async (req, res) => {
             (id) => id.toString() !== productId
           );
           await oldCollection.save();
-          console.log(
-            `Product ${productId} removed from old collection ${oldCollectionId}.`
-          );
+          logger.info(`Product ${productId} removed from old collection ${oldCollectionId}.`);
         }
       }
       if (newCollectionId) {
@@ -541,16 +535,14 @@ export const updateProduct = async (req, res) => {
         if (!newCollection.productIds.includes(product._id)) {
           newCollection.productIds.push(product._id);
           await newCollection.save();
-          console.log(
-            `Product ${productId} added to new collection ${newCollectionId}.`
-          );
+          logger.info(`Product ${productId} added to new collection ${newCollectionId}.`);
         }
       }
     }
     // --- End Collection ID Update Logic ---
 
     // --- Image Handling for Update ---
-    // console.log('--- Debugging Image Update ---');
+    // logger.info('--- Debugging Image Update ---');
     // console.log(
     //   '1. Initial product.images from DB:',
     //   JSON.stringify(product.images)
@@ -592,13 +584,10 @@ export const updateProduct = async (req, res) => {
               public_id: uploadResponse.public_id,
             });
           } else {
-            console.warn(
-              'Skipping invalid new image data (not a Base64 string):',
-              imageData
-            );
+            logger.warn({ imageData }, 'Skipping invalid new image data (not a Base64 string)');
           }
         } else {
-          console.warn('Skipping unrecognized image data format:', imageData);
+          logger.warn({ imageData }, 'Skipping unrecognized image data format');
         }
       }
     }
@@ -631,12 +620,9 @@ export const updateProduct = async (req, res) => {
     for (const publicId of publicIdsToDelete) {
       try {
         await cloudinary.uploader.destroy(publicId);
-        console.log(`Deleted image from Cloudinary: ${publicId}`);
+        logger.info(`Deleted image from Cloudinary: ${publicId}`);
       } catch (deleteError) {
-        console.error(
-          `Error deleting image ${publicId} from Cloudinary:`,
-          deleteError
-        );
+        logger.error({ err: deleteError }, `Error deleting image ${publicId} from Cloudinary`);
       }
     }
     // --- End Image Handling ---
@@ -717,7 +703,7 @@ export const updateProduct = async (req, res) => {
     const updatedProduct = await product.save();
     res.status(200).json(updatedProduct);
   } catch (error) {
-    console.error('Error in updateProduct controller: ', error.message);
+    logger.error({ err: error }, 'Error in updateProduct controller');
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map((err) => err.message);
       return res
@@ -746,7 +732,7 @@ export const delProduct = async (req, res) => {
       if (image.public_id) {
         // Only delete if public_id exists
         await cloudinary.uploader.destroy(image.public_id);
-        console.log(`Deleted image from Cloudinary: ${image.public_id}`);
+        logger.info(`Deleted image from Cloudinary: ${image.public_id}`);
       }
     }
 
@@ -754,7 +740,7 @@ export const delProduct = async (req, res) => {
 
     res.status(200).json({ message: 'Product deleted successfully.' });
   } catch (error) {
-    console.error('Error in delProduct controller: ', error.message);
+    logger.error({ err: error }, 'Error in delProduct controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -867,16 +853,12 @@ export const addCollection = async (req, res) => {
                   (id) => id.toString() !== productId.toString()
                 );
                 await oldCollection.save();
-                console.log(
-                  `Product ${productId} removed from old collection ${oldCollection._id}.`
-                );
+                logger.info(`Product ${productId} removed from old collection ${oldCollection._id}.`);
               }
             }
             product.collectionId = savedCollection._id;
             await product.save();
-            console.log(
-              `Product ${productId} updated with collectionId ${savedCollection._id}.`
-            );
+            logger.info(`Product ${productId} updated with collectionId ${savedCollection._id}.`);
           }
         }
       }
@@ -884,7 +866,7 @@ export const addCollection = async (req, res) => {
 
     res.status(201).json(savedCollection);
   } catch (error) {
-    console.error('Error in addCollection controller: ', error.message);
+    logger.error({ err: error }, 'Error in addCollection controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -990,9 +972,7 @@ export const updateCollection = async (req, res) => {
       // Frontend explicitly sent null to remove image
       if (collection.coverImage && collection.coverImage.public_id) {
         await cloudinary.uploader.destroy(collection.coverImage.public_id);
-        console.log(
-          `Deleted cover image from Cloudinary: ${collection.coverImage.public_id}`
-        );
+        logger.info(`Deleted cover image from Cloudinary: ${collection.coverImage.public_id}`);
       }
       updatedCoverImage = undefined; // Set to undefined to remove from DB
     } else if (
@@ -1004,9 +984,7 @@ export const updateCollection = async (req, res) => {
       if (collection.coverImage && collection.coverImage.public_id) {
         // Delete old image if it exists
         await cloudinary.uploader.destroy(collection.coverImage.public_id);
-        console.log(
-          `Deleted old cover image from Cloudinary: ${collection.coverImage.public_id}`
-        );
+        logger.info(`Deleted old cover image from Cloudinary: ${collection.coverImage.public_id}`);
       }
       const uploadResponse = await cloudinary.uploader.upload(coverImage, {
         folder: 'furniture_collections_covers',
@@ -1091,16 +1069,12 @@ export const updateCollection = async (req, res) => {
               (id) => id.toString() !== productId
             );
             await oldCollection.save();
-            console.log(
-              `Product ${productId} removed from old collection ${oldCollection._id}.`
-            );
+            logger.info(`Product ${productId} removed from old collection ${oldCollection._id}.`);
           }
         }
         product.collectionId = collection._id;
         await product.save();
-        console.log(
-          `Product ${productId} added to collection ${collection._id}.`
-        );
+        logger.info(`Product ${productId} added to collection ${collection._id}.`);
       }
     }
 
@@ -1114,9 +1088,7 @@ export const updateCollection = async (req, res) => {
       ) {
         product.collectionId = undefined; // Or null, depending on your schema
         await product.save();
-        console.log(
-          `Product ${productId} removed from collection ${collection._id}.`
-        );
+        logger.info(`Product ${productId} removed from collection ${collection._id}.`);
       }
     }
     // --- END NEW LOGIC ---
@@ -1127,7 +1099,7 @@ export const updateCollection = async (req, res) => {
     const updatedCollection = await collection.save();
     res.status(200).json(updatedCollection);
   } catch (error) {
-    console.error('Error in updateCollection controller: ', error.message);
+    logger.error({ err: error }, 'Error in updateCollection controller');
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map((err) => err.message);
       return res
@@ -1154,16 +1126,14 @@ export const delCollection = async (req, res) => {
     // Delete associated cover image from Cloudinary if it exists
     if (collection.coverImage && collection.coverImage.public_id) {
       await cloudinary.uploader.destroy(collection.coverImage.public_id);
-      console.log(
-        `Deleted cover image from Cloudinary: ${collection.coverImage.public_id}`
-      );
+      logger.info(`Deleted cover image from Cloudinary: ${collection.coverImage.public_id}`);
     }
 
     await Collection.deleteOne({ _id: collectionId }); // Use deleteOne for clarity
 
     res.status(200).json({ message: 'Collection deleted successfully.' });
   } catch (error) {
-    console.error('Error in delCollection controller: ', error.message);
+    logger.error({ err: error }, 'Error in delCollection controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -1204,7 +1174,7 @@ export const addProject = async (req, res) => {
         typeof imageData !== 'string' ||
         !imageData.startsWith('data:image')
       ) {
-        console.warn('Skipping invalid image data:', imageData);
+        logger.warn({ imageData }, 'Skipping invalid image data');
         continue;
       }
       const uploadResponse = await cloudinary.uploader.upload(imageData, {
@@ -1235,7 +1205,7 @@ export const addProject = async (req, res) => {
 
     res.status(201).json(savedProject);
   } catch (error) {
-    console.error('Error in addProject controller: ', error.message);
+    logger.error({ err: error }, 'Error in addProject controller');
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map((err) => err.message);
       return res
@@ -1313,13 +1283,10 @@ export const updateProject = async (req, res) => {
               public_id: uploadResponse.public_id,
             });
           } else {
-            console.warn(
-              'Skipping invalid new image data (not a Base64 string):',
-              imageData
-            );
+            logger.warn({ imageData }, 'Skipping invalid new image data (not a Base64 string)');
           }
         } else {
-          console.warn('Skipping unrecognized image data format:', imageData);
+          logger.warn({ imageData }, 'Skipping unrecognized image data format');
         }
       }
     }
@@ -1343,12 +1310,9 @@ export const updateProject = async (req, res) => {
     for (const publicId of publicIdsToDelete) {
       try {
         await cloudinary.uploader.destroy(publicId);
-        console.log(`Deleted image from Cloudinary: ${publicId}`);
+        logger.info(`Deleted image from Cloudinary: ${publicId}`);
       } catch (deleteError) {
-        console.error(
-          `Error deleting image ${publicId} from Cloudinary:`,
-          deleteError
-        );
+        logger.error({ err: deleteError }, `Error deleting image ${publicId} from Cloudinary`);
       }
     }
     // --- End Image Handling ---
@@ -1360,7 +1324,7 @@ export const updateProject = async (req, res) => {
     const updatedProject = await project.save();
     res.status(200).json(updatedProject);
   } catch (error) {
-    console.error('Error in updateProject controller: ', error.message);
+    logger.error({ err: error }, 'Error in updateProject controller');
     if (error.name === 'ValidationError') {
       const errors = Object.values(error.errors).map((err) => err.message);
       return res
@@ -1387,7 +1351,7 @@ export const delProject = async (req, res) => {
     for (const image of project.images) {
       if (image.public_id) {
         await cloudinary.uploader.destroy(image.public_id);
-        console.log(`Deleted image from Cloudinary: ${image.public_id}`);
+        logger.info(`Deleted image from Cloudinary: ${image.public_id}`);
       }
     }
 
@@ -1395,7 +1359,7 @@ export const delProject = async (req, res) => {
 
     res.status(200).json({ message: 'Project deleted successfully.' });
   } catch (error) {
-    console.error('Error in delProject controller: ', error.message);
+    logger.error({ err: error }, 'Error in delProject controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };

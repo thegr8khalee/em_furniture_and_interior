@@ -1,4 +1,5 @@
 import AuditLog from '../models/auditLog.model.js';
+import { logger } from '../lib/logger.js';
 
 /**
  * Middleware to log audit trail for admin actions
@@ -75,7 +76,7 @@ export const createAuditLog = (action, resourceType) => {
         }
       } catch (error) {
         // Don't fail the request if audit logging fails
-        console.error('Audit log error:', error);
+        logger.error({ err: error }, 'Audit log error');
       }
     });
 
@@ -117,6 +118,6 @@ export const logAuditAction = async ({
       errorMessage,
     });
   } catch (error) {
-    console.error('Failed to create audit log:', error);
+    logger.error({ err: error }, 'Failed to create audit log');
   }
 };

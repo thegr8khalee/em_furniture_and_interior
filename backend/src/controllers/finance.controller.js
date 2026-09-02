@@ -1,4 +1,5 @@
 import Order from '../models/order.model.js';
+import { logger } from '../lib/logger.js';
 
 const parseDateRange = (startDate, endDate) => {
   const end = endDate ? new Date(endDate) : new Date();
@@ -98,7 +99,7 @@ export const getRevenueSummary = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error generating revenue summary:', error.message);
+    logger.error({ err: error }, 'Error generating revenue summary');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -164,7 +165,7 @@ export const exportRevenueCsv = async (req, res) => {
     );
     res.status(200).send(csv);
   } catch (error) {
-    console.error('Error exporting revenue CSV:', error.message);
+    logger.error({ err: error }, 'Error exporting revenue CSV');
     res.status(500).json({ message: 'Server error' });
   }
 };

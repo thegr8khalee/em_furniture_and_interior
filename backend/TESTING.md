@@ -1,57 +1,73 @@
 # Backend Tests
 
-## Running
-
 ```bash
 npm test                  # all suites
 npm test -- --coverage    # with coverage
-npm test payments         # one file
+npm test app              # one file
 npm test -- --watch       # watch mode
 ```
 
-## Honest state of the suite
+Runs in CI on every push (`.github/workflows/ci.yml`).
 
-Read this before trusting a green run.
+## What is covered
 
-| Suite | Tests real code? | Notes |
-| --- | --- | --- |
-| `__tests__/integration/payments.test.js` | **Yes** | Imports `verifyPaystackSignature`, `chargeMatchesOrder`, `toMinorUnit` and `calculateTax` and asserts against them. |
-| `__tests__/integration/core.test.js` | **No** | Placebo. Builds literal objects and asserts on them — tests nothing in `src/`. |
-| `__tests__/integration/features.test.js` | **No** | Placebo, same pattern. |
+Every test imports real application code. There are no assertions on literals
+the test itself constructed — if a file has no `src/` import, it is not a test.
 
-`core.test.js` and `features.test.js` contain assertions like
-`expect(mockUser.username).toBe('John Doe')` against an object the test itself
-just wrote. They pass whatever the application does, so they will stay green
-through a refactor that breaks production. They are scheduled for deletion and
-replacement with Supertest integration tests against a real Postgres instance
-as part of the database migration — until then, treat their result as
-meaningless rather than reassuring.
+### `__tests__/integration/app.test.js`
 
-Do not add new tests in that style.
+Drives the real Express app through Supertest. `src/app.js` builds and exports
+the app without listening, so the whole middleware stack is exercised in-process
+with no server and no database.
 
-## What is genuinely covered
+- **Health probes.** `/healthz` answers without touching Mongo (liveness must
+  not fail because the database blipped). `/readyz` answers 503 while the
+  database is unreachable, so a load balancer drains the instance instead. Both
+  sit outside `/api`, verified by firing 30 requests past the API rate limit.
+- **Request correlation.** Every response carries `x-request-id`; a
+  caller-supplied id is echoed so a trace can span frontend and API; an
+  oversized or malformed one is replaced rather than trusted; ids differ per
+  request.
+- **Paystack webhook over HTTP.** Missing, forged, junk-length and
+  post-signing-tampered signatures all get 401. The decisive case: a *valid*
+  signature over non-JSON bytes reaches the parser and fails there — proof the
+  raw body survived the middleware stack intact, which is the one thing that
+  silently breaks HMAC verification.
+- **Removed gateways.** The four Flutterwave and Stripe routes are 404; the
+  Paystack verify route still answers 400, not 404.
 
-**Paystack webhook signature verification** — the security boundary for payment
-confirmation. Covers a correctly signed body, a body tampered with after
-signing, a signature from the wrong secret, a forged signature of the correct
-length, a short signature (which would throw inside `crypto.timingSafeEqual`
-without the length guard), a missing header, a missing `PAYSTACK_SECRET_KEY`,
-and a re-serialised body (which must fail — proof that the raw bytes matter).
+### `__tests__/integration/payments.test.js`
 
-**Charge amount verification** — a charge is only applied when the gateway's
-reported amount equals the order total in kobo and the currency is NGN. Covers
-underpayment, overpayment, wrong currency, malformed payloads, and kobo-level
-precision on fractional totals.
+Unit coverage of the money path.
 
-**Tax calculation** — rate applied from `TAX_RATE_PERCENTAGE`, and the
-validation error when no items are supplied.
+- **Signature verification** — correct signature, tampered body, wrong secret,
+  forged signature of the correct length, a short signature (which throws inside
+  `crypto.timingSafeEqual` without the length guard), missing header, missing
+  `PAYSTACK_SECRET_KEY`, and a re-serialised body, which must fail.
+- **Amount verification** — a charge applies only when the gateway's amount
+  equals the order total in kobo and the currency is NGN. Underpayment,
+  overpayment, wrong currency, malformed payloads, kobo-level precision.
+- **Tax calculation** — rate from `TAX_RATE_PERCENTAGE`, and the validation
+  error when no items are supplied.
 
-## Conventions for new tests
+## What is not covered yet
 
-1. Import the thing under test from `src/`. If a test file has no `src/` import,
-   it is not testing the application.
-2. Assert on the return value or the mocked `res` of a real call, never on a
-   literal the test just constructed.
+Most of the API. The two suites that previously claimed to cover auth, cart,
+wishlist, products, coupons, consultations, analytics and orders asserted on
+objects they had just built themselves, so they passed regardless of what the
+application did. They were deleted rather than left to give false confidence.
+
+Real coverage of those areas needs a database, and the plan is to add it against
+Postgres during the migration rather than build a Mongo harness that is thrown
+away. `src/app.js` is already exported for exactly that purpose — a suite that
+needs data can spin a database, import `app`, and drive it with Supertest the
+same way `app.test.js` does.
+
+## Conventions
+
+1. Import the thing under test from `src/`.
+2. Assert on a real return value or a real HTTP response, never on a literal the
+   test just wrote.
 3. Mock at the boundary — `fetch`, Cloudinary, the mailer — not the module under
    test.
 4. Cover the failure path. For anything touching money or auth, cover the
@@ -59,7 +75,7 @@ validation error when no items are supplied.
 
 ## Manual webhook check
 
-The Postman collection (`docs/EM_Furniture_API.postman_collection.json`) has a
-**Paystack Webhook (charge.success)** request whose pre-request script signs the
-body with `paystackSecretKey`. Clear that variable to confirm the endpoint
-answers 401; edit the body after signing to confirm it rejects tampering.
+The Postman collection has a **Paystack Webhook (charge.success)** request whose
+pre-request script signs the body with `paystackSecretKey`. Clear that variable
+to confirm the endpoint answers 401; edit the body after signing to confirm it
+rejects tampering.

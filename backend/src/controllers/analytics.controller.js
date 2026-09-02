@@ -2,6 +2,7 @@ import Order from '../models/order.model.js';
 import Product from '../models/product.model.js';
 import User from '../models/user.model.js';
 import ConsultationRequest from '../models/consultationRequest.model.js';
+import { logger } from '../lib/logger.js';
 
 const parseDateRange = (startDate, endDate) => {
   const end = endDate ? new Date(endDate) : new Date();
@@ -61,7 +62,7 @@ export const getSalesByCategory = async (req, res) => {
       range: { start: range.start, end: range.end },
     });
   } catch (error) {
-    console.error('Error fetching sales by category:', error.message);
+    logger.error({ err: error }, 'Error fetching sales by category');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -104,7 +105,7 @@ export const getSalesByRegion = async (req, res) => {
       range: { start: range.start, end: range.end },
     });
   } catch (error) {
-    console.error('Error fetching sales by region:', error.message);
+    logger.error({ err: error }, 'Error fetching sales by region');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -147,7 +148,7 @@ export const getProductPerformance = async (req, res) => {
       range: { start: range.start, end: range.end },
     });
   } catch (error) {
-    console.error('Error fetching product performance:', error.message);
+    logger.error({ err: error }, 'Error fetching product performance');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -224,7 +225,7 @@ export const getDesignerPerformance = async (req, res) => {
       range: { start: range.start, end: range.end },
     });
   } catch (error) {
-    console.error('Error fetching designer performance:', error.message);
+    logger.error({ err: error }, 'Error fetching designer performance');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -288,7 +289,7 @@ export const getCustomerLifetimeValue = async (req, res) => {
       data: customerLTV,
     });
   } catch (error) {
-    console.error('Error fetching customer LTV:', error.message);
+    logger.error({ err: error }, 'Error fetching customer LTV');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -341,7 +342,7 @@ export const getConversionFunnel = async (req, res) => {
       range: { start: range.start, end: range.end },
     });
   } catch (error) {
-    console.error('Error fetching conversion funnel:', error.message);
+    logger.error({ err: error }, 'Error fetching conversion funnel');
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -404,7 +405,7 @@ export const getOverviewStats = async (req, res) => {
       range: { start: range.start, end: range.end },
     });
   } catch (error) {
-    console.error('Error fetching overview stats:', error.message);
+    logger.error({ err: error }, 'Error fetching overview stats');
     res.status(500).json({ message: 'Server error' });
   }
 };

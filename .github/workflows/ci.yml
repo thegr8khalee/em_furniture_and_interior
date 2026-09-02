@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# A new push supersedes the run in flight for the same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      # --ignore-scripts skips puppeteer's postinstall, which downloads ~170MB
+      # of Chromium. No test launches a browser, so CI does not need it.
+      - name: Install
+        run: npm ci --ignore-scripts
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+
+      - name: Test
+        run: npm test
+
+      - name: Check the OpenAPI spec parses
+        # swagger.js reads this at boot, so a malformed spec crashes the server
+        # on deploy rather than failing here.
+        run: node -e "JSON.parse(require('fs').readFileSync('docs/swagger.json','utf8')); console.log('swagger.json OK')"
+
+      - name: Check the Postman collection parses
+        run: node -e "JSON.parse(require('fs').readFileSync('docs/EM_Furniture_API.postman_collection.json','utf8')); console.log('postman collection OK')"
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # Reported, not enforced. The tree carries 66 pre-existing violations
+      # (61 of them no-unused-vars); gating on lint today would mean a CI that
+      # is red on arrival and therefore ignored. Clear the backlog, then drop
+      # continue-on-error and make this a real gate.
+      - name: Lint (non-blocking)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Test
+        run: npx vitest run
+
+      - name: Build
+        run: npm run build

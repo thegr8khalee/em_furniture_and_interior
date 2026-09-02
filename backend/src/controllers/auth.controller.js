@@ -9,6 +9,7 @@ import Admin from '../models/admin.model.js';
 import { resolvePermissions } from '../lib/permissions.js';
 import crypto from 'crypto';
 import { sendEmail } from '../services/gmail.service.js';
+import { logger } from '../lib/logger.js';
 
 export const signup = async (req, res) => {
   // Destructure fullName from req.body, but map to username for the User model
@@ -69,7 +70,7 @@ export const signup = async (req, res) => {
       updatedAt: newUser.updatedAt,
     });
   } catch (error) {
-    console.error('Error in signup controller: ', error.message);
+    logger.error({ err: error }, 'Error in signup controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -117,7 +118,7 @@ export const login = async (req, res) => {
       updatedAt: user.updatedAt,
     });
   } catch (error) {
-    console.error('Error in login Controller: ', error.message);
+    logger.error({ err: error }, 'Error in login Controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -132,7 +133,7 @@ export const logout = (req, res) => {
     });
     res.status(200).json({ message: 'Logged Out successfully' });
   } catch (error) {
-    console.error('Error in logout controller: ', error.message);
+    logger.error({ err: error }, 'Error in logout controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -199,12 +200,10 @@ export const updateProfile = async (req, res) => {
 
     res.status(200).json(responseData);
   } catch (error) {
-    console.error('Error in updateProfile controller:', error);
+    logger.error({ err: error }, 'Error in updateProfile controller');
     // Check if headers have already been sent before attempting to send response
     if (res.headersSent) {
-      console.warn(
-        'Headers already sent, cannot send error response from updateProfile catch block.'
-      );
+      logger.warn('Headers already sent, cannot send error response from updateProfile catch block.');
       return;
     }
     res
@@ -303,11 +302,9 @@ export const checkAuth = async (req, res) => {
       updatedAt: authenticatedEntity.updatedAt,
     });
   } catch (error) {
-    console.error('Error in checkAuth controller:', error);
+    logger.error({ err: error }, 'Error in checkAuth controller');
     if (res.headersSent) {
-      console.warn(
-        'Headers already sent, cannot send error response from checkAuth catch block.'
-      );
+      logger.warn('Headers already sent, cannot send error response from checkAuth catch block.');
       return;
     }
     return res
@@ -318,7 +315,6 @@ export const checkAuth = async (req, res) => {
 
 export const deleteAccount = async (req, res) => {
   try {
-    console.log(req.user);
     // Ensure user is authenticated and req.user is populated by middleware
     if (!req.user || !req.user._id) {
       return res
@@ -349,11 +345,9 @@ export const deleteAccount = async (req, res) => {
 
     res.status(200).json({ message: `your account deleted successfully.` });
   } catch (error) {
-    console.error('Error in deleteAccount controller:', error.message);
+    logger.error({ err: error }, 'Error in deleteAccount controller');
     if (res.headersSent) {
-      console.warn(
-        'Headers already sent, cannot send error response from deleteAccount catch block.'
-      );
+      logger.warn('Headers already sent, cannot send error response from deleteAccount catch block.');
       return;
     }
     res
@@ -425,9 +419,9 @@ export const forgotPassword = async (req, res) => {
         text: `Reset your password using this link: ${resetUrl}`,
         html: htmlContent,
       });
-      console.log('Password reset email sent to:', user.email);
+      logger.info({ email: user.email }, 'Password reset email sent');
     } catch (emailError) {
-      console.error('Error sending password reset email:', emailError);
+      logger.error({ err: emailError }, 'Error sending password reset email');
     }
 
     res.status(200).json({
@@ -435,7 +429,7 @@ export const forgotPassword = async (req, res) => {
         'If an account with that email exists, a password reset link has been sent.',
     });
   } catch (error) {
-    console.error('Error in forgotPassword controller:', error.message);
+    logger.error({ err: error }, 'Error in forgotPassword controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -484,7 +478,7 @@ export const resetPassword = async (req, res) => {
 
     res.status(200).json({ message: 'Password has been reset successfully.' });
   } catch (error) {
-    console.error('Error in resetPassword controller:', error.message);
+    logger.error({ err: error }, 'Error in resetPassword controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -535,7 +529,7 @@ export const changePassword = async (req, res) => {
 
     res.status(200).json({ message: 'Password changed successfully.' });
   } catch (error) {
-    console.error('Error in changePassword controller:', error.message);
+    logger.error({ err: error }, 'Error in changePassword controller');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };

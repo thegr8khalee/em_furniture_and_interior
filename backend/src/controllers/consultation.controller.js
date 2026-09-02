@@ -20,6 +20,7 @@ const uploadImage = async (imageData, folder) => {
   };
 };
 import { sendEmail } from '../services/gmail.service.js';
+import { logger } from '../lib/logger.js';
 
 export const createConsultationRequest = async (req, res) => {
   try {
@@ -115,7 +116,7 @@ Meeting: ${preferredMeetingType || 'calendly'}`,
       consultation,
     });
   } catch (error) {
-    console.error('Error creating consultation request:', error.message);
+    logger.error({ err: error }, 'Error creating consultation request');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -150,7 +151,7 @@ export const getConsultations = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error fetching consultations:', error.message);
+    logger.error({ err: error }, 'Error fetching consultations');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -191,7 +192,7 @@ export const updateConsultation = async (req, res) => {
 
     res.status(200).json({ consultation });
   } catch (error) {
-    console.error('Error updating consultation:', error.message);
+    logger.error({ err: error }, 'Error updating consultation');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };

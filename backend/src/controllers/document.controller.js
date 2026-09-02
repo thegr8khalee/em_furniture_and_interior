@@ -1,4 +1,5 @@
 import { generateCustomDocumentPDF } from '../lib/invoiceGenerator.js';
+import { logger } from '../lib/logger.js';
 
 /**
  * POST /api/admin/documents/generate
@@ -120,7 +121,7 @@ export const generateCustomDocument = async (req, res) => {
       res
     );
   } catch (error) {
-    console.error('Error generating custom document:', error);
+    logger.error({ err: error }, 'Error generating custom document');
     if (!res.headersSent) {
       res.status(500).json({ message: 'Failed to generate document' });
     }

@@ -1,5 +1,6 @@
 import Designer from '../models/designer.model.js';
 import cloudinary from '../lib/cloudinary.js';
+import { logger } from '../lib/logger.js';
 
 const uploadAvatar = async (avatarData) => {
   if (!avatarData || typeof avatarData !== 'string') {
@@ -24,7 +25,7 @@ export const getActiveDesigners = async (req, res) => {
     const designers = await Designer.find({ isActive: true }).sort({ name: 1 });
     res.status(200).json({ designers });
   } catch (error) {
-    console.error('Error fetching designers:', error.message);
+    logger.error({ err: error }, 'Error fetching designers');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -34,7 +35,7 @@ export const getAllDesigners = async (req, res) => {
     const designers = await Designer.find({}).sort({ createdAt: -1 });
     res.status(200).json({ designers });
   } catch (error) {
-    console.error('Error fetching designers:', error.message);
+    logger.error({ err: error }, 'Error fetching designers');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -59,7 +60,7 @@ export const createDesigner = async (req, res) => {
 
     res.status(201).json({ designer });
   } catch (error) {
-    console.error('Error creating designer:', error.message);
+    logger.error({ err: error }, 'Error creating designer');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -90,7 +91,7 @@ export const updateDesigner = async (req, res) => {
 
     res.status(200).json({ designer });
   } catch (error) {
-    console.error('Error updating designer:', error.message);
+    logger.error({ err: error }, 'Error updating designer');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -106,7 +107,7 @@ export const deleteDesigner = async (req, res) => {
 
     res.status(200).json({ message: 'Designer deleted.' });
   } catch (error) {
-    console.error('Error deleting designer:', error.message);
+    logger.error({ err: error }, 'Error deleting designer');
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
