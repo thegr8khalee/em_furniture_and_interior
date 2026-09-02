@@ -10,13 +10,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Skips puppeteer's ~170MB Chromium download. No test launches a browser.
+  PUPPETEER_SKIP_DOWNLOAD: 'true'
+
 jobs:
-  backend:
-    name: Backend
+  test:
+    name: Test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
 
     steps:
       - uses: actions/checkout@v4
@@ -25,55 +26,89 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      # --ignore-scripts skips puppeteer's postinstall, which downloads ~170MB
-      # of Chromium. No test launches a browser, so CI does not need it.
+      # One install for the whole workspace — npm links @em/* into node_modules.
       - name: Install
         run: npm ci --ignore-scripts
-        env:
-          PUPPETEER_SKIP_DOWNLOAD: 'true'
 
-      - name: Test
-        run: npm test
+      - name: Test all workspaces
+        run: npm test --workspaces --if-present
 
+      # Reported, not enforced. The tree carries pre-existing violations, and
+      # gating on lint today would mean a CI that is red on arrival and
+      # therefore ignored. Clear the backlog, then drop continue-on-error.
+      - name: Lint (non-blocking)
+        run: npm run lint --workspaces --if-present
+        continue-on-error: true
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Build storefront and console
+        run: npm run build
+
+      # The whole point of splitting the apps: console code must not reach a
+      # public visitor. This fails the build if any of it leaks back in.
+      - name: Assert no console code in the public bundle
+        run: |
+          set -e
+          test -d apps/web/dist/assets || { echo "storefront bundle missing"; exit 1; }
+          test -d apps/erp/dist/assets  || { echo "console bundle missing"; exit 1; }
+          status=0
+          for term in AdminSideBar SecurityLogs DocumentBuilder InventoryManagement \
+                      FinanceReports ConsultationManagement admin/security-logs tinymce; do
+            if grep -rqs -- "$term" apps/web/dist/assets; then
+              echo "::error::'$term' leaked into the storefront bundle"
+              status=1
+            fi
+            # Positive control: the term must be findable in the console bundle,
+            # otherwise the check above passes for the wrong reason.
+            if ! grep -rqs -- "$term" apps/erp/dist/assets; then
+              echo "::warning::'$term' not found in the console bundle either — marker may be stale"
+            fi
+          done
+          exit $status
+
+  api-spec:
+    name: API spec
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # swagger.js reads these at boot, so a malformed file crashes the server
+      # on deploy rather than failing here.
       - name: Check the OpenAPI spec parses
-        # swagger.js reads this at boot, so a malformed spec crashes the server
-        # on deploy rather than failing here.
         run: node -e "JSON.parse(require('fs').readFileSync('docs/swagger.json','utf8')); console.log('swagger.json OK')"
 
       - name: Check the Postman collection parses
         run: node -e "JSON.parse(require('fs').readFileSync('docs/EM_Furniture_API.postman_collection.json','utf8')); console.log('postman collection OK')"
 
-  frontend:
-    name: Frontend
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install
-        run: npm ci
-
-      # Reported, not enforced. The tree carries 66 pre-existing violations
-      # (61 of them no-unused-vars); gating on lint today would mean a CI that
-      # is red on arrival and therefore ignored. Clear the backlog, then drop
-      # continue-on-error and make this a real gate.
-      - name: Lint (non-blocking)
-        run: npm run lint
-        continue-on-error: true
-
-      - name: Test
-        run: npx vitest run
-
-      - name: Build
-        run: npm run build
+      - name: Check the removed gateways stay removed
+        run: |
+          if grep -qi 'flutterwave\|stripe' docs/swagger.json docs/EM_Furniture_API.postman_collection.json; then
+            echo "::error::a removed payment gateway reappeared in the API docs"
+            exit 1
+          fi
+          echo "docs are Paystack-only"

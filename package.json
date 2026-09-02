@@ -2,15 +2,24 @@
   "name": "em_furniture_and_interior",
   "version": "1.0.0",
   "description": "EM Furniture and Interior - E-commerce Web Application (MVP)",
-  "main": "index.js",
   "scripts": {
-    "dev": "npm run dev --prefix backend & npm run dev --prefix frontend",
-    "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
-    "start": "npm run start --prefix backend",
-    "test": "npm test --prefix backend && npm run test:run --prefix frontend",
-    "lint": "npm run lint --prefix frontend"
+    "dev": "npm run dev --workspace=@em/api & npm run dev --workspace=@em/web & npm run dev --workspace=@em/erp",
+    "dev:api": "npm run dev --workspace=@em/api",
+    "dev:web": "npm run dev --workspace=@em/web",
+    "dev:erp": "npm run dev --workspace=@em/erp",
+    "build": "npm run build --workspace=@em/web && npm run build --workspace=@em/erp",
+    "build:web": "npm run build --workspace=@em/web",
+    "build:erp": "npm run build --workspace=@em/erp",
+    "start": "npm run start --workspace=@em/api",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }
