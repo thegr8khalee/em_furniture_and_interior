@@ -107,6 +107,16 @@ Moved into the schema, so they hold for every writer:
 | A shipping window does not end before it starts | `products_shipping_window_ordered` |
 | An approved review records when | `reviews_approval_is_attributed` |
 | One review per customer per item | unique `(sellable_item_id, customer_id)` |
+| An order total equals subtotal − discount + shipping + tax | `orders_total_is_the_sum_of_its_parts` |
+| A discount does not exceed the subtotal | `orders_discount_within_subtotal` |
+| A line total equals price × quantity | `order_items_line_total_is_price_times_quantity` |
+| One order per checkout intent | unique `orders.idempotency_key` |
+| A cart belongs to a customer **or** a guest | `carts_exactly_one_owner` |
+| A percentage coupon is at most 100% | `coupons_percentage_within_range` |
+| Coupon usage stays within its limit | `coupons_within_usage_limit` |
+| A successful payment was verified | `payment_success_is_verified` |
+| One transaction per gateway reference | unique `payment_transactions.gateway_reference` |
+| A refund does not exceed the payment | `payment_refund_within_amount` |
 
 ### The rating is maintained by the database
 
@@ -130,28 +140,71 @@ Mongo's unique index is case-sensitive, so `Ada@example.com` and
 `ada@example.com` were two accounts, and whether "email already in use" fired
 depended on how the user typed it.
 
-### `legacy_mongo_id`
+### No legacy id columns
 
-Nullable, unique when present, on every table that will receive imported rows.
-It exists so imported data can be reconciled against Mongo during cutover, and
-is dropped once the migration is signed off.
+The Mongo database holds no production data, so this is a greenfield schema.
+There are no `legacy_mongo_id` columns, no import step, no dual-write period and
+no reconciliation script — the cutover is a deploy, not a data migration.
 
-**If the Mongo database turns out to hold no production data**, these columns and
-the import step are unnecessary — say so and they come out in one migration.
+That also means an empty database has no account to sign in with. Seeding the
+first operator is a bootstrap step, not an import.
+
+### Stock is a ledger, not a counter
+
+The audit found that placing an order never decremented stock: the only writer
+was an admin's manual adjustment endpoint, so inventory became fiction the
+moment anyone bought anything.
+
+Decrementing a counter would have replaced that with a worse problem — a number
+nobody can explain. *"Why does this say 4?"* has no answer when the number is
+the only record. So `stock_movements` is an append-only log, and the balance is
+derived from it. Every unit is accounted for by a row saying when it moved, why,
+and against which order.
+
+- **Append-only, enforced by triggers.** `UPDATE` and `DELETE` are refused. A
+  mistake is corrected by posting the reversing movement, which leaves both the
+  error and the correction visible.
+- **A movement has to make sense.** A receipt cannot remove stock, a sale cannot
+  add it, a sale must name its order, and an adjustment must carry a note — a
+  correction with no explanation is how a discrepancy becomes permanent.
+- **`product_stock` caches the running total**, maintained by trigger so a
+  listing does not sum thousands of rows. Because only the trigger writes it and
+  the log cannot be edited, the two cannot drift — and
+  `product_stock_discrepancies` returns a row if they ever do, which is asserted
+  in the tests rather than assumed.
+- **Negative stock is recorded, not refused.** Rejecting an oversell would mean
+  the log stops matching the warehouse, which is worse than a number nobody can
+  miss.
+
+`stock_reservations` are the soft holds. Stock physically leaves on payment, but
+it must stop being *sellable* the moment it is in a confirmed order, or two
+customers buy the last sofa. `product_availability` is what the storefront
+should publish: `available = on_hand − reserved`, and low-stock is measured
+against `available` — five on hand with four reserved is one sellable unit, not
+five.
+
+### Order lines are a snapshot
+
+`order_items` carries the name, unit price and unit cost as they were at the
+time of sale, and `sellable_item_id` is nulled rather than cascaded when a
+product is retired. Reprinting a two-year-old invoice gives back the original
+figures, which is what makes it audit-safe.
+
+Addresses are `jsonb` on the order for the same reason: an order must keep
+showing where it was actually sent after the customer edits their address.
 
 ## What is not built yet
 
-This is the first slice: identity and catalog. Still to come, in order —
+Identity, catalog, commerce and inventory are in. Still to come, in order —
 
-1. **Cart, wishlist, orders, payments.** Orders are last because they are the
-   highest-risk table and benefit from the patterns settling first.
-2. **The stock ledger.** Stock becomes derived from an append-only movement log
-   rather than a mutable counter, which is what makes a discrepancy explainable.
-   This is also where the audit's "orders never decrement stock" finding gets
-   fixed properly rather than patched.
-3. **The double-entry ledger**, accounting periods, and period locking.
-4. **The data-access rewrite** — controllers move off Mongoose onto a service
-   layer, module by module, catalog first and payments last.
-5. **Supabase Auth.** `customers.supabase_user_id` and `staff.supabase_user_id`
-   are already in place, nullable, so both authentication paths can run side by
-   side rather than requiring a big-bang cutover.
+1. **The double-entry ledger**, accounting periods and period locking. Orders,
+   payments and stock movements then post into it automatically.
+2. **The data-access rewrite** — controllers move off Mongoose onto a service
+   layer, module by module, catalog first and payments last. Nothing reads
+   Postgres yet.
+3. **Supabase Auth.** `customers.supabase_user_id` and `staff.supabase_user_id`
+   are in place and nullable, so both paths can run side by side rather than
+   requiring a big-bang cutover. An empty database has no account to sign in
+   with, so a bootstrap step comes with it.
+4. **Expenses, vendors and purchase orders**, which are each a form plus a
+   posting rule once the ledger exists.

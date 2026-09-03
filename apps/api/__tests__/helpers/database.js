@@ -121,14 +121,9 @@ export const insertProduct = async (overrides = {}) => {
   );
 
   await getDb().query(
-    `INSERT INTO products (id, category, sku, stock_quantity) VALUES (:id, :category, :sku, :stock)`,
+    `INSERT INTO products (id, category, sku) VALUES (:id, :category, :sku)`,
     {
-      replacements: {
-        id: item.id,
-        category: fields.category,
-        sku: fields.sku ?? null,
-        stock: fields.stock_quantity ?? 0,
-      },
+      replacements: { id: item.id, category: fields.category, sku: fields.sku ?? null },
     }
   );
 
@@ -168,4 +163,66 @@ export const insertCustomer = async (overrides = {}) => {
     }
   );
   return row.id;
+};
+
+export const insertGuestSession = async () => {
+  const [[row]] = await getDb().query(
+    `INSERT INTO guest_sessions (anonymous_id) VALUES (:id) RETURNING id`,
+    { replacements: { id: `anon-${Math.random().toString(36).slice(2)}` } }
+  );
+  return row.id;
+};
+
+/** An order whose total reconciles, so a test has to opt in to breaking it. */
+export const insertOrder = async (overrides = {}) => {
+  const customerId = overrides.customerId ?? (await insertCustomer());
+  const subtotal = overrides.subtotal ?? 100000;
+  const discount = overrides.discount ?? 0;
+  const shipping = overrides.shipping ?? 0;
+  const tax = overrides.tax ?? 0;
+
+  const [[row]] = await getDb().query(
+    `INSERT INTO orders (order_number, customer_id, shipping_address, subtotal, discount,
+                         shipping_cost, tax_amount, total_amount, idempotency_key)
+     VALUES (:orderNumber, :customerId, '{}', :subtotal, :discount, :shipping, :tax, :total, :key)
+     RETURNING id`,
+    {
+      replacements: {
+        orderNumber: overrides.orderNumber ?? `ORD-${Math.random().toString(36).slice(2, 10)}`,
+        customerId,
+        subtotal,
+        discount,
+        shipping,
+        tax,
+        total: subtotal - discount + shipping + tax,
+        key: overrides.idempotencyKey ?? null,
+      },
+    }
+  );
+  return row.id;
+};
+
+export const recordMovement = async (productId, quantity, reason, extra = {}) => {
+  const [[row]] = await getDb().query(
+    `INSERT INTO stock_movements (product_id, quantity, reason, order_id, note)
+     VALUES (:productId, :quantity, :reason, :orderId, :note) RETURNING id`,
+    {
+      replacements: {
+        productId,
+        quantity,
+        reason,
+        orderId: extra.orderId ?? null,
+        note: extra.note ?? null,
+      },
+    }
+  );
+  return row.id;
+};
+
+export const stockOf = async (productId) => {
+  const [[row]] = await getDb().query(
+    `SELECT on_hand, reserved, available, is_low FROM product_availability WHERE product_id = :id`,
+    { replacements: { id: productId } }
+  );
+  return row;
 };

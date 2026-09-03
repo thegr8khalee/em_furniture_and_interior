@@ -18,7 +18,6 @@ CREATE TABLE customers (
   loyalty_points        integer NOT NULL DEFAULT 0 CHECK (loyalty_points >= 0),
   password_reset_token  text,
   password_reset_expires timestamptz,
-  legacy_mongo_id       text UNIQUE,
   created_at            timestamptz NOT NULL DEFAULT now(),
   updated_at            timestamptz NOT NULL DEFAULT now(),
 
@@ -30,8 +29,6 @@ CREATE TABLE customers (
 CREATE TRIGGER customers_updated_at BEFORE UPDATE ON customers
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-COMMENT ON COLUMN customers.legacy_mongo_id IS
-  'ObjectId of the source document, kept through cutover so imported rows can be reconciled against Mongo. Drop once the migration is signed off.';
 
 CREATE TYPE staff_role AS ENUM (
   'super_admin', 'admin', 'editor', 'support', 'social_media_manager'
@@ -50,7 +47,6 @@ CREATE TABLE staff (
   permissions      text[] NOT NULL DEFAULT '{}',
   is_active        boolean NOT NULL DEFAULT true,
   last_login_at    timestamptz,
-  legacy_mongo_id  text UNIQUE,
   created_at       timestamptz NOT NULL DEFAULT now(),
   updated_at       timestamptz NOT NULL DEFAULT now(),
 
@@ -67,7 +63,6 @@ CREATE TABLE guest_sessions (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   anonymous_id    text NOT NULL UNIQUE,
   last_seen_at    timestamptz NOT NULL DEFAULT now(),
-  legacy_mongo_id text UNIQUE,
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now()
 );

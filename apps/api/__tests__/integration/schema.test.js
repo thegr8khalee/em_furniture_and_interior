@@ -338,12 +338,14 @@ describe('Identity', () => {
 });
 
 describe('Inventory and SKU', () => {
-  test('rejects negative stock', async () => {
-    const id = await insertProduct();
-    await expectRejection(
-      `UPDATE products SET stock_quantity = -1 WHERE id = '${id}'`,
-      'products_stock_quantity_check'
+  test('stock is not a column here — it is derived from the movement log', async () => {
+    // Deliberately absent. A mutable counter alongside an append-only log is a
+    // second source of truth that can disagree with it; see inventory.test.js.
+    const [rows] = await getDb().query(
+      `SELECT 1 FROM information_schema.columns
+       WHERE table_name = 'products' AND column_name = 'stock_quantity'`
     );
+    expect(rows).toHaveLength(0);
   });
 
   test('rejects a duplicate SKU', async () => {

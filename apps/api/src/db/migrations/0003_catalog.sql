@@ -36,8 +36,6 @@ CREATE TABLE sellable_items (
   average_rating   numeric(2,1) NOT NULL DEFAULT 0
                      CHECK (average_rating >= 0 AND average_rating <= 5),
   review_count     integer NOT NULL DEFAULT 0 CHECK (review_count >= 0),
-
-  legacy_mongo_id  text UNIQUE,
   created_at       timestamptz NOT NULL DEFAULT now(),
   updated_at       timestamptz NOT NULL DEFAULT now(),
 
@@ -75,7 +73,8 @@ CREATE TABLE products (
   sku                text UNIQUE,   -- unique but optional: not every piece has one
   warehouse_location text,
 
-  stock_quantity     integer NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
+  -- Stock itself is NOT here: it is derived from the append-only movement log
+  -- in 0005. This is only the policy for when to reorder.
   low_stock_threshold integer NOT NULL DEFAULT 5 CHECK (low_stock_threshold >= 0),
 
   lead_time_days     integer NOT NULL DEFAULT 0 CHECK (lead_time_days >= 0),
@@ -97,8 +96,6 @@ CREATE TABLE products (
 );
 
 CREATE INDEX products_category_idx ON products (category);
-CREATE INDEX products_low_stock_idx ON products (stock_quantity)
-  WHERE stock_quantity <= low_stock_threshold;
 
 CREATE TABLE collections (
   id                    uuid PRIMARY KEY,
@@ -147,7 +144,6 @@ CREATE TABLE reviews (
   is_approved          boolean NOT NULL DEFAULT false,
   approved_by          uuid REFERENCES staff (id) ON DELETE SET NULL,
   approved_at          timestamptz,
-  legacy_mongo_id      text UNIQUE,
   created_at           timestamptz NOT NULL DEFAULT now(),
   updated_at           timestamptz NOT NULL DEFAULT now(),
 
