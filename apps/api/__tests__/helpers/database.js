@@ -57,6 +57,15 @@ export const teardownDatabase = async () => {
   db = null;
 };
 
+/**
+ * The URL of the throwaway database this worker is using.
+ *
+ * Tests that drive the HTTP app set DATABASE_URL from this before importing
+ * app.js, so the service layer's lazily-created connection lands on the test
+ * database rather than a developer's real one.
+ */
+export const currentDatabaseUrl = () => urlFor(databaseName());
+
 export const getDb = () => {
   if (!db) throw new Error('setupDatabase() has not run');
   return db;

@@ -299,24 +299,46 @@ and if neither exists returns `{ posted: false, reason: 'unknown_cost' }` with a
 warning. A cost-of-goods-sold figure invented from nothing is worse than an
 absent one, because it looks like a real margin.
 
+### The data-access rewrite
+
+Controllers move off Mongoose module by module, catalog first and payments last.
+`src/services/catalog.js` is the first slice: the public product and collection
+reads now query PostgreSQL.
+
+**The response shapes are deliberately unchanged.** Both frontends read
+`product._id`, `images[].url` and prices in naira, so the service maps the new
+storage back onto the old contract. Changing storage and contract in one commit
+would be impossible to bisect when something breaks. The tests assert the
+contract, not the SQL: `_id` not `id`, naira not kobo, `images` as objects.
+
+Two differences that could not be preserved, and are not bugs:
+
+- Ids are UUIDs rather than ObjectIds. Nothing in either frontend parses an id;
+  it passes back whatever the API gave it.
+- `collectionId` was a single reference in Mongo and is a many-to-many here, so
+  a product reports the first collection it belongs to.
+
+One deliberate behaviour change: `stockQuantity` now publishes **available**
+stock rather than what is physically on the floor. Units reserved against a
+confirmed order are not sellable, and publishing them as if they were is how a
+shop promises what it has already sold.
+
 ## What is not built yet
 
-Identity, catalog, commerce, inventory, the ledger and the posting rules are in.
-A full trading cycle — buy, sell, get paid — posts correctly and the trial
-balance comes out equal, with revenue against its actual cost. Still to come —
+**The system is mid-migration and not deployable in this state.** Catalog reads
+come from PostgreSQL; everything else still reads Mongo, which is empty. That is
+expected during the rewrite, and it is why nothing has been cut over.
 
-1. **Callers.** The posting rules exist but no controller invokes them: the
-   order and payment controllers still write to Mongo. They get wired up during
-   the data-access rewrite, not before, or postings would reference orders that
-   only exist in the other database.
-2. **The data-access rewrite** — controllers move off Mongoose onto a service
-   layer, module by module, catalog first and payments last. This is the bulk of
-   what remains.
-3. **Supabase Auth.** `customers.supabase_user_id` and `staff.supabase_user_id`
-   are in place and nullable, so both paths can run side by side. An empty
-   database has no account to sign in with, so a bootstrap step comes with it.
+In order —
+
+1. **Catalog writes.** The admin CRUD in `admin.controller.js` still writes
+   products and collections to Mongo — 986 lines of it, mostly Cloudinary image
+   handling. Until it moves, the console cannot populate the catalog the
+   storefront now reads. This is the immediate next step, and it finishes
+   "catalog".
+2. **Cart, wishlist, orders, payments, reviews** — the remaining controllers,
+   payments last. Wiring the posting rules to their callers happens here.
+3. **Supabase Auth**, plus a bootstrap step, since an empty database has no
+   account to sign in with.
 4. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
-   `2100 Accounts payable` is already the credit side of a purchase receipt, so
-   the ledger half is done.
-5. **Reports** — P&L, balance sheet, VAT return — which are queries over the
-   ledger rather than new storage.
+5. **Reports** — P&L, balance sheet, VAT return — queries over the ledger.
