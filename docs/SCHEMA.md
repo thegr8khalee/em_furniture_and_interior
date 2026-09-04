@@ -117,6 +117,10 @@ Moved into the schema, so they hold for every writer:
 | A successful payment was verified | `payment_success_is_verified` |
 | One transaction per gateway reference | unique `payment_transactions.gateway_reference` |
 | A refund does not exceed the payment | `payment_refund_within_amount` |
+| A journal line is a debit **or** a credit | `line_is_debit_xor_credit` |
+| An account's normal balance matches its type | `accounts_normal_balance_matches_type` |
+| Accounting periods do not overlap | `periods_do_not_overlap` |
+| A closed period records when it closed | `period_close_is_dated` |
 
 ### The rating is maintained by the database
 
@@ -193,12 +197,73 @@ figures, which is what makes it audit-safe.
 Addresses are `jsonb` on the order for the same reason: an order must keep
 showing where it was actually sent after the customer edits their address.
 
+### The ledger
+
+Everything the audit called "finance" was a `SUM` over the orders collection.
+That is a sales report: it cannot express a cost, an expense, a liability or a
+bank balance, and nothing reconciles because there is nothing to reconcile
+against. This is the spine the remaining modules hang off — once it exists,
+expenses, purchase orders and payroll are each a form plus a posting rule.
+
+**It balances, and the database is what says so.** Debits must equal credits per
+entry. That cannot be a `CHECK` — a check sees one row and this spans them — so
+it is a `CONSTRAINT TRIGGER` that is `DEFERRABLE INITIALLY DEFERRED`. Lines are
+inserted one at a time, so the entry only balances once the last one lands, and
+the trigger therefore fires at **COMMIT**.
+
+That timing matters for tests: a test that never commits never reaches the
+constraint and passes vacuously. `ledger.test.js` bypasses the service and
+commits deliberately, to prove the database enforces this and not just the
+application.
+
+**Posted history is immutable.** `UPDATE` and `DELETE` on `journal_entries` and
+`journal_lines` are refused. A correction is a reversing entry with the debits
+and credits mirrored and `reverses_id` set, so both the original and the
+correction stay on the record — the difference between a ledger and a
+spreadsheet. Reversals are dated today, not on the original's date, which may
+sit in a period that is now closed.
+
+**Only leaves take postings.** `accounts.is_postable` is half of a composite
+foreign key from `journal_lines`, the same trick as the sellable-item subtypes,
+so "you cannot post to a summary account" is a referential fact rather than a
+convention.
+
+**A closed period stays closed.** A posting dated inside one is refused, as is a
+posting with no period at all — better to refuse than let it land nowhere and
+quietly miss every report. Periods cannot overlap, enforced by a GiST exclusion
+constraint on the date range.
+
+### Gapless numbering
+
+`next_number()` takes a row lock on a counters table rather than using a
+sequence. Sequences do not roll back: a failed transaction burns its number and
+leaves a hole. *"Why is there no invoice INV-2026-0041?"* is not a conversation
+worth having with an auditor, so the number returns to the pool when the
+transaction that claimed it rolls back — which is asserted in the tests.
+
+The cost is serialisation: two concurrent postings queue behind the same row.
+For a furniture business's volume that is the right trade; if a table ever needs
+throughput more than it needs gaplessness, it should use a sequence and say so.
+
+### Posting rules live in `src/services/ledger.js`
+
+`postEntry` takes an optional transaction so a posting can join a larger unit of
+work — confirming a payment should record the payment and its posting together,
+or neither. It validates in JavaScript before the database does, purely so the
+error names the entry being built instead of surfacing as a deferred trigger
+failure with no application context.
+
+Amounts are checked as whole minor units first, because the database rounds a
+fractional input silently. A discount computed as 33.333% has to be resolved in
+code.
+
 ## What is not built yet
 
-Identity, catalog, commerce and inventory are in. Still to come, in order —
+Identity, catalog, commerce, inventory and the ledger are in. Still to come —
 
-1. **The double-entry ledger**, accounting periods and period locking. Orders,
-   payments and stock movements then post into it automatically.
+1. **Automatic postings.** Orders, payments, refunds and stock movements do not
+   yet post to the ledger; the rules exist as a service but nothing calls it.
+   This is the next step and it is small, now that the spine is there.
 2. **The data-access rewrite** — controllers move off Mongoose onto a service
    layer, module by module, catalog first and payments last. Nothing reads
    Postgres yet.
@@ -206,5 +271,6 @@ Identity, catalog, commerce and inventory are in. Still to come, in order —
    are in place and nullable, so both paths can run side by side rather than
    requiring a big-bang cutover. An empty database has no account to sign in
    with, so a bootstrap step comes with it.
-4. **Expenses, vendors and purchase orders**, which are each a form plus a
-   posting rule once the ledger exists.
+4. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
+5. **Reports** — P&L, balance sheet, VAT return — which are queries over the
+   ledger rather than new storage.
