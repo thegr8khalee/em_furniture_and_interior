@@ -350,18 +350,69 @@ old controller carried code to remove a product from its previous collection.
 `collection_products` holds it once. Dropping that index is the whole change if
 the business ever wants multi-collection membership.
 
+### Carts and wishlists — one path, not two
+
+`src/services/cart.js` is the second slice. Mongo stored these twice: an
+embedded array on the user document and a near-identical array on a separate
+guest-session collection, with two sets of handlers kept in sync by hand. They
+had drifted:
+
+- The guest wishlist answered **400** where the user wishlist answered **200**
+  for the same request. The storefront rolls its optimistic update back on any
+  non-2xx, so a guest tapping the heart on something they had already saved
+  watched it disappear.
+- The guest cart keyed lines by `productId`, the user cart by `item` +
+  `itemType`. A guest could not put a collection in their cart at all.
+
+There is now one `carts` table with an owner arc — exactly one of `customer_id`
+or `guest_session_id`, per `carts_exactly_one_owner` — and the same SQL runs for
+both, so the two cannot drift again. `resolveOwner` (`src/lib/owner.js`) turns
+whichever principal the request carries into that single shape.
+
+The response shape is unchanged: cart entries are
+`{ _id, item, itemType, quantity }` and wishlist entries are
+`{ _id, item, itemType }`. `_id` is now the item's own id, because a line here
+*is* (cart, item) and there is no subdocument id to report. That incidentally
+fixes the cart page's delete button, which passed the subdocument id where an
+item id was expected and answered 404 under Mongo.
+
+Two loops the controllers ran on every read are gone, replaced by the schema:
+
+- Sweeping up lines whose product had been deleted — `ON DELETE CASCADE`.
+- Stopping the same item appearing twice in one cart — the `cart_items` primary
+  key, not a `findIndex` over an array.
+
+**Two routing fixes came with it.** The cart and wishlist routes were mounted as
+`identifyGuest, protectRoute`, and `protectRoute` answers 401 without a `jwt`
+cookie — that is every guest, so the guest cart these routes exist to serve was
+unreachable and the storefront silently fell back to browser storage. They now
+run `identifyGuest` alone and the handlers refuse a request that resolves to no
+principal. And `identifyGuest` no longer writes a session row on the way past:
+it used to create one for every request without a cookie, so every crawler left
+a row behind. The row is created by the first write that needs one.
+
+`/api/guestAuth/*` is deleted. It duplicated the cart and wishlist routes under
+an incompatible shape, no frontend called it, and it was mounted at a path that
+did not match its own documentation.
+
+`mergeGuestIntoCustomer` folds a guest's cart and wishlist into the account they
+just created: quantities add, wishlist entries de-duplicate, and the session row
+goes — taking its cart with it, because `carts.guest_session_id` cascades. All
+in one transaction, since a half-finished merge either duplicates a shopper's
+cart or loses it. It is a no-op until sign-in produces `customers` rows.
+
 ## What is not built yet
 
 **The system is mid-migration and not deployable in this state.** The catalog —
-reads and writes — is on PostgreSQL. Everything else still reads Mongo, which is
-empty.
+reads and writes — and carts and wishlists are on PostgreSQL. Everything else
+still reads Mongo, which is empty.
 
 In order —
 
-1. **Cart, wishlist, orders, payments, reviews** — the remaining controllers,
-   payments last. Wiring the posting rules to their callers happens here, and it
-   is the bulk of what remains. `inventory`, `analytics`, `guest`, `sitemap` and
-   the seed script still import the Mongo catalog models and go with them.
+1. **Orders, payments, reviews** — the remaining controllers, payments last.
+   Wiring the posting rules to their callers happens here, and it is the bulk of
+   what remains. `inventory`, `analytics`, `sitemap` and the seed script still
+   import the Mongo catalog models and go with them.
 2. **Supabase Auth**, plus a bootstrap step, since an empty database has no
    account to sign in with.
 3. **Expenses, vendors and purchase orders**, each a form plus a posting rule.

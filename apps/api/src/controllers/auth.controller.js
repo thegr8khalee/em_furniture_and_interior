@@ -3,7 +3,7 @@
 import User from '../models/user.model.js'; // Ensure correct path and .js extension
 import bcrypt from 'bcryptjs';
 import { generateToken } from '../lib/utils.js'; // Assuming generateToken is in utils/jwt.js
-import { mergeGuestDataToUser } from './guest.controller.js'; // Import the new merge function
+import { mergeGuestIntoCustomer } from '../services/cart.js';
 import jwt from 'jsonwebtoken';
 import Admin from '../models/admin.model.js';
 import { resolvePermissions } from '@em/shared/permissions';
@@ -54,7 +54,7 @@ export const signup = async (req, res) => {
 
     // Merge guest cart/wishlist data if a guest session exists
     if (anonymousId) {
-      await mergeGuestDataToUser(newUser._id, anonymousId);
+      await mergeGuestIntoCustomer(newUser._id, anonymousId);
       res.clearCookie('anonymousId', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' });
     }
 
@@ -102,7 +102,7 @@ export const login = async (req, res) => {
 
     // Merge guest cart/wishlist data if a guest session exists
     if (anonymousId) {
-      await mergeGuestDataToUser(user._id, anonymousId);
+      await mergeGuestIntoCustomer(user._id, anonymousId);
       res.clearCookie('anonymousId', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' });
     }
 

@@ -20,7 +20,6 @@
   ],
   "tags": [
     { "name": "Auth", "description": "User authentication & profile" },
-    { "name": "Guest", "description": "Guest session & guest cart/wishlist" },
     { "name": "Admin", "description": "Admin auth & CRUD operations" },
     { "name": "Products", "description": "Public product endpoints" },
     { "name": "Collections", "description": "Public collection endpoints" },
@@ -53,6 +52,12 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "jwt"
+      },
+      "guestCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "anonymousId",
+        "description": "Anonymous shopper. Set by the API on first contact with a cart or wishlist route; carries the cart until the shopper signs in, at which point it is merged into their account."
       }
     },
     "schemas": {
@@ -509,138 +514,6 @@
         }
       }
     },
-    "/api/guestAuth/session": {
-      "get": {
-        "tags": ["Guest"],
-        "summary": "Get or create guest session",
-        "parameters": [{ "name": "anonymousId", "in": "query", "required": true, "schema": { "type": "string" } }],
-        "responses": {
-          "200": { "description": "Guest session data with populated cart and wishlist" }
-        }
-      }
-    },
-    "/api/guestAuth/cart/add": {
-      "post": {
-        "tags": ["Guest"],
-        "summary": "Add item to guest cart",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["anonymousId", "productId"],
-                "properties": {
-                  "anonymousId": { "type": "string" },
-                  "productId": { "type": "string" },
-                  "quantity": { "type": "integer", "default": 1 }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Updated guest cart" }
-        }
-      }
-    },
-    "/api/guestAuth/cart/update/{productId}": {
-      "put": {
-        "tags": ["Guest"],
-        "summary": "Update guest cart item quantity",
-        "parameters": [{ "name": "productId", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["anonymousId", "quantity"],
-                "properties": {
-                  "anonymousId": { "type": "string" },
-                  "quantity": { "type": "integer", "minimum": 0 }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Updated guest cart" }
-        }
-      }
-    },
-    "/api/guestAuth/cart/remove/{productId}": {
-      "delete": {
-        "tags": ["Guest"],
-        "summary": "Remove item from guest cart",
-        "parameters": [{ "name": "productId", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["anonymousId"],
-                "properties": {
-                  "anonymousId": { "type": "string" }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Updated guest cart" }
-        }
-      }
-    },
-    "/api/guestAuth/wishlist/add": {
-      "post": {
-        "tags": ["Guest"],
-        "summary": "Add item to guest wishlist",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["anonymousId", "itemId", "itemType"],
-                "properties": {
-                  "anonymousId": { "type": "string" },
-                  "itemId": { "type": "string" },
-                  "itemType": { "type": "string", "enum": ["Product", "Collection"] }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Updated guest wishlist" }
-        }
-      }
-    },
-    "/api/guestAuth/wishlist/remove/{itemId}": {
-      "delete": {
-        "tags": ["Guest"],
-        "summary": "Remove item from guest wishlist",
-        "parameters": [{ "name": "itemId", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["anonymousId", "itemType"],
-                "properties": {
-                  "anonymousId": { "type": "string" },
-                  "itemType": { "type": "string", "enum": ["Product", "Collection"] }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": { "description": "Updated guest wishlist" }
-        }
-      }
-    },
     "/api/admin/signup": {
       "post": {
         "tags": ["Admin"],
@@ -1041,8 +914,8 @@
     "/api/cart": {
       "get": {
         "tags": ["Cart"],
-        "summary": "Get user cart",
-        "security": [{ "cookieAuth": [] }],
+        "summary": "Get the cart (signed-in shopper or guest)",
+        "security": [{ "cookieAuth": [] }, { "guestCookie": [] }],
         "responses": {
           "200": { "description": "Cart items", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" }, "cart": { "type": "array", "items": { "$ref": "#/components/schemas/CartItem" } } } } } } }
         }
@@ -1052,7 +925,7 @@
       "put": {
         "tags": ["Cart"],
         "summary": "Add item to cart",
-        "security": [{ "cookieAuth": [] }],
+        "security": [{ "cookieAuth": [] }, { "guestCookie": [] }],
         "requestBody": {
           "required": true,
           "content": {
@@ -1077,7 +950,7 @@
       "put": {
         "tags": ["Cart"],
         "summary": "Remove item from cart",
-        "security": [{ "cookieAuth": [] }],
+        "security": [{ "cookieAuth": [] }, { "guestCookie": [] }],
         "requestBody": {
           "required": true,
           "content": {
@@ -1101,7 +974,7 @@
       "delete": {
         "tags": ["Cart"],
         "summary": "Clear entire cart",
-        "security": [{ "cookieAuth": [] }],
+        "security": [{ "cookieAuth": [] }, { "guestCookie": [] }],
         "responses": {
           "200": { "description": "Cart cleared", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" }, "cart": { "type": "array", "items": {} } } } } } }
         }
@@ -1111,7 +984,7 @@
       "put": {
         "tags": ["Cart"],
         "summary": "Update cart item quantity",
-        "security": [{ "cookieAuth": [] }],
+        "security": [{ "cookieAuth": [] }, { "guestCookie": [] }],
         "requestBody": {
           "required": true,
           "content": {
@@ -1180,8 +1053,8 @@
     "/api/wishlist": {
       "get": {
         "tags": ["Wishlist"],
-        "summary": "Get user wishlist",
-        "security": [{ "cookieAuth": [] }],
+        "summary": "Get the wishlist (signed-in shopper or guest)",
+        "security": [{ "cookieAuth": [] }, { "guestCookie": [] }],
         "responses": {
           "200": { "description": "Wishlist items", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" }, "wishlist": { "type": "array", "items": { "$ref": "#/components/schemas/WishlistItem" } } } } } } }
         }
@@ -1191,7 +1064,7 @@
       "put": {
         "tags": ["Wishlist"],
         "summary": "Add item to wishlist",
-        "security": [{ "cookieAuth": [] }],
+        "security": [{ "cookieAuth": [] }, { "guestCookie": [] }],
         "requestBody": {
           "required": true,
           "content": {
@@ -1215,7 +1088,7 @@
       "put": {
         "tags": ["Wishlist"],
         "summary": "Remove item from wishlist",
-        "security": [{ "cookieAuth": [] }],
+        "security": [{ "cookieAuth": [] }, { "guestCookie": [] }],
         "requestBody": {
           "required": true,
           "content": {
@@ -1239,7 +1112,7 @@
       "delete": {
         "tags": ["Wishlist"],
         "summary": "Clear entire wishlist",
-        "security": [{ "cookieAuth": [] }],
+        "security": [{ "cookieAuth": [] }, { "guestCookie": [] }],
         "responses": {
           "200": { "description": "Wishlist cleared", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" }, "wishlist": { "type": "array", "items": {} } } } } } }
         }

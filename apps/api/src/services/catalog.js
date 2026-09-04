@@ -336,3 +336,21 @@ export const getCollection = async (id, db = getSequelize()) => {
   collection.productIds = collection.productIds.map((p) => ({ ...p, price: money(p.price) }));
   return collection;
 };
+
+/** The collection counterpart of getProductsByIds, for the cart's detail lookup. */
+export const getCollectionsByIds = async (ids, db = getSequelize()) => {
+  const valid = ids.filter(isValidId);
+  if (valid.length === 0) return [];
+
+  const rows = await db.query(
+    `SELECT ${SELLABLE_COLUMNS}, c.cover_image_url, c.cover_image_public_id, img.images
+     FROM sellable_items s
+     JOIN collections c ON c.id = s.id
+     ${IMAGES}
+     WHERE s.id IN (:ids) AND s.kind = 'collection'`,
+    { replacements: { ids: valid }, type: QueryTypes.SELECT }
+  );
+
+  const byId = new Map(rows.map((row) => [row.id, mapCollection(row)]));
+  return ids.map((id) => byId.get(id)).filter(Boolean);
+};

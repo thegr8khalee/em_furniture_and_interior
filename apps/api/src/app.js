@@ -18,7 +18,6 @@ import { httpLogger, withRequestContext } from './middleware/requestLogger.js';
 import { logger } from './lib/logger.js';
 
 import authRoutes from './routes/auth.routes.js';
-import guestRoutes from './routes/guest.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import collectionRoutes from './routes/collection.routes.js';
 import productRoutes from './routes/product.routes.js';
@@ -150,7 +149,6 @@ if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
 app.use('/api', apiLimiter);
 
 app.use('/api/auth', authRoutes);
-app.use('/api/guestAuth', guestRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/collections', collectionRoutes);
