@@ -323,22 +323,46 @@ stock rather than what is physically on the floor. Units reserved against a
 confirmed order are not sellable, and publishing them as if they were is how a
 shop promises what it has already sold.
 
+**Writes** live in `src/services/catalogAdmin.js`. The validation rules carried
+over from `admin.controller.js` unchanged, including the ones the database now
+also enforces — the constraint is the guarantee, the check is the error message.
+A 400 saying "discounted price must be less than the original price" is usable;
+a raw constraint violation is not. One rule the database does *not* have: a
+discounted price must be strictly **below** list price. The schema permits
+equal, so that stays an application rule rather than being quietly relaxed by
+the migration.
+
+Cloudinary moved behind `src/services/imageStore.js`, which is injectable. The
+old controller had upload and destroy calls inlined in four places with small
+differences each time, which made the write path untestable without live
+credentials. With a fake store the business logic is covered and only the two
+HTTP calls it replaces are not.
+
+Image uploads happen **before** the transaction opens and deletions happen
+**after** it commits. Holding a database transaction across a network round trip
+keeps row locks for its duration, and deleting a file before the record commits
+loses it if the transaction then rolls back.
+
+Migration 0009 makes "a product belongs to at most one collection" a unique
+index. Mongo held that fact twice — a `collectionId` on the product and a
+`productIds` array on the collection, kept in sync by hand — which is why the
+old controller carried code to remove a product from its previous collection.
+`collection_products` holds it once. Dropping that index is the whole change if
+the business ever wants multi-collection membership.
+
 ## What is not built yet
 
-**The system is mid-migration and not deployable in this state.** Catalog reads
-come from PostgreSQL; everything else still reads Mongo, which is empty. That is
-expected during the rewrite, and it is why nothing has been cut over.
+**The system is mid-migration and not deployable in this state.** The catalog —
+reads and writes — is on PostgreSQL. Everything else still reads Mongo, which is
+empty.
 
 In order —
 
-1. **Catalog writes.** The admin CRUD in `admin.controller.js` still writes
-   products and collections to Mongo — 986 lines of it, mostly Cloudinary image
-   handling. Until it moves, the console cannot populate the catalog the
-   storefront now reads. This is the immediate next step, and it finishes
-   "catalog".
-2. **Cart, wishlist, orders, payments, reviews** — the remaining controllers,
-   payments last. Wiring the posting rules to their callers happens here.
-3. **Supabase Auth**, plus a bootstrap step, since an empty database has no
+1. **Cart, wishlist, orders, payments, reviews** — the remaining controllers,
+   payments last. Wiring the posting rules to their callers happens here, and it
+   is the bulk of what remains. `inventory`, `analytics`, `guest`, `sitemap` and
+   the seed script still import the Mongo catalog models and go with them.
+2. **Supabase Auth**, plus a bootstrap step, since an empty database has no
    account to sign in with.
-4. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
-5. **Reports** — P&L, balance sheet, VAT return — queries over the ledger.
+3. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
+4. **Reports** — P&L, balance sheet, VAT return — queries over the ledger.
