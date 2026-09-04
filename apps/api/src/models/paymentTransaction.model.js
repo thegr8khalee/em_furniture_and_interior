@@ -12,8 +12,7 @@ const paymentTransactionSchema = new mongoose.Schema(
       required: true,
     },
     user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      type: String, // a customers.id UUID
     },
     guest: {
       type: mongoose.Schema.Types.ObjectId,
@@ -78,8 +77,7 @@ const paymentTransactionSchema = new mongoose.Schema(
       default: false,
     },
     verifiedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
+      type: String, // a staff.id UUID
     },
     verifiedAt: {
       type: Date,

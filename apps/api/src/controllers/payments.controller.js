@@ -2,7 +2,8 @@ import crypto from 'crypto';
 import Order from '../models/order.model.js';
 import PaymentTransaction from '../models/paymentTransaction.model.js';
 import GuestSession from '../models/guest.model.js';
-import User from '../models/user.model.js';
+import { findCustomerById } from '../services/identity.js';
+import { clearCart } from '../services/cart.js';
 import cloudinary from '../lib/cloudinary.js';
 import { logger } from '../lib/logger.js';
 
@@ -92,9 +93,7 @@ const resolveOrderForRequester = async (req, orderId) => {
 
 const clearRequesterCart = async (order) => {
   if (order.user) {
-    await User.findByIdAndUpdate(order.user, { cart: [] });
-  } else if (order.guest) {
-    await GuestSession.findByIdAndUpdate(order.guest, { cart: [] });
+    await clearCart({ customerId: order.user, guestSessionId: null });
   }
 };
 
@@ -254,8 +253,8 @@ export const initializePaystackPayment = async (req, res) => {
     let customerEmail = order?.shippingAddress?.email || order?.billingAddress?.email;
 
     if (!customerEmail && order.user) {
-      const user = await User.findById(order.user);
-      customerEmail = user?.email;
+      const customer = await findCustomerById(order.user);
+      customerEmail = customer?.email;
     }
 
     if (!customerEmail) {

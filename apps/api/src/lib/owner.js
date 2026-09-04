@@ -17,15 +17,11 @@ export const resolveOwner = async (req, db = getSequelize()) => {
   const customerId = req.user?.id ?? req.user?._id;
 
   if (customerId) {
-    // Sign-in still runs against the old store, which issues Mongo ObjectIds.
-    // Handing one to Postgres would surface as a 500 with a cast error in the
-    // logs and nothing useful in the response; say what is actually wrong until
-    // the auth migration lands and this branch stops being reachable.
+    // Sign-in mints `customers` rows now, so this is a UUID. A cookie issued
+    // before that migration still names an ObjectId; it belongs to no account
+    // and is treated as one, rather than reaching Postgres as a cast error.
     if (!isValidId(String(customerId))) {
-      throw new CartError(
-        'Signed-in carts are unavailable while accounts are being migrated.',
-        503
-      );
+      throw new CartError('Unauthorized: Please sign in again.', 401);
     }
     return { customerId: String(customerId), guestSessionId: null };
   }

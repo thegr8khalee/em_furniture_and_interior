@@ -7,6 +7,7 @@ import {
   insertProduct,
   insertCollection,
   insertCustomer,
+  insertOrder,
 } from '../helpers/database.js';
 
 // Every test here asserts the database REJECTS something, or that it maintains
@@ -334,6 +335,25 @@ describe('Identity', () => {
        VALUES ('u', 'u@example.com', 'x', 'owner')`,
       'invalid input value for enum staff_role'
     );
+  });
+
+  // Two rules that disagree, pinned here so the disagreement is visible rather
+  // than waiting in production. `orders.customer_id` is ON DELETE SET NULL, but
+  // `orders_has_a_buyer` requires one of customer or guest session to be
+  // present, so nulling the only one fails: a shopper who has ordered cannot
+  // close their account.
+  //
+  // Not reachable yet — nothing writes `orders` until order creation moves off
+  // Mongo — and it is that slice's call which rule gives way. Erasure and
+  // keeping a financial record are both defensible; silently doing neither is
+  // not. If this test starts failing, that decision has been made.
+  test('a shopper who has ordered cannot yet close their account', async () => {
+    const customerId = await insertCustomer();
+    await insertOrder({ customerId });
+
+    await expectRejection('DELETE FROM customers WHERE id = :id', 'orders_has_a_buyer', {
+      id: customerId,
+    });
   });
 });
 

@@ -1,17 +1,16 @@
 import LoyaltyTransaction from '../models/loyaltyTransaction.model.js';
-import User from '../models/user.model.js';
 import { logger } from '../lib/logger.js';
 
 export const getLoyaltySummary = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('loyaltyPoints');
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    // The balance is a column on the account, which `protectRoute` has already
+    // read; the second lookup it used to do here answered the same question
+    // twice. The transaction ledger has not moved yet, so the totals below are
+    // still a Mongo aggregate keyed on the account's UUID.
+    const userId = req.user.id;
 
     const totals = await LoyaltyTransaction.aggregate([
-      { $match: { user: user._id } },
+      { $match: { user: userId } },
       {
         $group: {
           _id: '$type',
@@ -25,7 +24,7 @@ export const getLoyaltySummary = async (req, res) => {
 
     res.json({
       success: true,
-      balance: user.loyaltyPoints,
+      balance: req.user.loyaltyPoints,
       totalEarned,
       totalRedeemed,
     });

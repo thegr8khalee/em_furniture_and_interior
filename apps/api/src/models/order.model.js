@@ -79,8 +79,7 @@ const orderSchema = new mongoose.Schema(
       unique: true
     },
     user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      type: String, // a customers.id UUID
       default: null // null for guest orders
     },
     guest: {
@@ -210,8 +209,7 @@ const orderSchema = new mongoose.Schema(
           required: true
         },
         updatedBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'Admin'
+          type: String // a staff.id UUID
         },
         timestamp: {
           type: Date,

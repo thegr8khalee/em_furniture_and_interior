@@ -1,75 +1,61 @@
 // middleware/adminAuthMiddleware.js
 import jwt from 'jsonwebtoken';
-import Admin from '../models/admin.model.js'; // Ensure correct path to your Admin model
-import { resolvePermissions } from '@em/shared/permissions';
+import { findStaffById } from '../services/identity.js';
 import { logger } from '../lib/logger.js';
 
 /**
  * @desc Middleware to protect admin routes
- * Verifies JWT, checks for 'admin' role, and attaches admin user to req.admin
- * @param {object} req - Express request object
- * @param {object} res - Express response object
- * @param {function} next - Next middleware function
+ * Verifies JWT, checks for 'admin' role, and attaches the operator to req.admin
+ *
+ * The permission set is resolved from the `staff` row on every request, not
+ * carried in the token: revoking a permission has to take effect now, and a
+ * token issued before the change would otherwise keep it for fifteen days.
+ *
+ * `is_active` is enforced here for the first time. Under Mongo the only way to
+ * revoke console access was to delete the account, which also orphaned every
+ * audit-log entry pointing at it.
  */
 export const protectAdminRoute = async (req, res, next) => {
   try {
-    // Get token from cookies
     const token = req.cookies.jwt;
 
     if (!token) {
-      return res
-        .status(401)
-        .json({ message: 'Not authorized, no token provided.' });
+      return res.status(401).json({ message: 'Not authorized, no token provided.' });
     }
 
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Check if token is valid and contains 'admin' role
     if (!decoded || decoded.role !== 'admin') {
-      return res
-        .status(403)
-        .json({
-          message: 'Not authorized, invalid token or insufficient privileges.',
-        });
+      return res.status(403).json({
+        message: 'Not authorized, invalid token or insufficient privileges.',
+      });
     }
 
-    // Find the admin user by ID from the decoded token
-    // Select all fields except the passwordHash for security
-    const admin = await Admin.findById(decoded.userId).select('-passwordHash');
+    const admin = await findStaffById(decoded.userId);
 
     if (!admin) {
       return res.status(404).json({ message: 'Admin user not found.' });
     }
 
-    // Backfill legacy admins with a super_admin role.
-    if (!admin.role) {
-      admin.role = 'super_admin';
-      admin.permissions = resolvePermissions('super_admin');
-      await admin.save();
+    if (!admin.isActive) {
+      return res.status(403).json({ message: 'Not authorized, this account has been deactivated.' });
     }
 
-    const adminPermissions = resolvePermissions(admin.role, admin.permissions);
-
-    // Attach the admin object to the request for subsequent middleware/controllers
+    // req.admin is what the audit logger reads; the resolved permissions are
+    // what requirePermissions checks.
     req.admin = admin;
-    req.adminPermissions = adminPermissions;
-    req.adminRole = admin.role;
-    next(); // Proceed to the next middleware or route handler
+    req.adminPermissions = admin.permissions;
+    req.adminRole = admin.adminRole;
+    next();
   } catch (error) {
-    logger.error({ err: error }, 'Error in protectAdminRoute middleware');
-    // Handle different JWT errors (e.g., TokenExpiredError, JsonWebTokenError)
     if (error.name === 'TokenExpiredError') {
-      return res
-        .status(401)
-        .json({ message: 'Not authorized, token expired.' });
-    } else if (error.name === 'JsonWebTokenError') {
-      return res
-        .status(401)
-        .json({ message: 'Not authorized, invalid token.' });
+      return res.status(401).json({ message: 'Not authorized, token expired.' });
     }
-    res
-      .status(500)
-      .json({ message: 'Internal Server Error during token verification.' });
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ message: 'Not authorized, invalid token.' });
+    }
+
+    logger.error({ err: error }, 'Error in protectAdminRoute middleware');
+    res.status(500).json({ message: 'Internal Server Error during token verification.' });
   }
 };

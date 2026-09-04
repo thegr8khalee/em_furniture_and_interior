@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const loyaltyTransactionSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: String, required: true }, // a customers.id UUID
     order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
     type: { type: String, enum: ['earn', 'redeem', 'adjustment'], required: true },
     points: { type: Number, required: true },

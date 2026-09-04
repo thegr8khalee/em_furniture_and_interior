@@ -11,7 +11,7 @@ const inventoryAdjustmentSchema = new mongoose.Schema(
     previousQuantity: { type: Number, required: true },
     newQuantity: { type: Number, required: true },
     reason: { type: String, trim: true },
-    adjustedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+    adjustedBy: { type: String }, // a staff.id UUID
   },
   { timestamps: true }
 );

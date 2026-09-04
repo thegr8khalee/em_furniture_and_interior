@@ -13,7 +13,7 @@ const blogPostSchema = new mongoose.Schema(
     tags: { type: [String], default: [] },
     status: { type: String, enum: ['draft', 'published'], default: 'draft' },
     publishedAt: { type: Date },
-    author: { type: mongoose.Schema.Types.ObjectId, ref: 'Admin' },
+    author: { type: String }, // a staff.id UUID
   },
   { timestamps: true }
 );

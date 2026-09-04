@@ -3,11 +3,9 @@ import mongoose from 'mongoose';
 import { faker } from '@faker-js/faker';
 import Product from '../models/product.model.js';
 import Collection from '../models/collection.model.js';
-import Admin from '../models/admin.model.js';
 import BlogPost from '../models/blogPost.model.js';
 import FAQ from '../models/faq.model.js';
 import Project from '../models/project.model.js';
-import User from '../models/user.model.js';
 import GuestSession from '../models/guest.model.js';
 import Designer from '../models/designer.model.js';
 import Coupon from '../models/coupon.model.js';
@@ -16,9 +14,9 @@ import FlashSale from '../models/flashSale.model.js';
 import Order from '../models/order.model.js';
 import InventoryAdjustment from '../models/inventoryAdjustment.model.js';
 import { connectDB } from '../lib/db.js';
-import { resolvePermissions } from '@em/shared/permissions';
+import { getSequelize, closeSequelize } from '../db/sequelize.js';
+import { registerCustomer, registerStaff } from '../services/identity.js';
 import dotenv from 'dotenv';
-import bcrypt from 'bcryptjs';
 
 dotenv.config({ path: './.env' });
 
@@ -57,17 +55,14 @@ const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) +
 
 // --- Generators ---
 
-const generateUser = async () => {
-    const passwordHash = await bcrypt.hash('Password123!', 10);
-    return {
-        username: faker.internet.userName(),
-        email: faker.internet.email(),
-        passwordHash,
-        phoneNumber: faker.phone.number(),
-        wishlist: [], 
-        cart: []
-    };
-};
+// Accounts are in PostgreSQL; `registerCustomer` hashes the password, so the
+// seeder no longer does it by hand with a different cost factor than the API.
+const generateUser = () => ({
+    fullName: faker.internet.userName(),
+    email: faker.internet.email(),
+    password: 'Password123!',
+    phoneNumber: faker.phone.number(),
+});
 
 const generateProject = () => {
     const numImages = getRandomInt(2, 5);
@@ -177,11 +172,9 @@ const seedDB = async () => {
     await Promise.all([
         Product.deleteMany({}),
         Collection.deleteMany({}),
-        Admin.deleteMany({}),
         BlogPost.deleteMany({}),
         FAQ.deleteMany({}),
         Project.deleteMany({}),
-        User.deleteMany({}),
         GuestSession.deleteMany({}),
         Designer.deleteMany({}),
         Coupon.deleteMany({}),
@@ -202,24 +195,26 @@ const seedDB = async () => {
       { username: 'Social Media', email: 'social@emfurniture.local', role: 'social_media_manager' },
     ];
 
+    // Accounts live in PostgreSQL, so they are cleared there rather than with a
+    // Mongo deleteMany. Staff first, then customers, and only these two tables:
+    // wiping anything a customer owns is the migration runner's business.
+    const sql = getSequelize();
+    await sql.query('DELETE FROM staff');
+    await sql.query('DELETE FROM customers');
+
     const createdAdmins = [];
     for (const seed of adminSeeds) {
-        const passwordHash = await bcrypt.hash(SEED_ADMIN_PASSWORD, 10);
-        const admin = await Admin.create({
-            username: seed.username,
-            email: seed.email,
-            passwordHash,
-            role: seed.role,
-            permissions: resolvePermissions(seed.role),
-        });
-        createdAdmins.push(admin);
+        createdAdmins.push(
+            await registerStaff({ ...seed, password: SEED_ADMIN_PASSWORD })
+        );
     }
 
     // --- 2. Users ---
     console.log(`Seeding ${NUM_USERS} users...`);
-    const userPromises = Array.from({ length: NUM_USERS }, () => generateUser());
-    const userData = await Promise.all(userPromises);
-    const createdUsers = await User.insertMany(userData);
+    const createdUsers = [];
+    for (let i = 0; i < NUM_USERS; i += 1) {
+        createdUsers.push(await registerCustomer(generateUser()));
+    }
     console.log('Users created.');
 
     // --- 3. Projects ---
@@ -279,7 +274,7 @@ const seedDB = async () => {
         tags: ['Living Room', 'Sofa', 'Tips'],
         status: 'published',
         publishedAt: new Date(),
-        author: createdAdmins.find(a => a.role === 'admin')?._id || createdAdmins[0]._id
+        author: createdAdmins.find(a => a.adminRole === 'admin')?._id || createdAdmins[0]._id
       },
       {
         title: '5 Ways to Refresh Your Bedroom in a Weekend',
@@ -288,7 +283,7 @@ const seedDB = async () => {
         tags: ['Bedroom', 'Refresh', 'Weekend'],
         status: 'published',
         publishedAt: new Date(Date.now() - 86400000 * 2),
-        author: createdAdmins.find(a => a.role === 'editor')?._id || createdAdmins[0]._id
+        author: createdAdmins.find(a => a.adminRole === 'editor')?._id || createdAdmins[0]._id
       },
       {
         title: 'How We Source Materials for Lasting Quality',
@@ -297,7 +292,7 @@ const seedDB = async () => {
         tags: ['Craftsmanship', 'Materials'],
         status: 'published',
         publishedAt: new Date(Date.now() - 86400000 * 5),
-        author: createdAdmins.find(a => a.role === 'editor')?._id || createdAdmins[0]._id
+        author: createdAdmins.find(a => a.adminRole === 'editor')?._id || createdAdmins[0]._id
       },
       {
          title: 'The Modern Minimalist Guide',
@@ -306,7 +301,7 @@ const seedDB = async () => {
          tags: ['Minimalist', 'Design', 'Guide'],
          status: 'published',
          publishedAt: new Date(Date.now() - 86400000 * 10),
-         author: createdAdmins.find(a => a.role === 'admin')?._id || createdAdmins[0]._id
+         author: createdAdmins.find(a => a.adminRole === 'admin')?._id || createdAdmins[0]._id
       }
     ];
 
@@ -468,6 +463,7 @@ const seedDB = async () => {
       await mongoose.connection.close();
       console.log('MongoDB connection closed.');
     }
+    await closeSequelize();
   }
 };
 

@@ -354,9 +354,9 @@ export const mergeGuestIntoCustomer = async (
 ) => {
   if (!customerId || !anonymousId) return { merged: false, reason: 'missing_ids' };
 
-  // Sign-up and sign-in still run against the old store and hand back its ids.
-  // Merging into one would fail on the cast; there is nothing to merge into
-  // until those accounts are `customers` rows, so this is a no-op until then.
+  // A customer id is a UUID. Anything else is a cookie from before accounts
+  // moved to Postgres, naming a row that does not exist; there is nothing to
+  // merge into, and passing it on would fail as a cast error.
   if (!isValidId(String(customerId))) return { merged: false, reason: 'not_a_customer' };
 
   return db.transaction(async (transaction) => {

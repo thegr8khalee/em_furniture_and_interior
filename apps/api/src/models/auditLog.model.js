@@ -2,9 +2,10 @@ import mongoose from 'mongoose';
 
 const auditLogSchema = new mongoose.Schema(
   {
+    // A `staff.id` UUID — operators live in PostgreSQL. `actorEmail` below is
+    // why this collection stayed readable without a join.
     actor: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Admin',
+      type: String,
       required: true,
     },
     actorEmail: {

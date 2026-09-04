@@ -70,12 +70,12 @@
       "User": {
         "type": "object",
         "properties": {
-          "_id": { "type": "string" },
-          "username": { "type": "string" },
+          "_id": { "type": "string", "format": "uuid" },
+          "id": { "type": "string", "format": "uuid", "description": "The same value as _id." },
+          "username": { "type": "string", "description": "The shopper's full name." },
           "email": { "type": "string", "format": "email" },
-          "phoneNumber": { "type": "string" },
-          "cart": { "type": "array", "items": { "$ref": "#/components/schemas/CartItem" } },
-          "wishlist": { "type": "array", "items": { "$ref": "#/components/schemas/WishlistItem" } },
+          "phoneNumber": { "type": "string", "nullable": true },
+          "loyaltyPoints": { "type": "integer", "minimum": 0 },
           "createdAt": { "type": "string", "format": "date-time" },
           "updatedAt": { "type": "string", "format": "date-time" }
         }
@@ -83,12 +83,15 @@
       "AdminUser": {
         "type": "object",
         "properties": {
-          "_id": { "type": "string" },
+          "_id": { "type": "string", "format": "uuid" },
+          "id": { "type": "string", "format": "uuid", "description": "The same value as _id." },
           "username": { "type": "string" },
           "email": { "type": "string", "format": "email" },
-          "role": { "type": "string", "enum": ["admin"] },
-          "adminRole": { "type": "string" },
+          "role": { "type": "string", "enum": ["admin"], "description": "The kind of principal, not the console role." },
+          "adminRole": { "type": "string", "enum": ["super_admin", "admin", "editor", "support", "social_media_manager"] },
           "permissions": { "type": "array", "items": { "type": "string" } },
+          "isActive": { "type": "boolean" },
+          "lastLoginAt": { "type": "string", "format": "date-time", "nullable": true },
           "createdAt": { "type": "string", "format": "date-time" },
           "updatedAt": { "type": "string", "format": "date-time" }
         }
@@ -518,6 +521,7 @@
       "post": {
         "tags": ["Admin"],
         "summary": "Create new admin account",
+        "description": "Requires an operator holding admin.dashboard.view. The caller keeps their own session — this does not sign them in as the account it creates. The first account is created with `npm run bootstrap:staff`.",
         "security": [{ "cookieAuth": [] }],
         "requestBody": {
           "required": true,
@@ -529,14 +533,16 @@
                 "properties": {
                   "username": { "type": "string" },
                   "email": { "type": "string", "format": "email" },
-                  "password": { "type": "string" }
+                  "password": { "type": "string" },
+                  "role": { "type": "string", "enum": ["super_admin", "admin", "editor", "support", "social_media_manager"], "default": "admin" }
                 }
               }
             }
           }
         },
         "responses": {
-          "201": { "description": "Admin created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminUser" } } } }
+          "201": { "description": "Admin created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminUser" } } } },
+          "400": { "description": "Email or username already taken, or an unknown role", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
@@ -560,7 +566,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Admin logged in", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminUser" } } } }
+          "200": { "description": "Admin logged in", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminUser" } } } },
+          "400": { "description": "Invalid credentials", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "The account has been deactivated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },

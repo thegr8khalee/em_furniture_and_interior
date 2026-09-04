@@ -77,21 +77,15 @@ export const addReviewToProduct = async (req, res) => {
     // Mongoose pre-save hook will automatically update averageRating
     await product.save();
 
-    // Populate the user for the newly added review before sending response
-    const populatedProduct = await Product.findById(productId).populate(
-      'reviews.userId',
-      'username'
-    );
-
-    // Find the newly added review to return it
-    const addedReview = populatedProduct.reviews.find(
-      (review) => review.userId._id.toString() === userId.toString()
-    );
+    // The review just pushed is the one to return. This used to re-read the
+    // product and populate `reviews.userId`, which no longer resolves — accounts
+    // are in PostgreSQL, so the field holds a UUID Mongo cannot join on.
+    const addedReview = product.reviews[product.reviews.length - 1];
 
     res.status(201).json({
       message: 'Review submitted and pending approval.',
       review: addedReview,
-      averageRating: populatedProduct.averageRating,
+      averageRating: product.averageRating,
     });
   } catch (error) {
     logger.error({ err: error }, 'Error in addReviewToProduct controller');
@@ -156,20 +150,12 @@ export const addReviewToCollection = async (req, res) => {
     // Mongoose pre-save hook will automatically update averageRating
     await collection.save();
 
-    // Populate the user for the newly added review before sending response
-    const populatedCollection = await Collection.findById(
-      collectionId
-    ).populate('reviews.userId', 'username');
-
-    // Find the newly added review to return it
-    const addedReview = populatedCollection.reviews.find(
-      (review) => review.userId._id.toString() === userId.toString()
-    );
+    const addedReview = collection.reviews[collection.reviews.length - 1];
 
     res.status(201).json({
       message: 'Review submitted and pending approval.',
       review: addedReview,
-      averageRating: populatedCollection.averageRating,
+      averageRating: collection.averageRating,
     });
   } catch (error) {
     logger.error({ err: error }, 'Error in addReviewToCollection controller');

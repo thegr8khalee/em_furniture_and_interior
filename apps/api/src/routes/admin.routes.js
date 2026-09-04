@@ -24,10 +24,13 @@ import { createAuditLog } from '../middleware/auditLogger.js';
 
 const router = express.Router();
 
+// Only super_admin holds STAFF_MANAGE. This route used to ask for
+// ADMIN_DASHBOARD_VIEW, which support and every other role above it also hold.
 router.post(
   '/signup',
   protectAdminRoute,
-  requirePermissions([PERMISSIONS.ADMIN_DASHBOARD_VIEW]),
+  requirePermissions([PERMISSIONS.STAFF_MANAGE]),
+  createAuditLog('CREATE', 'staff'),
   adminSignup
 );
 router.post('/login', authLimiter, adminLogin);

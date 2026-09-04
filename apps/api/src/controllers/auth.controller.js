@@ -1,358 +1,176 @@
-// controllers/authController.js
-
-import User from '../models/user.model.js'; // Ensure correct path and .js extension
-import bcrypt from 'bcryptjs';
-import { generateToken } from '../lib/utils.js'; // Assuming generateToken is in utils/jwt.js
-import { mergeGuestIntoCustomer } from '../services/cart.js';
 import jwt from 'jsonwebtoken';
-import Admin from '../models/admin.model.js';
-import { resolvePermissions } from '@em/shared/permissions';
-import crypto from 'crypto';
+import { generateToken } from '../lib/utils.js';
+import { mergeGuestIntoCustomer } from '../services/cart.js';
 import { sendEmail } from '../services/gmail.service.js';
 import { logger } from '../lib/logger.js';
+import {
+  IdentityError,
+  authenticateCustomer,
+  beginPasswordReset,
+  changeCustomerPassword,
+  completePasswordReset,
+  deleteCustomer,
+  findCustomerById,
+  findStaffById,
+  registerCustomer,
+  updateCustomerProfile,
+} from '../services/identity.js';
 
-export const signup = async (req, res) => {
-  // Destructure fullName from req.body, but map to username for the User model
-  const { fullName, email, password, phoneNumber } = req.body;
+/*
+ * Shopper authentication. The account itself lives in `customers`, and
+ * everything that touches a password or a reset token is in
+ * services/identity.js — these handlers translate the request and translate the
+ * error, as the catalog and cart controllers do.
+ *
+ * Sign-in responses no longer carry `cart` and `wishlist`. Those were the
+ * embedded Mongo arrays and stopped being the cart when carts moved to their
+ * own tables; neither frontend read them. The cart is at GET /api/cart.
+ */
+
+const cookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+});
+
+const handleError = (error, res, where) => {
+  if (error instanceof IdentityError) {
+    return res.status(error.status).json({ message: error.message });
+  }
+  logger.error({ err: error }, `Error in ${where} controller`);
+  return res.status(500).json({ message: 'Internal Server Error' });
+};
+
+/**
+ * Adopts whatever the shopper put in their basket before signing in.
+ *
+ * The merge is best-effort on purpose: a failure here must not turn a
+ * successful sign-in into an error response, because the account exists either
+ * way and refusing the session would leave them unable to reach the cart at
+ * all. It is logged rather than swallowed.
+ */
+const adoptGuestCart = async (customerId, req, res) => {
   const anonymousId = req.cookies?.anonymousId;
+  if (!anonymousId) return;
 
   try {
-    // Input validation
-    if (!fullName) {
-      return res.status(400).json({ message: 'Full name cannot be empty' });
-    }
-    if (!email) {
-      return res.status(400).json({ message: 'Email cannot be empty' });
-    }
-    if (!password) {
-      return res.status(400).json({ message: 'Password cannot be empty' });
-    }
-
-    // Check if user with given email already exists
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: 'Email already in use' });
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
-
-    // Create new user instance, mapping fullName to username
-    const newUser = new User({
-      username: fullName, // Map fullName from request to username in model
-      email,
-      passwordHash, // Store hashed password in passwordHash field
-      phoneNumber, // phoneNumber is optional, will be null if not provided
-    });
-
-    // Save the new user to the database
-    await newUser.save();
-
-    // Generate JWT token and set it as a cookie
-    generateToken(newUser._id, res);
-
-    // Merge guest cart/wishlist data if a guest session exists
-    if (anonymousId) {
-      await mergeGuestIntoCustomer(newUser._id, anonymousId);
-      res.clearCookie('anonymousId', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' });
-    }
-
-    // Respond with success message and user data (excluding passwordHash)
-    res.status(201).json({
-      _id: newUser._id,
-      username: newUser.username,
-      email: newUser.email,
-      phoneNumber: newUser.phoneNumber,
-      cart: newUser.cart,
-      wishlist: newUser.wishlist,
-      createdAt: newUser.createdAt,
-      updatedAt: newUser.updatedAt,
-    });
+    await mergeGuestIntoCustomer(customerId, anonymousId);
+    res.clearCookie('anonymousId', cookieOptions());
   } catch (error) {
-    logger.error({ err: error }, 'Error in signup controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    logger.error({ err: error, customerId }, 'Could not merge the guest cart on sign-in');
+  }
+};
+
+export const signup = async (req, res) => {
+  try {
+    const { fullName, email, password, phoneNumber } = req.body;
+
+    const customer = await registerCustomer({ fullName, email, password, phoneNumber });
+
+    generateToken(customer.id, res);
+    await adoptGuestCart(customer.id, req, res);
+
+    res.status(201).json(customer);
+  } catch (error) {
+    handleError(error, res, 'signup');
   }
 };
 
 export const login = async (req, res) => {
-  const { email, password } = req.body;
-  const anonymousId = req.cookies?.anonymousId;
-
   try {
-    // Input validation
-    if (!email || !password) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
+    const { email, password } = req.body;
 
-    // Find user by email
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid Credentials' });
-    }
+    const customer = await authenticateCustomer(email, password);
 
-    // Compare provided password with hashed password in the database
-    const isPasswordCorrect = await bcrypt.compare(password, user.passwordHash); // Compare with passwordHash
-    if (!isPasswordCorrect) {
-      return res.status(400).json({ message: 'Invalid Credentials' });
-    }
+    generateToken(customer.id, res);
+    await adoptGuestCart(customer.id, req, res);
 
-    // Generate JWT token and set it as a cookie
-    generateToken(user._id, res);
-
-    // Merge guest cart/wishlist data if a guest session exists
-    if (anonymousId) {
-      await mergeGuestIntoCustomer(user._id, anonymousId);
-      res.clearCookie('anonymousId', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' });
-    }
-
-    // Respond with user data (excluding passwordHash)
-    res.status(200).json({
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      phoneNumber: user.phoneNumber,
-      cart: user.cart,
-      wishlist: user.wishlist,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    });
+    res.status(200).json(customer);
   } catch (error) {
-    logger.error({ err: error }, 'Error in login Controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    handleError(error, res, 'login');
   }
 };
 
 export const logout = (req, res) => {
-  try {
-    // Clear the JWT cookie by setting its maxAge to 0
-    res.cookie('jwt', '', {
-      maxAge: 0,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-    });
-    res.status(200).json({ message: 'Logged Out successfully' });
-  } catch (error) {
-    logger.error({ err: error }, 'Error in logout controller');
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
+  res.cookie('jwt', '', { ...cookieOptions(), maxAge: 0 });
+  res.status(200).json({ message: 'Logged Out successfully' });
 };
 
 export const updateProfile = async (req, res) => {
   try {
-    // console.log(req.user._id)
-    // req.user is exp
-    // ected to be populated by an authentication middleware
-    // that verifies the JWT and attaches the user/admin object to the request.
-    if (!req.user || !req.user._id) {
-      return res
-        .status(401)
-        .json({ message: 'Not authenticated: User information missing.' });
-    }
-
     const { username, email, phoneNumber } = req.body;
-    const userId = req.user._id;
-    // console.log(userId)
-
-    let authenticatedEntity = null;
-
-    // Determine which model to use based on the user's role
-
-    authenticatedEntity = await User.findById(userId);
-
-    if (!authenticatedEntity) {
-      return res.status(404).json({ message: 'User not found.' });
-    }
-
-    // Update fields if they are provided in the request body
-    if (username !== undefined) {
-      authenticatedEntity.username = username;
-    }
-    if (email !== undefined) {
-      // Basic email validation and uniqueness check (more robust validation should be done)
-      if (email !== authenticatedEntity.email) {
-        // Check if email is actually changing
-        const emailExists = await User.findOne({ email });
-        if (emailExists && emailExists._id.toString() !== userId.toString()) {
-          return res
-            .status(400)
-            .json({ message: 'Email already in use by another user.' });
-        }
-      }
-      authenticatedEntity.email = email;
-    }
-    if (phoneNumber !== undefined) {
-      authenticatedEntity.phoneNumber = phoneNumber;
-    }
-
-    // Save the updated entity to the database
-    await authenticatedEntity.save();
-
-    // Prepare the response data, excluding sensitive information like password hash
-    const responseData = {
-      _id: authenticatedEntity._id,
-      username: authenticatedEntity.username,
-      email: authenticatedEntity.email,
-      phoneNumber: authenticatedEntity.phoneNumber,
-      createdAt: authenticatedEntity.createdAt,
-      updatedAt: authenticatedEntity.updatedAt,
-    };
-
-    res.status(200).json(responseData);
+    res.status(200).json(await updateCustomerProfile(req.user.id, { username, email, phoneNumber }));
   } catch (error) {
-    logger.error({ err: error }, 'Error in updateProfile controller');
-    // Check if headers have already been sent before attempting to send response
-    if (res.headersSent) {
-      logger.warn('Headers already sent, cannot send error response from updateProfile catch block.');
-      return;
-    }
-    res
-      .status(500)
-      .json({ message: 'Internal Server Error during profile update.' });
-  }
-};
-
-export const checkAuth = async (req, res) => {
-  try {
-    const token = req.cookies.jwt; // Get JWT from cookie
-
-    if (!token) {
-      // No JWT token found, user is not authenticated.
-      return res
-        .status(401)
-        .json({ message: 'Not authenticated: No token provided.' });
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (jwtError) {
-      // Token is invalid or expired. Clear the cookie.
-      res.clearCookie('jwt', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-      });
-      return res
-        .status(401)
-        .json({ message: 'Not authenticated: Invalid or expired token.' });
-    }
-
-    // NEW OPTIMIZED LOGIC: Use the role from the decoded token to perform a single, targeted lookup.
-    let authenticatedEntity = null;
-    let role = decoded.role; // Get role directly from the token
-
-    if (role === 'admin') {
-      authenticatedEntity = await Admin.findById(decoded.userId).select(
-        '-passwordHash'
-      );
-    } else if (role === 'user') {
-      authenticatedEntity = await User.findById(decoded.userId).select(
-        '-passwordHash'
-      );
-    } else {
-      // Handle unexpected or invalid roles in the token
-      res.clearCookie('jwt', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-      });
-      return res
-        .status(401)
-        .json({ message: 'Not authenticated: Invalid role in token.' });
-    }
-
-    if (!authenticatedEntity) {
-      // Entity not found in DB despite valid token and role (e.g., account deleted). Clear cookie.
-      res.clearCookie('jwt', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-      });
-      return res.status(401).json({
-        message: 'Not authenticated: User/Admin account not found in database.',
-      });
-    }
-
-    // Authenticated entity found, send their details including role
-    const adminPayload =
-      role === 'admin'
-        ? {
-            adminRole: authenticatedEntity.role || 'super_admin',
-            permissions: resolvePermissions(
-              authenticatedEntity.role || 'super_admin',
-              authenticatedEntity.permissions
-            ),
-          }
-        : {};
-
-    return res.status(200).json({
-      _id: authenticatedEntity._id,
-      username: authenticatedEntity.username,
-      email: authenticatedEntity.email,
-      role: role, // Use the role determined from the token
-      // Conditionally include fields specific to User or Admin models
-      ...(role === 'user' && {
-        phoneNumber: authenticatedEntity.phoneNumber,
-        cart: authenticatedEntity.cart,
-        wishlist: authenticatedEntity.wishlist,
-      }),
-      ...adminPayload,
-      createdAt: authenticatedEntity.createdAt,
-      updatedAt: authenticatedEntity.updatedAt,
-    });
-  } catch (error) {
-    logger.error({ err: error }, 'Error in checkAuth controller');
-    if (res.headersSent) {
-      logger.warn('Headers already sent, cannot send error response from checkAuth catch block.');
-      return;
-    }
-    return res
-      .status(500)
-      .json({ message: 'Internal Server Error during authentication check.' });
+    handleError(error, res, 'updateProfile');
   }
 };
 
 export const deleteAccount = async (req, res) => {
   try {
-    // Ensure user is authenticated and req.user is populated by middleware
-    if (!req.user || !req.user._id) {
-      return res
-        .status(401)
-        .json({ message: 'Not authenticated: User information missing.' });
+    const deleted = await deleteCustomer(req.user.id);
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Account not found or already deleted.' });
     }
 
-    const userId = req.user._id;
-    // const userRole = req.user.role;
-
-    let deletedEntity = null;
-
-    deletedEntity = await User.findByIdAndDelete(userId);
-
-    if (!deletedEntity) {
-      return res
-        .status(404)
-        .json({ message: 'Account not found or already deleted.' });
-    }
-
-    // Clear the JWT cookie after successful deletion
-    res.clearCookie('jwt', {
-      maxAge: 0,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-    });
-
+    res.clearCookie('jwt', cookieOptions());
     res.status(200).json({ message: `your account deleted successfully.` });
   } catch (error) {
-    logger.error({ err: error }, 'Error in deleteAccount controller');
-    if (res.headersSent) {
-      logger.warn('Headers already sent, cannot send error response from deleteAccount catch block.');
-      return;
+    handleError(error, res, 'deleteAccount');
+  }
+};
+
+/**
+ * Who the caller is, according to their cookie.
+ *
+ * Both frontends poll this on load, so it answers for either kind of principal:
+ * the token says which table to read, and the wrong table is never queried.
+ * Every failure clears the cookie — a token this endpoint refuses is one no
+ * other endpoint will accept either, and leaving it in place means the client
+ * retries the same rejection on every page load.
+ */
+export const checkAuth = async (req, res) => {
+  try {
+    const token = req.cookies.jwt;
+    if (!token) {
+      return res.status(401).json({ message: 'Not authenticated: No token provided.' });
     }
-    res
-      .status(500)
-      .json({ message: 'Internal Server Error during account deletion.' });
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+      res.clearCookie('jwt', cookieOptions());
+      return res.status(401).json({ message: 'Not authenticated: Invalid or expired token.' });
+    }
+
+    if (decoded.role !== 'admin' && decoded.role !== 'user') {
+      res.clearCookie('jwt', cookieOptions());
+      return res.status(401).json({ message: 'Not authenticated: Invalid role in token.' });
+    }
+
+    const principal =
+      decoded.role === 'admin'
+        ? await findStaffById(decoded.userId)
+        : await findCustomerById(decoded.userId);
+
+    if (!principal) {
+      res.clearCookie('jwt', cookieOptions());
+      return res.status(401).json({
+        message: 'Not authenticated: User/Admin account not found in database.',
+      });
+    }
+
+    // A deactivated operator holding a valid token is still refused: the token
+    // outlives the decision to revoke access by up to fifteen days.
+    if (decoded.role === 'admin' && principal.isActive === false) {
+      res.clearCookie('jwt', cookieOptions());
+      return res.status(401).json({ message: 'Not authenticated: This account has been deactivated.' });
+    }
+
+    return res.status(200).json({ ...principal, role: decoded.role === 'admin' ? 'admin' : 'user' });
+  } catch (error) {
+    return handleError(error, res, 'checkAuth');
   }
 };
 
@@ -364,43 +182,26 @@ export const deleteAccount = async (req, res) => {
 export const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
+  // One response for both outcomes, so this cannot be used to find out which
+  // addresses have accounts.
+  const generic = {
+    message:
+      'If an account with that email exists, a password reset link has been sent.',
+  };
+
   if (!email) {
-    return res
-      .status(400)
-      .json({ message: 'Please provide an email address.' });
+    return res.status(400).json({ message: 'Please provide an email address.' });
   }
 
   try {
-    const user = await User.findOne({ email });
+    const reset = await beginPasswordReset(email);
+    if (!reset) return res.status(200).json(generic);
 
-    if (!user) {
-      // Send a generic success message to prevent email enumeration attacks
-      return res.status(200).json({
-        message:
-          'If an account with that email exists, a password reset link has been sent.',
-      });
-    }
+    const { customer, token } = reset;
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${token}`;
 
-    // Generate a secure, URL-safe random token
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenHash = crypto
-      .createHash('sha256')
-      .update(resetToken)
-      .digest('hex');
-
-    // Set token expiry (e.g., 1 hour from now)
-    const resetTokenExpiry = Date.now() + 3600000; // 1 hour in milliseconds
-
-    user.passwordResetToken = resetTokenHash;
-    user.passwordResetExpires = resetTokenExpiry;
-    await user.save();
-
-    // Construct the reset URL for the email
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-
-    // Send password reset email via Gmail API (OAuth2)
     const htmlContent = `
-      <p>Hello ${user.username || user.email},</p>
+      <p>Hello ${customer.username || customer.email},</p>
       <p>You are receiving this because you (or someone else) have requested the reset of the password for your account.</p>
       <p>Please click on the following link to reset your password:</p>
       <p><a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a></p>
@@ -414,23 +215,19 @@ export const forgotPassword = async (req, res) => {
 
     try {
       await sendEmail({
-        to: user.email,
+        to: customer.email,
         subject: 'Password Reset Request for Your Account',
         text: `Reset your password using this link: ${resetUrl}`,
         html: htmlContent,
       });
-      logger.info({ email: user.email }, 'Password reset email sent');
+      logger.info({ email: customer.email }, 'Password reset email sent');
     } catch (emailError) {
       logger.error({ err: emailError }, 'Error sending password reset email');
     }
 
-    res.status(200).json({
-      message:
-        'If an account with that email exists, a password reset link has been sent.',
-    });
+    res.status(200).json(generic);
   } catch (error) {
-    logger.error({ err: error }, 'Error in forgotPassword controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    handleError(error, res, 'forgotPassword');
   }
 };
 
@@ -440,46 +237,20 @@ export const forgotPassword = async (req, res) => {
  * @access Public
  */
 export const resetPassword = async (req, res) => {
-  const { token } = req.params;
   const { newPassword } = req.body;
 
   if (!newPassword) {
     return res.status(400).json({ message: 'Please provide a new password.' });
   }
   if (newPassword.length < 6) {
-    return res
-      .status(400)
-      .json({ message: 'Password must be at least 6 characters long.' });
+    return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
   }
 
   try {
-    const resetTokenHash = crypto
-      .createHash('sha256')
-      .update(token)
-      .digest('hex');
-
-    const user = await User.findOne({
-      passwordResetToken: resetTokenHash,
-      passwordResetExpires: { $gt: Date.now() },
-    });
-
-    if (!user) {
-      return res
-        .status(400)
-        .json({ message: 'Password reset token is invalid or has expired.' });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    user.passwordHash = await bcrypt.hash(newPassword, salt);
-
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    await user.save();
-
+    await completePasswordReset(req.params.token, newPassword);
     res.status(200).json({ message: 'Password has been reset successfully.' });
   } catch (error) {
-    logger.error({ err: error }, 'Error in resetPassword controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    handleError(error, res, 'resetPassword');
   }
 };
 
@@ -492,44 +263,16 @@ export const changePassword = async (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
   if (!oldPassword || !newPassword) {
-    return res
-      .status(400)
-      .json({ message: 'Please provide both old and new passwords.' });
+    return res.status(400).json({ message: 'Please provide both old and new passwords.' });
   }
   if (newPassword.length < 6) {
-    return res
-      .status(400)
-      .json({ message: 'New password must be at least 6 characters long.' });
-  }
-
-  if (!req.user || !req.user._id) {
-    return res
-      .status(401)
-      .json({ message: 'Not authenticated: User information missing.' });
+    return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
   }
 
   try {
-    const user = await User.findById(req.user._id);
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found.' });
-    }
-
-    const isPasswordCorrect = await bcrypt.compare(
-      oldPassword,
-      user.passwordHash
-    );
-    if (!isPasswordCorrect) {
-      return res.status(400).json({ message: 'Incorrect old password.' });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    user.passwordHash = await bcrypt.hash(newPassword, salt);
-    await user.save();
-
+    await changeCustomerPassword(req.user.id, oldPassword, newPassword);
     res.status(200).json({ message: 'Password changed successfully.' });
   } catch (error) {
-    logger.error({ err: error }, 'Error in changePassword controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    handleError(error, res, 'changePassword');
   }
 };

@@ -1,6 +1,6 @@
 import Order from '../models/order.model.js';
 import Product from '../models/product.model.js';
-import User from '../models/user.model.js';
+import { countCustomers } from '../services/identity.js';
 import ConsultationRequest from '../models/consultationRequest.model.js';
 import { logger } from '../lib/logger.js';
 
@@ -309,7 +309,7 @@ export const getConversionFunnel = async (req, res) => {
     };
 
     const [totalUsers, ordersStarted, ordersCompleted, paidOrders] = await Promise.all([
-      User.countDocuments({ createdAt: match.createdAt }),
+      countCustomers({ from: range.start, to: range.end }),
       Order.countDocuments(match),
       Order.countDocuments({
         ...match,
@@ -379,7 +379,7 @@ export const getOverviewStats = async (req, res) => {
         { $group: { _id: null, total: { $sum: '$totalAmount' } } },
       ]).then((res) => res[0]?.total || 0),
       Order.countDocuments(match),
-      User.countDocuments(match),
+      countCustomers({ from: range.start, to: range.end }),
       ConsultationRequest.countDocuments(match),
       Order.aggregate([
         {

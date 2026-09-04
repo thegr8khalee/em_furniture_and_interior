@@ -1,45 +1,57 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/user.model.js';
+import { findCustomerById } from '../services/identity.js';
 import { logger } from '../lib/logger.js';
 
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'Lax',
+};
+
+/**
+ * Requires a signed-in shopper, and puts them on `req.user`.
+ *
+ * The account is re-read on every request rather than trusted from the token,
+ * so a deleted account stops being able to act immediately instead of at the
+ * token's fifteen-day expiry.
+ *
+ * A token that names no account clears the cookie and answers 401. It used to
+ * answer 404 — which the storefront's interceptor does not treat as "signed
+ * out", so the client kept a phantom session and retried every request against
+ * an account that was gone.
+ */
 export const protectRoute = async (req, res, next) => {
-    try {
-        const token = req.cookies.jwt;
+  try {
+    const token = req.cookies.jwt;
 
-        if (!token) {
-            return res.status(401).json({ message: 'Unauthorized - No token provided.' }); // IMPORTANT: Added 'return'
-        }
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        // If jwt.verify throws an error (e.g., invalid token), it will be caught by the catch block.
-        // If it successfully decodes but returns null/undefined for some reason (unlikely with valid token),
-        // the subsequent user lookup will handle it.
-        if (!decoded) {
-            // This case is typically handled by the catch block if jwt.verify fails.
-            // However, as a safeguard, explicit check and return.
-            return res.status(401).json({ message: 'Unauthorized - Invalid token.' }); // IMPORTANT: Added 'return'
-        }
-
-        const user = await User.findById(decoded.userId).select('-passwordHash'); // IMPORTANT: Corrected to '-passwordHash'
-
-        if (!user) {
-            res.clearCookie('jwt', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' });
-            return res.status(404).json({ message: 'User not found.' }); // IMPORTANT: Added 'return'
-        }
-
-        req.user = user; // User is authenticated, attach to request object
-        next(); // Proceed to the next middleware/controller
-
-    } catch (error) {
-        logger.info({ err: error }, 'Error in protectRoute middleware');
-        // Clear expired/invalid token cookie
-        res.clearCookie('jwt', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'Lax' });
-
-        if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
-            return res.status(401).json({ message: 'Unauthorized - Invalid or expired token.' }); // IMPORTANT: Added 'return'
-        }
-        // Generic server error for other unexpected issues
-        return res.status(500).json({ message: 'Internal server error.' }); // IMPORTANT: Added 'return'
+    if (!token) {
+      return res.status(401).json({ message: 'Unauthorized - No token provided.' });
     }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // An operator's token is not a shopper's. They are separate tables and
+    // separate id spaces, and reading one with the other's id finds nothing.
+    if (decoded.role === 'admin') {
+      return res.status(403).json({ message: 'Unauthorized - Not a customer account.' });
+    }
+
+    const user = await findCustomerById(decoded.userId);
+
+    if (!user) {
+      res.clearCookie('jwt', cookieOptions);
+      return res.status(401).json({ message: 'Unauthorized - Account not found.' });
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
+      res.clearCookie('jwt', cookieOptions);
+      return res.status(401).json({ message: 'Unauthorized - Invalid or expired token.' });
+    }
+
+    logger.error({ err: error }, 'Error in protectRoute middleware');
+    return res.status(500).json({ message: 'Internal server error.' });
+  }
 };

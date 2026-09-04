@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 
 const reviewSchema = new mongoose.Schema({
   // Re-using reviewSchema for consistency
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userId: { type: String, required: true }, // a customers.id UUID
   rating: { type: Number, required: true, min: 1, max: 5 },
   comment: { type: String, trim: true },
   isVerifiedPurchase: { type: Boolean, default: false },

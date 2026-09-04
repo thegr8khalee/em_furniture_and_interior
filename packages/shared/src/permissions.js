@@ -22,6 +22,11 @@ export const PERMISSIONS = {
   DESIGNERS_MANAGE: 'designers.manage',
   INVENTORY_MANAGE: 'inventory.manage',
   FINANCE_VIEW: 'finance.view',
+  // Creating and changing operator accounts. Deliberately absent from every
+  // role list below, so only super_admin holds it: POST /api/admin/signup used
+  // to require only `admin.dashboard.view`, which `support` also has, so a
+  // support account could mint itself a colleague with more access than itself.
+  STAFF_MANAGE: 'staff.manage',
 };
 
 export const ROLES = {

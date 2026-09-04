@@ -2,9 +2,11 @@ import mongoose from 'mongoose';
 
 const activityLogSchema = new mongoose.Schema(
   {
+    // Accounts live in PostgreSQL now, so this is a `customers.id` UUID and no
+    // longer a reference Mongo can resolve. It moves with this collection when
+    // activity logging follows.
     user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      type: String,
     },
     guest: {
       type: mongoose.Schema.Types.ObjectId,

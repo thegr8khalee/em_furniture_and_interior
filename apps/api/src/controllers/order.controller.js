@@ -3,7 +3,8 @@ import Product from '../models/product.model.js';
 import Collection from '../models/collection.model.js';
 import Coupon from '../models/coupon.model.js';
 import GuestSession from '../models/guest.model.js';
-import User from '../models/user.model.js';
+import { creditLoyaltyPoints } from '../services/identity.js';
+import { clearCart } from '../services/cart.js';
 import LoyaltyTransaction from '../models/loyaltyTransaction.model.js';
 import { generateInvoicePDF, generateOrderDocumentPDF } from '../lib/invoiceGenerator.js';
 import { createNotification } from './notification.controller.js';
@@ -349,7 +350,9 @@ export const getAllOrders = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('user', 'firstName lastName email')
+      // `user` is a customers.id UUID now and cannot be populated from Mongo.
+      // Nothing read the populated document: the console renders the buyer from
+      // `shippingAddress`, which is captured on the order itself.
       .populate('couponId', 'code');
 
     const total = await Order.countDocuments(query);
@@ -448,9 +451,7 @@ export const updateOrderStatus = async (req, res) => {
     ) {
       const points = Math.floor(order.totalAmount / 1000);
       if (points > 0) {
-        await User.findByIdAndUpdate(order.user, {
-          $inc: { loyaltyPoints: points },
-        });
+        await creditLoyaltyPoints(order.user, points);
 
         await LoyaltyTransaction.create({
           user: order.user,
@@ -504,10 +505,10 @@ export const updatePaymentStatus = async (req, res) => {
 
     // Clear cart when payment is confirmed
     if (paymentStatus === 'paid') {
+      // The cart is in PostgreSQL; the Mongo write this replaced had been a
+      // no-op since carts moved, so a paid order left the basket full.
       if (order.user) {
-        await User.findByIdAndUpdate(order.user, { cart: [] });
-      } else if (order.guest) {
-        await GuestSession.findByIdAndUpdate(order.guest, { cart: [] });
+        await clearCart({ customerId: order.user, guestSessionId: null });
       }
     }
 

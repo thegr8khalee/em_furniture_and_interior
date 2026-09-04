@@ -399,21 +399,104 @@ did not match its own documentation.
 just created: quantities add, wishlist entries de-duplicate, and the session row
 goes — taking its cart with it, because `carts.guest_session_id` cascades. All
 in one transaction, since a half-finished merge either duplicates a shopper's
-cart or loses it. It is a no-op until sign-in produces `customers` rows.
+cart or loses it.
+
+### Accounts — customers and staff
+
+`src/services/identity.js` is the third slice: registration, sign-in, profile
+edits, password changes and password resets, for both kinds of principal.
+
+**Two tables, not one.** A shopper has a cart, a phone number and loyalty
+points; an operator has a role, a permission set and an audit trail; the overlap
+is an email and a password. They were two Mongo collections already, but every
+handler reached for whichever it needed and the two flows were copies of each
+other.
+
+Things the database now decides that application code used to:
+
+- **Duplicate emails.** `INSERT ... ON CONFLICT (email) DO NOTHING` returning no
+  row is the duplicate check. The previous `findOne`-then-`create` let two
+  simultaneous registrations both pass the check, and the loser got a 500 from
+  the index it had just violated.
+- **Case.** `email` is `citext`, so `Ada@example.com` and `ada@example.com` are
+  one account. Under Mongo's case-sensitive unique index they were two.
+- **A reset link is spent once.** Matching the token and clearing it are one
+  `UPDATE`. Read-then-write let the same link be redeemed twice if both requests
+  read before either wrote.
+- **Loyalty points cannot go negative** — a check constraint, not a caller who
+  remembered to look.
+
+Two behaviours that are new because the schema has the columns for them:
+
+- **`staff.is_active`** is enforced at sign-in *and* on every console request.
+  Mongo's admin document had no such field, so the only way to revoke console
+  access was to delete the account — which also orphaned every audit-log entry
+  pointing at it.
+- **Permissions are resolved from the row on every request**, never carried in
+  the token, so revoking one takes effect on the next request rather than at the
+  token's fifteen-day expiry.
+
+The published shapes are unchanged except for two fields that had stopped being
+true: `cart` and `wishlist` no longer appear on a sign-in response. They were the
+embedded Mongo arrays, which stopped being the cart when carts moved; neither
+frontend read them. A customer's display name is `full_name` in the database and
+is still published as `username`, because that is what both frontends read and
+send back.
+
+**`POST /api/admin/signup` no longer signs the caller in as the account it just
+created.** Creating a support user used to end the owner's session and replace it
+with that support user's, silently narrowing their permissions. It also asked
+only for `admin.dashboard.view`, which `support` holds — so a support account
+could mint a colleague with more access than itself. It now requires
+`staff.manage`, a new permission no role list grants, which means only
+`super_admin` has it. The first console account comes from
+`npm run bootstrap:staff`, which reads its password from the environment rather
+than a command line, and is idempotent.
+
+The audit logger records the request body as `changes`, so putting operator
+creation behind it would have written the new password into a log the console
+displays. Credential fields are redacted there now — for every route, not just
+this one.
+
+**One rule pair still disagrees.** `orders.customer_id` is `ON DELETE SET NULL`,
+while `orders_has_a_buyer` requires one of customer or guest session to be
+present — so nulling the only one fails, and a shopper who has ordered cannot
+close their account. It is not reachable yet, because nothing writes `orders`
+until order creation moves off Mongo, and it is that slice's call which rule
+gives way: erasure and keeping a financial record are both defensible, and the
+order already snapshots the buyer's name and email in `shipping_address`.
+Silently doing neither is not defensible, so a schema test pins the current
+behaviour and will fail when the decision is made.
+
+**This is the existing password scheme moved to PostgreSQL, not Supabase Auth.**
+`customers.password_hash` and `staff.password_hash` are nullable precisely so a
+Supabase-managed identity needs no local password; that migration is still ahead,
+and is now unblocked rather than done.
+
+Collections still in Mongo reference an account by its UUID, so those fields are
+`String` and no longer `ObjectId`. `.populate('user', ...)` cannot cross
+databases: the audit and activity log listings resolve their accounts with one
+batched query per page (`findStaffByIds`, `findCustomersByIds`), and the order
+listing simply dropped it — the console renders the buyer from `shippingAddress`,
+which is captured on the order itself.
 
 ## What is not built yet
 
 **The system is mid-migration and not deployable in this state.** The catalog —
-reads and writes — and carts and wishlists are on PostgreSQL. Everything else
-still reads Mongo, which is empty.
+reads and writes — carts and wishlists, and accounts are on PostgreSQL.
+Everything else still reads Mongo, which is empty.
 
 In order —
 
 1. **Orders, payments, reviews** — the remaining controllers, payments last.
    Wiring the posting rules to their callers happens here, and it is the bulk of
    what remains. `inventory`, `analytics`, `sitemap` and the seed script still
-   import the Mongo catalog models and go with them.
-2. **Supabase Auth**, plus a bootstrap step, since an empty database has no
-   account to sign in with.
+   import the Mongo catalog models and go with them. Guest orders are part of
+   this: `order.controller.js` still resolves a guest through the Mongo
+   `GuestSession` collection, which nothing writes to any more, so a guest order
+   attaches to no session.
+2. **Supabase Auth.** Accounts are in `customers` and `staff` now, and both
+   tables carry a nullable `supabase_user_id` for it, but sign-in is still the
+   local bcrypt password. The bootstrap step exists: `npm run bootstrap:staff`.
 3. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
 4. **Reports** — P&L, balance sheet, VAT return — queries over the ledger.

@@ -1,6 +1,24 @@
 import AuditLog from '../models/auditLog.model.js';
 import ActivityLog from '../models/activityLog.model.js';
+import { findCustomersByIds, findStaffByIds } from '../services/identity.js';
 import { logger } from '../lib/logger.js';
+
+/**
+ * Replaces the id on `field` with the account it names.
+ *
+ * Log entries are still in Mongo while the accounts they point at are in
+ * PostgreSQL, so the join cannot be a `.populate`. The rows are `.lean()`, so
+ * this rewrites them in place; an id with no matching account becomes null,
+ * which is what `.populate` did for a deleted one.
+ */
+const attachAccounts = async (rows, field, lookup) => {
+  if (rows.length === 0) return;
+
+  const accounts = await lookup(rows.map((row) => row[field]));
+  for (const row of rows) {
+    row[field] = accounts.get(row[field]) ?? null;
+  }
+};
 
 // Get audit logs with filtering and pagination
 export const getAuditLogs = async (req, res) => {
@@ -33,13 +51,16 @@ export const getAuditLogs = async (req, res) => {
 
     const [logs, total] = await Promise.all([
       AuditLog.find(query)
-        .populate('actor', 'firstName lastName email')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
         .lean(),
       AuditLog.countDocuments(query),
     ]);
+
+    // `actor` is a staff.id in PostgreSQL, so the operator behind each entry is
+    // resolved here rather than by `.populate` — one query for the page.
+    await attachAccounts(logs, 'actor', findStaffByIds);
 
     res.json({
       success: true,
@@ -142,13 +163,14 @@ export const getActivityLogs = async (req, res) => {
 
     const [logs, total] = await Promise.all([
       ActivityLog.find(query)
-        .populate('user', 'firstName lastName email')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit))
         .lean(),
       ActivityLog.countDocuments(query),
     ]);
+
+    await attachAccounts(logs, 'user', findCustomersByIds);
 
     res.json({
       success: true,

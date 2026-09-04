@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import User from '../models/user.model.js';
+import { findCustomerById } from '../services/identity.js';
 import { logger } from '../lib/logger.js';
 
 const cookieOptions = {
@@ -25,7 +25,10 @@ export const identifyGuest = async (req, res, next) => {
     if (token) {
       try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findById(decoded.userId).select('-passwordHash');
+        // An operator's token is not a shopper's; a console session browsing the
+        // storefront is an anonymous shopper, not a cart owner.
+        const user =
+          decoded.role === 'admin' ? null : await findCustomerById(decoded.userId);
         if (user) {
           req.user = user;
           return next();

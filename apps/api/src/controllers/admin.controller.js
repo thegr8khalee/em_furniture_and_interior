@@ -1,13 +1,15 @@
 // controllers/adminAuthController.js
 
-import Admin from '../models/admin.model.js'; // Import the Admin model
-import bcrypt from 'bcryptjs';
 import { generateToken } from '../lib/utils.js'; // Re-use the same token generation utility
 import mongoose from 'mongoose';
 import cloudinary from '../lib/cloudinary.js';
 import Project from '../models/project.model.js';
-import { resolvePermissions } from '@em/shared/permissions';
 import { logger } from '../lib/logger.js';
+import {
+  IdentityError,
+  authenticateStaff,
+  registerStaff,
+} from '../services/identity.js';
 import {
   CatalogError,
   createProduct,
@@ -18,133 +20,61 @@ import {
   deleteCollection as deleteCatalogCollection,
 } from '../services/catalogAdmin.js';
 
+/*
+ * Operator authentication. The account lives in `staff`; the credential work is
+ * in services/identity.js, alongside the shopper's. These are the HTTP shell.
+ */
+const handleIdentityError = (error, res, where) => {
+  if (error instanceof IdentityError) {
+    return res.status(error.status).json({ message: error.message });
+  }
+  logger.error({ err: error }, `Error in ${where} controller`);
+  return res.status(500).json({ message: 'Internal Server Error' });
+};
+
+const cookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+});
+
+/**
+ * Creates another operator. Reachable only by an operator who already holds
+ * `admin.dashboard.view`, which is what stops this being an open door into the
+ * console; the first account is created by `npm run bootstrap:staff`.
+ *
+ * It no longer signs the caller in as the account it just created. Doing so
+ * ended the session of whoever was creating the account — an owner adding a
+ * support user was silently demoted to that support user's permissions.
+ */
 export const adminSignup = async (req, res) => {
-  const { username, email, password } = req.body;
-
   try {
-    // Input validation
-    if (!username || !email || !password) {
-      return res.status(400).json({
-        message:
-          'All fields (username, email, password) are required for admin signup.',
-      });
-    }
+    const { username, email, password, role } = req.body;
 
-    // Check if admin with given email or username already exists
-    const adminExists = await Admin.findOne({ $or: [{ email }, { username }] });
-    if (adminExists) {
-      return res
-        .status(400)
-        .json({ message: 'Admin with this email or username already exists.' });
-    }
+    const staff = await registerStaff({ username, email, password, role });
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
-
-    // Create new admin instance
-    const newAdmin = new Admin({
-      username,
-      email,
-      passwordHash,
-      role: 'admin',
-      permissions: resolvePermissions('admin'),
-    });
-
-    // Save the new admin to the database
-    await newAdmin.save();
-
-    // Generate JWT token for admin (you might want a different token secret or payload for admins)
-    // For simplicity, we'll use the same generateToken, but in a real app, distinguish admin tokens.
-    generateToken(newAdmin._id, res, 'admin'); // Pass 'admin' as role/type for token differentiation
-
-    // Respond with success message and admin data (excluding passwordHash)
-    res.status(201).json({
-      _id: newAdmin._id,
-      username: newAdmin.username,
-      email: newAdmin.email,
-      role: 'admin',
-      adminRole: newAdmin.role,
-      permissions: newAdmin.permissions,
-      createdAt: newAdmin.createdAt,
-      updatedAt: newAdmin.updatedAt,
-      message: 'Admin registered successfully.',
-    });
+    res.status(201).json({ ...staff, message: 'Admin registered successfully.' });
   } catch (error) {
-    logger.error({ err: error }, 'Error in adminSignup controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    handleIdentityError(error, res, 'adminSignup');
   }
 };
 
 export const adminLogin = async (req, res) => {
-  const { email, password } = req.body;
-
-
   try {
-    // Input validation
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: 'Email and password are required for admin login.' });
-    }
+    const { email, password } = req.body;
 
-    // Find admin by email
-    const admin = await Admin.findOne({ email });
-    if (!admin) {
-      return res.status(400).json({ message: 'Invalid Credentials' });
-    }
+    const staff = await authenticateStaff(email, password);
+    generateToken(staff.id, res, 'admin');
 
-    // Compare provided password with hashed password in the database
-    const isPasswordCorrect = await bcrypt.compare(
-      password,
-      admin.passwordHash
-    );
-    if (!isPasswordCorrect) {
-      return res.status(400).json({ message: 'Invalid Credentials' });
-    }
-
-    // Backfill legacy admins with super_admin role.
-    if (!admin.role) {
-      admin.role = 'super_admin';
-      admin.permissions = resolvePermissions('super_admin');
-      await admin.save();
-    }
-
-    // Generate JWT token for admin
-    generateToken(admin._id, res, 'admin'); // Pass 'admin' role/type
-
-    // Respond with admin data (excluding passwordHash)
-    res.status(200).json({
-      _id: admin._id,
-      username: admin.username,
-      email: admin.email,
-      role: 'admin',
-      adminRole: admin.role,
-      permissions: resolvePermissions(admin.role, admin.permissions),
-      createdAt: admin.createdAt,
-      updatedAt: admin.updatedAt,
-      message: 'Admin logged in successfully.',
-    });
+    res.status(200).json({ ...staff, message: 'Admin logged in successfully.' });
   } catch (error) {
-    logger.error({ err: error }, 'Error in adminLogin controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    handleIdentityError(error, res, 'adminLogin');
   }
 };
 
 export const adminLogout = (req, res) => {
-  try {
-    // Clear the JWT cookie by setting its maxAge to 0
-    // Ensure this matches the cookie name used for admin tokens
-    res.cookie('jwt', '', {
-      maxAge: 0,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-    });
-    res.status(200).json({ message: 'Admin logged out successfully.' });
-  } catch (error) {
-    logger.error({ err: error }, 'Error in adminLogout controller');
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
+  res.cookie('jwt', '', { ...cookieOptions(), maxAge: 0 });
+  res.status(200).json({ message: 'Admin logged out successfully.' });
 };
 
 /*

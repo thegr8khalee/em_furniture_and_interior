@@ -2,6 +2,35 @@ import AuditLog from '../models/auditLog.model.js';
 import { logger } from '../lib/logger.js';
 
 /**
+ * Fields never worth keeping, and dangerous to keep.
+ *
+ * `changes` is the request body verbatim, so any route carrying a credential
+ * would write it to a log the console then displays. Operator creation is one
+ * such route, and it is exactly the action most worth auditing — so the entry
+ * stays and the secret goes.
+ */
+const SECRETS = new Set([
+  'password',
+  'newPassword',
+  'oldPassword',
+  'passwordHash',
+  'token',
+  'secret',
+  'apiKey',
+]);
+
+const redact = (body) => {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return body;
+
+  return Object.fromEntries(
+    Object.entries(body).map(([key, value]) => [
+      key,
+      SECRETS.has(key) ? '[redacted]' : value,
+    ])
+  );
+};
+
+/**
  * Middleware to log audit trail for admin actions
  * Should be applied after authentication middleware
  */
@@ -41,7 +70,7 @@ export const createAuditLog = (action, resourceType) => {
             resourceType,
             resourceId: req.params.id || req.params.productId || req.params.collectionId || req.params.orderId,
             resourceName: req.body?.name || req.body?.title || req.body?.orderNumber,
-            changes: req.body,
+            changes: redact(req.body),
             metadata: {
               method: req.method,
               path: req.path,

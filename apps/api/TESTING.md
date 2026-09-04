@@ -50,18 +50,48 @@ Unit coverage of the money path.
 - **Tax calculation** — rate from `TAX_RATE_PERCENTAGE`, and the validation
   error when no items are supplied.
 
+### `__tests__/integration/identity.test.js`
+
+Accounts, driven over HTTP with a cookie jar, because the parts that broke
+historically were the seams: which cookie is set, which principal a token names,
+and whether the guest cart survives signing in.
+
+- **Registration** — the published shape, the password stored hashed and absent
+  from the response, a duplicate address refused, an address treated as the same
+  one regardless of case.
+- **Sign-in** — an unknown address and a wrong password answer identically, so
+  the endpoint cannot be used to enumerate accounts.
+- **The guest cart** is adopted on both registration and sign-in, which is what
+  `mergeGuestIntoCustomer` was written for and could not be tested until
+  sign-in produced a `customers` row.
+- **Sessions** — `/api/auth/check` clears any cookie it refuses; a token naming
+  a deleted account is refused.
+- **Password reset** — the link is read out of the captured email, the token is
+  stored hashed, it is spent once, and it expires.
+- **Operators** — role permissions, a deactivated account refused at sign-in and
+  on a token issued before it was deactivated, a permission revoked taking
+  effect on the next request, and `admin/signup` not signing the caller in as
+  the account it just created.
+- **The two principals do not substitute for each other** — a shopper's token is
+  refused on a console route and an operator's on a shopper route.
+
+Each request carries its own `X-Forwarded-For`. The rate limiters are real and
+keyed on the client IP; a suite that shared one address would trip them partway
+through and then be testing the limiter.
+
+The mailer is the only double, since it reaches the Gmail API — and capturing
+the message is also how the test gets a reset link, which is how a real user
+gets one.
+
 ## What is not covered yet
 
-Most of the API. The two suites that previously claimed to cover auth, cart,
-wishlist, products, coupons, consultations, analytics and orders asserted on
-objects they had just built themselves, so they passed regardless of what the
-application did. They were deleted rather than left to give false confidence.
+Orders, payments beyond the signature and amount paths, reviews, consultations,
+notifications and analytics — the controllers still reading Mongo. They get
+suites as they move, the way the catalog, cart and account suites did.
 
-Real coverage of those areas needs a database, and the plan is to add it against
-Postgres during the migration rather than build a Mongo harness that is thrown
-away. `src/app.js` is already exported for exactly that purpose — a suite that
-needs data can spin a database, import `app`, and drive it with Supertest the
-same way `app.test.js` does.
+Two suites that once claimed to cover this ground asserted on objects they had
+built themselves, so they passed regardless of what the application did. They
+were deleted rather than left to give false confidence.
 
 ## Conventions
 
