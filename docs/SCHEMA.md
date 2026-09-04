@@ -257,20 +257,66 @@ Amounts are checked as whole minor units first, because the database rounds a
 fractional input silently. A discount computed as 33.333% has to be resolved in
 code.
 
+### Posting rules
+
+`src/services/posting.js` is where a business event becomes a journal entry.
+Every rule takes an optional transaction, so a posting commits with the thing it
+describes or not at all.
+
+| Event | Posting |
+| --- | --- |
+| Order confirmed | DR receivable (total), DR discounts given, CR sales / delivery / VAT |
+| Payment received | DR bank or cash, CR receivable |
+| Purchase receipt | DR inventory, CR accounts payable |
+| Stock sold | DR cost of goods sold, CR inventory |
+| Damage or write-off | DR write-offs, CR inventory |
+| Stock transfer | nothing — where stock sits is not a change in value |
+
+**Revenue is recognised at confirmation, not at payment.** The customer owes us
+from the moment the order is confirmed, so the debit is receivable and the
+payment posting clears it. Recognising on payment instead would leave a
+confirmed unpaid order invisible in every report — exactly the gap a
+receivables ledger exists to close.
+
+**A discount is contra-revenue, not a smaller sale.** Netting it off would hide
+what was given away; debiting 4900 keeps the gross sale and the discount both
+visible.
+
+**Cash on delivery lands in the cash box**, not the Paystack settlement account.
+The settlement account is chosen by payment method.
+
+**Nothing is posted twice.** A unique index on `(source, source_id)` means a
+retried webhook or a re-run job cannot double-count. The service checks first
+for a clean result, but check-then-insert is not atomic — two webhook deliveries
+arriving together would both find nothing — so the index is what actually holds,
+and there is a test that bypasses the service to prove it. A duplicate is
+reported as `{ posted: false, reason: 'already_posted' }` rather than raised:
+a retry succeeding the second time is normal, not a fault.
+
+**An unknown cost skips the posting.** A stock movement needs a unit cost; it
+uses the one recorded on the movement, falls back to the product's cost price,
+and if neither exists returns `{ posted: false, reason: 'unknown_cost' }` with a
+warning. A cost-of-goods-sold figure invented from nothing is worse than an
+absent one, because it looks like a real margin.
+
 ## What is not built yet
 
-Identity, catalog, commerce, inventory and the ledger are in. Still to come —
+Identity, catalog, commerce, inventory, the ledger and the posting rules are in.
+A full trading cycle — buy, sell, get paid — posts correctly and the trial
+balance comes out equal, with revenue against its actual cost. Still to come —
 
-1. **Automatic postings.** Orders, payments, refunds and stock movements do not
-   yet post to the ledger; the rules exist as a service but nothing calls it.
-   This is the next step and it is small, now that the spine is there.
+1. **Callers.** The posting rules exist but no controller invokes them: the
+   order and payment controllers still write to Mongo. They get wired up during
+   the data-access rewrite, not before, or postings would reference orders that
+   only exist in the other database.
 2. **The data-access rewrite** — controllers move off Mongoose onto a service
-   layer, module by module, catalog first and payments last. Nothing reads
-   Postgres yet.
+   layer, module by module, catalog first and payments last. This is the bulk of
+   what remains.
 3. **Supabase Auth.** `customers.supabase_user_id` and `staff.supabase_user_id`
-   are in place and nullable, so both paths can run side by side rather than
-   requiring a big-bang cutover. An empty database has no account to sign in
-   with, so a bootstrap step comes with it.
+   are in place and nullable, so both paths can run side by side. An empty
+   database has no account to sign in with, so a bootstrap step comes with it.
 4. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
+   `2100 Accounts payable` is already the credit side of a purchase receipt, so
+   the ledger half is done.
 5. **Reports** — P&L, balance sheet, VAT return — which are queries over the
    ledger rather than new storage.
