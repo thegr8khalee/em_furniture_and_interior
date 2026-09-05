@@ -224,16 +224,23 @@ export const reverseEntry = async (db, entryId, { date, description, createdBy =
 /** The trial balance as of a date. Debits and credits must come out equal. */
 export const trialBalance = async (db, { asOf = null } = {}) => {
   const rows = await db.query(
+    // The date test is inside the sums, not on the join. Putting it on the join
+    // to `journal_entries` left the line itself joined, so a line dated after
+    // `asOf` was still counted and the balance ignored the cut-off entirely.
     `SELECT a.code, a.name, a.type, a.normal_balance,
-            COALESCE(SUM(l.debit), 0)::bigint  AS total_debit,
-            COALESCE(SUM(l.credit), 0)::bigint AS total_credit
+            COALESCE(SUM(CASE WHEN :asOf::date IS NULL OR e.entry_date <= :asOf::date
+                              THEN l.debit ELSE 0 END), 0)::bigint  AS total_debit,
+            COALESCE(SUM(CASE WHEN :asOf::date IS NULL OR e.entry_date <= :asOf::date
+                              THEN l.credit ELSE 0 END), 0)::bigint AS total_credit
      FROM accounts a
      LEFT JOIN journal_lines l ON l.account_id = a.id
      LEFT JOIN journal_entries e ON e.id = l.entry_id
-       AND (:asOf::date IS NULL OR e.entry_date <= :asOf::date)
      WHERE a.is_postable
      GROUP BY a.code, a.name, a.type, a.normal_balance
-     HAVING COALESCE(SUM(l.debit), 0) <> 0 OR COALESCE(SUM(l.credit), 0) <> 0
+     HAVING COALESCE(SUM(CASE WHEN :asOf::date IS NULL OR e.entry_date <= :asOf::date
+                              THEN l.debit ELSE 0 END), 0) <> 0
+         OR COALESCE(SUM(CASE WHEN :asOf::date IS NULL OR e.entry_date <= :asOf::date
+                              THEN l.credit ELSE 0 END), 0) <> 0
      ORDER BY a.code`,
     { replacements: { asOf }, type: QueryTypes.SELECT }
   );

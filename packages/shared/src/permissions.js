@@ -27,6 +27,11 @@ export const PERMISSIONS = {
   // to require only `admin.dashboard.view`, which `support` also has, so a
   // support account could mint itself a colleague with more access than itself.
   STAFF_MANAGE: 'staff.manage',
+  // Closing and reopening an accounting period. Absent from every role list
+  // below, so only super_admin holds it: closing the books fixes a month's
+  // reported figures, and reopening one lets them move again. That is an
+  // owner's decision, not a shop manager's.
+  BOOKS_MANAGE: 'books.manage',
 };
 
 export const ROLES = {

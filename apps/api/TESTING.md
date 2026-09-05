@@ -192,6 +192,25 @@ Notifications, loyalty points and the two logs.
 - The activity log attributes a guest to their session and a customer to their
   account — and names them, which the old report could not.
 
+### `__tests__/integration/books.test.js`
+
+The ledger and the three reports. One sale is driven all the way through —
+confirmed, paid, stock gone — and then every report is asked about it, so each
+assertion is really asking whether the posting rules were right.
+
+- **The trial balance balances**, and shows revenue, VAT, cost of sales,
+  inventory and cash from one order. The receivable nets to nothing once paid,
+  which it never did while only a gateway charge posted a receipt.
+- **The reports reconcile to each other** — retained earnings on the balance
+  sheet equals net profit on the P&L, with no closing entry made.
+- **The balance sheet balances**: assets equal liabilities plus equity.
+- **VAT is not revenue** — it never appears in the P&L, only in the return.
+- **`asOf` actually cuts off.** Asking for 2020 reports nothing, which caught a
+  filter that had been on the join and so filtered nothing at all.
+- **Closing a month refuses later postings into it**, cannot be done to a month
+  that has not finished, cannot be done twice, and is closed to an ordinary
+  admin — reading the books is a finance question, closing them is the owner's.
+
 ## What is not covered yet
 
 Every route now has a suite behind it. What is thin rather than absent:

@@ -672,6 +672,44 @@ rather than a second, more forgiving path into the same tables — and a seeded
 database has orders that are priced and numbered, a ledger that balances, stock
 with a history, and content on every page.
 
+### Reading the books
+
+`src/services/books.js` is the read side of the ledger, which until now had
+none: `trialBalance` existed as a function with no route, and the only finance
+screen showed a sum over the orders table — a sales report, which cannot express
+a cost, a liability or a bank balance.
+
+`/api/books` serves the trial balance, the journal (filterable by source, date
+and account), a single entry with its lines, the chart of accounts, one
+account's ledger with a running balance, the accounting calendar, and three
+reports: profit and loss, balance sheet, VAT return.
+
+Everything derives from `journal_lines`. Nothing recomputes a figure from orders
+or payments — that is what makes the reports and the postings incapable of
+disagreeing, and it means a number that looks wrong points at a posting rule
+rather than at a report.
+
+Two decisions worth naming. **Retained earnings are computed, not posted**:
+revenue less expenses to date, so the balance sheet balances without anyone
+having made a year-end closing entry. And **the balance sheet publishes its own
+check** — `balanced: assets === liabilities + equity` — so a broken posting rule
+shows up on the screen rather than in a reconciliation months later.
+
+**Closing a month** needs `books.manage`, a permission no role list grants, so
+only `super_admin` has it. `assert_period_open` then refuses any posting into
+that month. Reopening is deliberate and audited: a month closing and reopening
+quietly is what an audit trail exists to prevent. A month that has not finished
+cannot be closed, because that would refuse postings for days that have not
+happened.
+
+Three bugs surfaced while writing the reports against real postings. `asOf` on
+the trial balance filtered nothing — the date test was on the join to
+`journal_entries`, which leaves the line joined and counted, so every cut-off
+was ignored. An account ledger with no start date opened at its own closing
+balance, because a null start made every line count as "before the start". And
+`normal_balance` was selected without being grouped, so the P&L and balance
+sheet were a 500 rather than a report.
+
 ## What is not built yet
 
 **The MongoDB migration is complete.** Every route reads and writes PostgreSQL;

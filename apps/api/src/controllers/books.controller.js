@@ -1,0 +1,145 @@
+import { logger } from '../lib/logger.js';
+import {
+  BooksError,
+  accountLedger,
+  balanceSheet,
+  closePeriod,
+  getEntry,
+  listAccounts,
+  listEntries,
+  listPeriods,
+  parseRange,
+  profitAndLoss,
+  reopenPeriod,
+  trialBalance,
+  vatReturn,
+} from '../services/books.js';
+
+/*
+ * The books, for reading — and the one control that changes them, which is
+ * closing a period.
+ *
+ * Everything here derives from `journal_lines`. Nothing recomputes a figure
+ * from orders or payments: that is what makes the reports and the postings
+ * incapable of disagreeing.
+ */
+
+const fail = (error, res, where) => {
+  if (error instanceof BooksError) {
+    return res.status(error.status).json({ message: error.message });
+  }
+  logger.error({ err: error }, where);
+  return res.status(500).json({ message: 'Server error' });
+};
+
+const withRange = (load, where) => async (req, res) => {
+  const range = parseRange(req.query.from, req.query.to);
+  if (!range) return res.status(400).json({ message: 'Invalid date range.' });
+
+  try {
+    res.json({ success: true, ...(await load(range, req)) });
+  } catch (error) {
+    fail(error, res, where);
+  }
+};
+
+export const getTrialBalance = async (req, res) => {
+  try {
+    res.json({ success: true, ...(await trialBalance({ asOf: req.query.asOf || null })) });
+  } catch (error) {
+    fail(error, res, 'Error building the trial balance');
+  }
+};
+
+export const getJournal = async (req, res) => {
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
+
+  try {
+    const { entries, total } = await listEntries({
+      page,
+      limit,
+      source: req.query.source || null,
+      from: req.query.from || null,
+      to: req.query.to || null,
+      account: req.query.account || null,
+    });
+
+    res.json({
+      success: true,
+      entries,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
+  } catch (error) {
+    fail(error, res, 'Error listing journal entries');
+  }
+};
+
+export const getJournalEntry = async (req, res) => {
+  try {
+    res.json({ success: true, entry: await getEntry(req.params.entryId) });
+  } catch (error) {
+    fail(error, res, 'Error reading a journal entry');
+  }
+};
+
+export const getAccounts = async (req, res) => {
+  try {
+    res.json({ success: true, accounts: await listAccounts({ asOf: req.query.asOf || null }) });
+  } catch (error) {
+    fail(error, res, 'Error listing accounts');
+  }
+};
+
+export const getAccountLedger = async (req, res) => {
+  try {
+    const ledger = await accountLedger(req.params.code, {
+      from: req.query.from || null,
+      to: req.query.to || null,
+    });
+    res.json({ success: true, ...ledger });
+  } catch (error) {
+    fail(error, res, 'Error reading an account ledger');
+  }
+};
+
+export const getPeriods = async (req, res) => {
+  try {
+    res.json({ success: true, periods: await listPeriods({ all: req.query.all === 'true' }) });
+  } catch (error) {
+    fail(error, res, 'Error listing accounting periods');
+  }
+};
+
+export const postClosePeriod = async (req, res) => {
+  try {
+    const period = await closePeriod(req.params.periodId, req.admin.id);
+    res.json({ success: true, message: `${period.name} is closed.`, period });
+  } catch (error) {
+    fail(error, res, 'Error closing an accounting period');
+  }
+};
+
+export const postReopenPeriod = async (req, res) => {
+  try {
+    const period = await reopenPeriod(req.params.periodId);
+    res.json({ success: true, message: `${period.name} is open again.`, period });
+  } catch (error) {
+    fail(error, res, 'Error reopening an accounting period');
+  }
+};
+
+export const getProfitAndLoss = withRange(
+  (range) => profitAndLoss(range),
+  'Error building the profit and loss'
+);
+
+export const getBalanceSheet = async (req, res) => {
+  try {
+    res.json({ success: true, ...(await balanceSheet({ asOf: req.query.asOf || null })) });
+  } catch (error) {
+    fail(error, res, 'Error building the balance sheet');
+  }
+};
+
+export const getVatReturn = withRange((range) => vatReturn(range), 'Error building the VAT return');
