@@ -1,5 +1,6 @@
 import { Sequelize } from 'sequelize';
 import { runMigrations } from '../../src/db/migrate.js';
+import { dialectOptionsFor } from '../../src/db/sequelize.js';
 
 /**
  * A real PostgreSQL for the schema tests.
@@ -23,11 +24,14 @@ const urlFor = (name) => {
   return url.toString();
 };
 
+/** A hosted database needs TLS; a local one does not. Same rule as the app. */
+const connectionOptions = (url) => ({ logging: false, dialectOptions: dialectOptionsFor(url) });
+
 let db = null;
 
 export const setupDatabase = async () => {
   const name = databaseName();
-  const admin = new Sequelize(ADMIN_URL, { logging: false });
+  const admin = new Sequelize(ADMIN_URL, connectionOptions(ADMIN_URL));
 
   try {
     await admin.authenticate();
@@ -41,11 +45,16 @@ export const setupDatabase = async () => {
 
   // Dropped and recreated per run so a failed run cannot leave state that makes
   // the next one pass for the wrong reason.
-  await admin.query(`DROP DATABASE IF EXISTS "${name}"`);
+  //
+  // FORCE because a connection pooler keeps server connections warm after the
+  // client has gone: the previous run's session is still attached when this one
+  // tries to drop, and a plain DROP refuses while anyone is connected.
+  await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
   await admin.query(`CREATE DATABASE "${name}"`);
   await admin.close();
 
-  db = new Sequelize(urlFor(name), { logging: false });
+  const url = urlFor(name);
+  db = new Sequelize(url, connectionOptions(url));
   await runMigrations({ db, silent: true });
 
   return db;

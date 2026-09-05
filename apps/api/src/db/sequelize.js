@@ -16,7 +16,30 @@ const DIRECT_URL = () => process.env.DIRECT_DATABASE_URL || process.env.DATABASE
 
 const isProduction = () => process.env.NODE_ENV === 'production';
 
-const baseOptions = () => ({
+/**
+ * TLS for anything that is not on this machine.
+ *
+ * This used to key off NODE_ENV, which is wrong in both directions: pointing a
+ * development shell at the hosted database failed to connect at all (Supabase
+ * requires TLS), and it would have been a plaintext connection over the public
+ * internet if it had succeeded. The host is what decides.
+ */
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+
+const needsTls = (url) => {
+  try {
+    return !LOCAL_HOSTS.has(new URL(url).hostname);
+  } catch {
+    // An unparseable URL is the connection's problem, not this function's.
+    return true;
+  }
+};
+
+/** Exported so the test harness's own admin connection makes the same choice. */
+export const dialectOptionsFor = (url) =>
+  needsTls(url) ? { ssl: { require: true, rejectUnauthorized: false } } : {};
+
+const baseOptions = (url) => ({
   dialect: 'postgres',
   logging: (sql, timing) => logger.debug({ sql, timing }, 'sequelize'),
   benchmark: true,
@@ -27,7 +50,9 @@ const baseOptions = () => ({
     freezeTableName: true,
     timestamps: true,
   },
-  dialectOptions: isProduction() ? { ssl: { require: true, rejectUnauthorized: false } } : {},
+  // rejectUnauthorized stays false because the managed endpoints present a
+  // chain this process has no CA bundle for. It buys encryption, not identity.
+  dialectOptions: dialectOptionsFor(url),
 });
 
 let appInstance = null;
@@ -42,7 +67,7 @@ export const getSequelize = () => {
   }
 
   appInstance = new Sequelize(url, {
-    ...baseOptions(),
+    ...baseOptions(url),
     pool: {
       max: Number(process.env.DB_POOL_MAX) || 10,
       min: 0,
@@ -70,7 +95,7 @@ export const createDirectConnection = () => {
     );
   }
 
-  return new Sequelize(url, { ...baseOptions(), pool: { max: 1, min: 0 } });
+  return new Sequelize(url, { ...baseOptions(url), pool: { max: 1, min: 0 } });
 };
 
 export const closeSequelize = async () => {

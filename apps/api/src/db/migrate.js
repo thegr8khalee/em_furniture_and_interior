@@ -1,3 +1,4 @@
+import dotenv from 'dotenv';
 import crypto from 'crypto';
 import path from 'path';
 import { readdir, readFile } from 'fs/promises';
@@ -113,6 +114,12 @@ export const runMigrations = async ({ db: provided, silent = false } = {}) => {
 
 // `npm run migrate`
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  // Only when run as a command. Imported — by the test harness, or by a server
+  // that has already configured itself — the environment is the caller's.
+  if (process.env.NODE_ENV !== 'production') {
+    dotenv.config();
+  }
+
   runMigrations()
     .then(({ applied, alreadyApplied }) => {
       logger.info(

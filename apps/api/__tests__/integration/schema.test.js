@@ -1,4 +1,3 @@
-import { jest } from '@jest/globals';
 import {
   setupDatabase,
   teardownDatabase,
@@ -14,7 +13,6 @@ import {
 // a value itself. Asserting the good case passes would prove almost nothing —
 // Mongo accepted the good case too. What it also accepted is the point.
 
-jest.setTimeout(30000);
 
 beforeAll(async () => {
   await setupDatabase();
@@ -167,9 +165,14 @@ describe('Money is exact', () => {
 
   test('sums stay exact across many rows', async () => {
     await getDb().query('DELETE FROM sellable_items');
-    for (let i = 0; i < 100; i += 1) {
-      await insertProduct({ price: 1, name: `Item ${i}` });
-    }
+
+    // One statement rather than a hundred. The claim under test is that the
+    // sum is exact, not that inserts work, and a row-at-a-time loop is a
+    // hundred network round trips at whatever latency the database sits behind.
+    await getDb().query(
+      `INSERT INTO sellable_items (kind, name, style, price)
+       SELECT 'product', 'Item ' || i, 'Modern', 1 FROM generate_series(1, 100) AS i`
+    );
 
     const [[row]] = await getDb().query('SELECT SUM(price) AS total FROM sellable_items');
     expect(Number(row.total)).toBe(100);
