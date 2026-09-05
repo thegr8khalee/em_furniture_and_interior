@@ -9,10 +9,20 @@ export const useProductsStore = create((set, get) => ({
   hasMoreProducts: true, // Flag to indicate if more products can be loaded
   currentFilters: {}, // Stores the filters currently applied to the fetched products
   productsCount: null,
+  isGettingProductsCount: false,
   isGettingProductsByIds: false,
 
+  /**
+   * Counting has its own flag.
+   *
+   * It used to raise `isGettingProducts`, which is the *list's* flag — and
+   * `getProducts` returns early while that is set. Any screen calling both in
+   * one effect, as the dashboard does, therefore counted the products and then
+   * skipped fetching them, and rendered "No products yet" beside a count of a
+   * hundred.
+   */
   getProductsCount: async () => {
-    set({ isGettingProducts: true });
+    set({ isGettingProductsCount: true });
 
     try {
       const res = await axiosInstance.get('/products/count');
@@ -20,7 +30,7 @@ export const useProductsStore = create((set, get) => ({
     } catch (error) {
       console.error('Error fetching products count:', error);
     } finally {
-      set({ isGettingProducts: false });
+      set({ isGettingProductsCount: false });
     }
   },
 

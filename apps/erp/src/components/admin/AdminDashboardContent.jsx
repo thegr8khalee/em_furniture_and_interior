@@ -157,7 +157,10 @@ const AdminDashboardContent = () => {
         const res = await axiosInstance.get('/orders/admin/all?page=1&limit=5');
         setRecentOrders(res.data.orders || []);
         setOrderStats({
-          total: res.data.totalOrders ?? res.data.orders?.length ?? 0,
+          // `pagination.total` is how many orders there are; `orders.length` is
+          // how many this page holds. Reading a field the API has never sent
+          // meant the dashboard reported the page size — always 5.
+          total: res.data.pagination?.total ?? res.data.orders?.length ?? 0,
           pending: (res.data.orders || []).filter((o) => o.status === 'pending').length,
         });
       } catch {

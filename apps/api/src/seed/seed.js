@@ -1,4 +1,5 @@
 // src/seed/seed.js
+import { QueryTypes } from 'sequelize';
 import { faker } from '@faker-js/faker';
 import { getSequelize, closeSequelize } from '../db/sequelize.js';
 import { registerCustomer, registerStaff } from '../services/identity.js';
@@ -98,7 +99,10 @@ const generateCollection = (index) => {
         discountedPrice: isPromo ? Math.floor(price * 0.85) : undefined,
         isForeign,
         origin: isForeign ? faker.location.country() : undefined,
-        images: [seedImage()],
+        // A collection takes a single `coverImage`, where a product takes an
+        // `images` array. Passing the wrong one is silently ignored, which is
+        // how thirty collections ended up with no picture.
+        coverImage: seedImage(),
     };
 };
 
@@ -137,37 +141,59 @@ const seedDB = async () => {
   try {
     // --- Cleanup ---
     //
-    // In dependency order: the foreign keys mean order matters, and a cascade
-    // that surprised somebody is worse than a list that is explicit.
+    // TRUNCATE rather than DELETE: the ledger is append-only, and
+    // `reject_ledger_history_change` refuses a DELETE on a posted entry — which
+    // is the whole point of it. That guard is a row trigger, so a table-level
+    // truncate is the one operation that resets it. This resets a development
+    // database; it should never be pointed at books anybody relies on.
+    //
+    // The list is the complete set of tables the seeder writes, plus every table
+    // that references one — so no CASCADE is needed, and nothing is wiped that
+    // was not named. CASCADE was tried and is wrong here: it reaches
+    // `accounting_periods` through `closed_by`, and the accounting calendar
+    // comes from a migration, not from this script.
+    //
+    // `staff` and `customers` are deleted rather than truncated for the same
+    // reason: truncating them would require listing `accounting_periods` too.
     console.log('Cleaning up database...');
     const sql = getSequelize();
-    for (const statement of [
-      'DELETE FROM journal_lines',
-      'DELETE FROM journal_entries',
-      'DELETE FROM stock_movements',
-      'DELETE FROM activity_logs',
-      'DELETE FROM audit_logs',
-      'DELETE FROM notifications',
-      'DELETE FROM loyalty_transactions',
-      'DELETE FROM payment_transactions',
-      'DELETE FROM orders',
-      'DELETE FROM reviews',
-      'DELETE FROM flash_sale_items',
-      'DELETE FROM flash_sales',
-      'DELETE FROM promo_banners',
-      'DELETE FROM sellable_items',
-      'DELETE FROM coupons',
-      'DELETE FROM consultation_requests',
-      'DELETE FROM designers',
-      'DELETE FROM project_images',
-      'DELETE FROM projects',
-      'DELETE FROM blog_posts',
-      'DELETE FROM faqs',
-      'DELETE FROM staff',
-      'DELETE FROM customers',
-      "DELETE FROM counters WHERE name = 'order'",
-    ]) {
-      await sql.query(statement);
+    await sql.query(`
+      TRUNCATE
+        journal_lines, journal_entries,
+        stock_movements, stock_reservations, product_stock,
+        activity_logs, audit_logs,
+        notifications, loyalty_transactions,
+        payment_transactions, order_items, order_status_events, orders,
+        reviews,
+        cart_items, carts, wishlist_items,
+        flash_sale_items, flash_sales, promo_banners,
+        collection_products, sellable_images, products, collections, sellable_items,
+        coupons,
+        consultation_room_photos, consultation_requests, designers,
+        project_images, projects,
+        blog_posts, faqs,
+        guest_sessions, counters
+      RESTART IDENTITY
+    `);
+    await sql.query('DELETE FROM staff');
+    await sql.query('DELETE FROM customers');
+
+    // The seeded orders post to the ledger, and a posting outside an open
+    // period is refused by the database. Checking here turns "no accounting
+    // period covers 2026-09-05", raised from deep inside order confirmation,
+    // into something a reader can act on.
+    const [today] = await sql.query(
+      `SELECT count(*)::int AS open FROM accounting_periods
+        WHERE CURRENT_DATE BETWEEN starts_on AND ends_on AND status = 'open'`,
+      { type: QueryTypes.SELECT }
+    );
+
+    if (today.open === 0) {
+      throw new Error(
+        'No open accounting period covers today, so no order can be confirmed. ' +
+          'Run `npm run migrate` against a fresh database, or open a period ' +
+          '(see src/db/migrations/0010_accounting_calendar.sql).'
+      );
     }
     console.log('Database cleared.');
 

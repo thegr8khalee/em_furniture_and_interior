@@ -10,18 +10,19 @@ export const useCollectionStore = create((set, get) => ({
   hasMoreCollections: true, // Flag to indicate if more collections can be loaded
   currentCollectionFilters: {}, // Stores the filters currently applied to the fetched collections
   collectionsCount: null,
+  isGettingCollectionsCount: false,
 
+  /** Its own flag, for the reason given in useProductsStore. */
   getCollectionsCount: async () => {
-    set({ isGettingCollections: true });
+    set({ isGettingCollectionsCount: true });
 
     try {
       const res = await axiosInstance.get('/collections/count');
-      // console.log(res.data.totalCollections)
       set({ collectionsCount: res.data.totalCollections });
     } catch (error) {
       console.error('Error fetching collections count:', error);
     } finally {
-      set({ isGettingCollections: false });
+      set({ isGettingCollectionsCount: false });
     }
   },
 
