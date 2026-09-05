@@ -236,6 +236,85 @@ describe('adjusting a count', () => {
     expect(res.status).toBe(404);
   });
 
+  it('writes a correction off against the books', async () => {
+    const id = await insertProduct({
+      name: 'Written Off',
+      price: 1000,
+      cost_price: 500000,
+      sku: 'ADJ-COGS',
+    });
+    await recordMovement(id, 10, 'purchase_receipt');
+
+    await adjust(id, { delta: -2, reason: 'Damaged in the warehouse' });
+
+    const lines = await rows(
+      `SELECT a.code, l.debit::bigint AS debit, l.credit::bigint AS credit
+         FROM journal_lines l
+         JOIN journal_entries e ON e.id = l.entry_id
+         JOIN accounts a ON a.id = l.account_id
+        WHERE e.source = 'stock_movement'
+          AND e.source_id IN (
+            SELECT id FROM stock_movements WHERE product_id = :id AND reason = 'adjustment'
+          )
+        ORDER BY a.code`,
+      { id }
+    );
+
+    // Two units at ₦5,000 cost, out of inventory and into write-offs.
+    expect(lines.map((l) => ({ code: l.code, debit: Number(l.debit), credit: Number(l.credit) }))).toEqual([
+      { code: '1300', debit: 0, credit: 1000000 },
+      { code: '5400', debit: 1000000, credit: 0 },
+    ]);
+  });
+
+  it('puts stock a count found back into inventory', async () => {
+    const id = await insertProduct({
+      name: 'Found Again',
+      price: 1000,
+      cost_price: 200000,
+      sku: 'ADJ-FOUND',
+    });
+    await recordMovement(id, 5, 'purchase_receipt');
+
+    await adjust(id, { newQuantity: 8, reason: 'Counted three more on the shelf' });
+
+    const lines = await rows(
+      `SELECT a.code, l.debit::bigint AS debit, l.credit::bigint AS credit
+         FROM journal_lines l
+         JOIN journal_entries e ON e.id = l.entry_id
+         JOIN accounts a ON a.id = l.account_id
+        WHERE e.source = 'stock_movement'
+          AND e.source_id IN (
+            SELECT id FROM stock_movements WHERE product_id = :id AND reason = 'adjustment'
+          )
+        ORDER BY a.code`,
+      { id }
+    );
+
+    expect(lines.map((l) => ({ code: l.code, debit: Number(l.debit), credit: Number(l.credit) }))).toEqual([
+      { code: '1300', debit: 600000, credit: 0 },
+      { code: '5400', debit: 0, credit: 600000 },
+    ]);
+  });
+
+  it('adjusts a product with no cost price without posting anything', async () => {
+    const id = await insertProduct({ name: 'No Cost', price: 1000, sku: 'ADJ-NOCOST' });
+    await recordMovement(id, 5, 'purchase_receipt');
+
+    const res = await adjust(id, { delta: -1, reason: 'Damaged' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.product.stockQuantity).toBe(4);
+
+    const [entries] = await rows(
+      `SELECT count(*)::int AS total FROM journal_entries
+        WHERE source = 'stock_movement'
+          AND source_id IN (SELECT id FROM stock_movements WHERE product_id = :id)`,
+      { id }
+    );
+    expect(entries.total).toBe(0);
+  });
+
   it('shows the movements behind the count, including the sale that caused one', async () => {
     const id = await stocked(10, 'ADJ-8');
     await adjust(id, { delta: -1, reason: 'Damaged in transit' });

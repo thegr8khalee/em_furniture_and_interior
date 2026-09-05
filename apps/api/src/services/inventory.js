@@ -1,6 +1,7 @@
 import { QueryTypes } from 'sequelize';
 import { getSequelize } from '../db/sequelize.js';
 import { isValidId } from './catalog.js';
+import { postStockMovement } from './posting.js';
 
 /**
  * Stock, against PostgreSQL.
@@ -156,11 +157,19 @@ export const adjustStock = async (
     }
 
     if (movement !== 0) {
-      await db.query(
+      const recorded = await selectOne(
+        db,
         `INSERT INTO stock_movements (product_id, quantity, reason, staff_id, note)
-         VALUES (:productId, :quantity, 'adjustment', :staffId, :note)`,
-        { replacements: { productId, quantity: movement, staffId, note: String(reason).trim() }, ...opts }
+         VALUES (:productId, :quantity, 'adjustment', :staffId, :note)
+         RETURNING id`,
+        { productId, quantity: movement, staffId, note: String(reason).trim() },
+        opts
       );
+
+      // A correction changes what the business owns, so it posts — written off
+      // against 5400 when stock goes down, and back into inventory when a count
+      // finds more than the books said.
+      await postStockMovement(db, recorded.id, opts);
     }
 
     const updated = await selectOne(

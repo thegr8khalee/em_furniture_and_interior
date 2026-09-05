@@ -570,6 +570,125 @@ describe('the console managing orders', () => {
     expect(customer.loyalty_points).toBe(430); // floor(430,000 / 1000)
   });
 
+  it('posts the receipt when an order is marked paid, so the receivable clears', async () => {
+    const order = await anOrder();
+
+    await api('put', `/api/orders/admin/${order._id}/status`)
+      .set('Cookie', adminCookie)
+      .send({ status: 'confirmed' });
+    await api('put', `/api/orders/admin/${order._id}/payment`)
+      .set('Cookie', adminCookie)
+      .send({ paymentStatus: 'paid' });
+
+    // Only a gateway charge used to post a receipt, so an order settled by
+    // transfer or cash had its revenue recognised and its receivable left open
+    // for ever.
+    const [receivable] = await rows(
+      `SELECT COALESCE(SUM(l.debit) - SUM(l.credit), 0)::bigint AS balance
+         FROM journal_lines l
+         JOIN journal_entries e ON e.id = l.entry_id
+         JOIN accounts a ON a.id = l.account_id
+        WHERE a.code = '1200' AND e.source_id IN (
+          SELECT id FROM payment_transactions WHERE order_id = :id
+          UNION SELECT :id::uuid
+        )`,
+      { id: order._id }
+    );
+    expect(Number(receivable.balance)).toBe(0);
+
+    const [transaction] = await rows(
+      `SELECT status, payment_method, amount FROM payment_transactions WHERE order_id = :id`,
+      { id: order._id }
+    );
+    expect(transaction.status).toBe('success');
+  });
+
+  it('does not record a second receipt for an order that already paid by card', async () => {
+    const order = await anOrder();
+
+    await getDb().query(
+      `INSERT INTO payment_transactions (order_id, amount, payment_method, status, verified_at,
+                                         gateway_reference)
+       VALUES (:id, :amount, 'paystack', 'success', now(), :ref)`,
+      {
+        replacements: {
+          id: order._id,
+          amount: Math.round(order.totalAmount * 100),
+          ref: `REF-${Math.random().toString(36).slice(2)}`,
+        },
+      }
+    );
+
+    await api('put', `/api/orders/admin/${order._id}/payment`)
+      .set('Cookie', adminCookie)
+      .send({ paymentStatus: 'paid' });
+
+    const [counted] = await rows(
+      'SELECT count(*)::int AS total FROM payment_transactions WHERE order_id = :id',
+      { id: order._id }
+    );
+    expect(counted.total).toBe(1);
+  });
+
+  it('posts the cost of what was sold, not only the revenue', async () => {
+    const costed = await insertProduct({
+      name: 'Costed Sofa',
+      price: 10000000,
+      cost_price: 6000000,
+      sku: `COGS-${Math.random().toString(36).slice(2, 7)}`,
+    });
+    const placed = await place(guest(), { items: [{ item: costed, quantity: 2 }] });
+    const order = placed.body.order;
+
+    await api('put', `/api/orders/admin/${order._id}/payment`)
+      .set('Cookie', adminCookie)
+      .send({ paymentStatus: 'paid' });
+
+    const lines = await rows(
+      `SELECT a.code, l.debit::bigint AS debit, l.credit::bigint AS credit
+         FROM journal_lines l
+         JOIN journal_entries e ON e.id = l.entry_id
+         JOIN accounts a ON a.id = l.account_id
+        WHERE e.source = 'stock_movement'
+          AND e.source_id IN (SELECT id FROM stock_movements WHERE order_id = :id)
+        ORDER BY a.code`,
+      { id: order._id }
+    );
+
+    // Two units at ₦60,000 cost: inventory out, cost of goods sold in.
+    // bigint arrives as a string, so the amounts are coerced rather than compared raw.
+    expect(lines.map((l) => ({ code: l.code, debit: Number(l.debit), credit: Number(l.credit) }))).toEqual([
+      { code: '1300', debit: 0, credit: 12000000 },
+      { code: '5100', debit: 12000000, credit: 0 },
+    ]);
+  });
+
+  it('posts no cost when the product has none, rather than inventing one', async () => {
+    const uncosted = await insertProduct({
+      name: 'Uncosted Sofa',
+      price: 10000000,
+      sku: `NOCOST-${Math.random().toString(36).slice(2, 7)}`,
+    });
+    const placed = await place(guest(), { items: [{ item: uncosted, quantity: 1 }] });
+    const order = placed.body.order;
+
+    const res = await api('put', `/api/orders/admin/${order._id}/payment`)
+      .set('Cookie', adminCookie)
+      .send({ paymentStatus: 'paid' });
+
+    expect(res.status).toBe(200);
+
+    const [entries] = await rows(
+      `SELECT count(*)::int AS total FROM journal_entries
+        WHERE source = 'stock_movement'
+          AND source_id IN (SELECT id FROM stock_movements WHERE order_id = :id)`,
+      { id: order._id }
+    );
+    // A cost of goods sold figure invented from nothing looks like a real
+    // margin, which is worse than an absent one.
+    expect(entries.total).toBe(0);
+  });
+
   it('takes the goods out of stock when the order is paid, once', async () => {
     const order = await anOrder();
 

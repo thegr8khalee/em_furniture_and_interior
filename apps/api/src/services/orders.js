@@ -4,7 +4,7 @@ import { isValidId } from './catalog.js';
 import { toMajor, toMinor, percentOf, sumMinor } from '../lib/money.js';
 import { claim } from './coupons.js';
 import { applyLoyalty } from './engagement.js';
-import { postOrderConfirmed } from './posting.js';
+import { postOrderConfirmed, postPaymentReceived, postStockMovement } from './posting.js';
 import { logger } from '../lib/logger.js';
 
 /**
@@ -699,6 +699,7 @@ export const setPaymentStatus = async (orderId, paymentStatus, staffId = null, d
 
     if (paymentStatus === 'paid' && before.payment_status !== 'paid') {
       await recordSaleMovements(db, orderId, staffId, opts);
+      await recordManualReceipt(db, row, staffId, opts);
     }
 
     const items = await loadItems(db, [orderId], opts);
@@ -708,6 +709,50 @@ export const setPaymentStatus = async (orderId, paymentStatus, staffId = null, d
       nowPaid: paymentStatus === 'paid' && before.payment_status !== 'paid',
     };
   });
+};
+
+/**
+ * Records the money behind an order an operator marked paid.
+ *
+ * Only a gateway charge used to post a receipt, so an order settled by transfer,
+ * cash or WhatsApp had its revenue recognised and its receivable never cleared:
+ * the books carried it as owed for ever. A payment received off-system is still
+ * a payment, and `payment_transactions` is where receipts live — so one is
+ * written, marked verified by whoever marked the order paid, and posted.
+ *
+ * Nothing is written if a successful transaction already exists. A customer who
+ * paid by card and was then marked paid by hand has paid once.
+ */
+const recordManualReceipt = async (db, order, staffId, opts) => {
+  const existing = await selectOne(
+    db,
+    `SELECT 1 AS found FROM payment_transactions
+      WHERE order_id = :orderId AND status = 'success' LIMIT 1`,
+    { orderId: order.id },
+    opts
+  );
+  if (existing) return null;
+
+  const receipt = await selectOne(
+    db,
+    `INSERT INTO payment_transactions
+       (order_id, amount, currency, payment_method, status, verified_at, verification_notes)
+     VALUES (:orderId, :amount, :currency, :method::payment_method, 'success', now(), :notes)
+     RETURNING id`,
+    {
+      orderId: order.id,
+      amount: Number(order.total_amount),
+      currency: order.currency,
+      method: order.payment_method,
+      notes: staffId
+        ? `Marked paid in the console by ${staffId}`
+        : 'Marked paid in the console',
+    },
+    opts
+  );
+
+  await postPaymentReceived(db, receipt.id, opts);
+  return receipt.id;
 };
 
 /**
@@ -727,14 +772,25 @@ const recordSaleMovements = async (db, orderId, staffId, opts) => {
   );
   if (already) return;
 
-  await db.query(
+  const movements = await select(
+    db,
     `INSERT INTO stock_movements (product_id, quantity, reason, order_id, staff_id, unit_cost)
      SELECT p.id, -oi.quantity, 'sale', oi.order_id, :staffId, oi.unit_cost
        FROM order_items oi
        JOIN products p ON p.id = oi.sellable_item_id
-      WHERE oi.order_id = :orderId`,
-    { replacements: { orderId, staffId }, ...opts }
+      WHERE oi.order_id = :orderId
+     RETURNING id`,
+    { orderId, staffId },
+    opts
   );
+
+  // Stock leaving is a cost. Without this the books carried the revenue from a
+  // sale and none of what it cost to make, so every margin was the whole price.
+  // A line whose cost is unknown posts nothing and says so — an invented cost of
+  // goods sold is worse than an absent one, because it looks like a real margin.
+  for (const movement of movements) {
+    await postStockMovement(db, movement.id, opts);
+  }
 };
 
 /**
