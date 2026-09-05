@@ -117,9 +117,21 @@ test is what this service does with a charge, not what Paystack does.
   order unpaid and the transaction marked failed with a note.
 - **Bank transfer** proof is attached without marking anything paid.
 
+### `__tests__/integration/reviews.test.js`
+
+Who may review what, and what moderation does.
+
+- **Only a buyer** may review, and only once; a pending order does not count.
+- **An unapproved review does not move the rating** — the number the storefront
+  shows is unchanged until an operator approves it, and back down again when one
+  is rejected.
+- **A collection review does not arrive through the product route**, and neither
+  appears in the other's moderation queue.
+- **Approval is attributed** — who, and when.
+
 ## What is not covered yet
 
-Reviews, consultations, notifications, inventory, analytics and finance — the
+Consultations, notifications, inventory, analytics and finance — the
 controllers still reading Mongo. They get suites as they move, the way the
 catalog, cart, account, order and payment suites did.
 

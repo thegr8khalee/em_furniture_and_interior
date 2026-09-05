@@ -544,27 +544,50 @@ The account number the bank-transfer form collected is no longer stored. The
 transfer is identified by its reference, and a bank account number sitting in an
 admin list is a liability rather than a record.
 
+### Reviews
+
+`src/services/reviews.js` is one table for both kinds of item, so the eight
+handlers — the same four written twice, once for products and once for
+collections — are four with the kind as a parameter. "Everything awaiting
+moderation" is a query rather than two collection scans merged in JavaScript.
+
+Three things the database decides:
+
+- **One review per customer per item**, by unique index. The embedded array
+  allowed duplicates and the handler checked first, which is a race.
+- **The rating**, by `reviews_refresh_rating`. It was a `pre('save')` hook, so
+  approving through anything but that one path left the average stale. Only
+  approved reviews count, so posting one cannot move the number.
+- **An approval says when**, by `reviews_approval_is_attributed`.
+
+`is_verified_purchase` is the result of the purchase check that gates the
+endpoint, not a field the caller sends — which is the only thing that makes the
+badge mean anything. The check reads `order_items`, so one query covers products
+and collections, and a pending order does not count: an unpaid order anyone can
+create would otherwise be a way to review anything.
+
+Approve and reject take the review's own id. The routes still carry the parent
+item, because both frontends build the URL that way, but a review was a
+subdocument and is now a row.
+
 ## What is not built yet
 
 **The system is mid-migration and not deployable in this state.** The catalog —
-reads and writes — carts and wishlists, accounts, orders, payments and coupons
-are on PostgreSQL. Everything else still reads Mongo, which is empty.
+reads and writes — carts and wishlists, accounts, orders, payments, coupons
+and reviews are on PostgreSQL. Everything else still reads Mongo, which is empty.
 
 In order —
 
-1. **Reviews**, whose table already exists — `reviews`, with the rating
-   maintained by a trigger. `review.controller.js` still writes to the embedded
-   arrays on the Mongo product and collection documents, which nothing reads.
-2. **Inventory, analytics, finance and the sitemap**, which read Mongo
+1. **Inventory, analytics, finance and the sitemap**, which read Mongo
    collections that no longer receive writes and therefore report zero. The
    inventory tables (`stock_movements`, `product_stock`, `stock_reservations`)
    and the ledger are already in place; these are queries over them.
-3. **Everything with no table yet** — blog, FAQs, projects, designers,
+2. **Everything with no table yet** — blog, FAQs, projects, designers,
    consultations, notifications, the loyalty ledger, promo banners, flash sales,
    and the activity and audit logs. Each needs a migration first. The seed
    script goes with them.
-4. **Supabase Auth.** Accounts are in `customers` and `staff` now, and both
+3. **Supabase Auth.** Accounts are in `customers` and `staff` now, and both
    tables carry a nullable `supabase_user_id` for it, but sign-in is still the
    local bcrypt password. The bootstrap step exists: `npm run bootstrap:staff`.
-5. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
-6. **Reports** — P&L, balance sheet, VAT return — queries over the ledger.
+4. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
+5. **Reports** — P&L, balance sheet, VAT return — queries over the ledger.

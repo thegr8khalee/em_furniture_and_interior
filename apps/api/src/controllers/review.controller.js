@@ -1,314 +1,86 @@
-
-import mongoose from 'mongoose';
-import Product from '../models/product.model.js';
-import Collection from '../models/collection.model.js';
-import Order from '../models/order.model.js';
 import { logger } from '../lib/logger.js';
+import {
+  ReviewError,
+  addReview,
+  approveReview,
+  pendingReviews,
+  rejectReview,
+} from '../services/reviews.js';
 
-const hasPurchasedItem = async ({ userId, itemId, itemType }) => {
-  const eligibleStatuses = ['confirmed', 'processing', 'shipped', 'delivered'];
+/*
+ * Reviews. One table for both kinds of item, so what used to be eight handlers
+ * — the same four written twice, once for products and once for collections —
+ * is four, with the kind as a parameter.
+ */
 
-  return Order.exists({
-    user: userId,
-    status: { $in: eligibleStatuses },
-    items: {
-      $elemMatch: {
-        item: itemId,
-        itemType,
-      },
-    },
-  });
+const fail = (error, res, where) => {
+  if (error instanceof ReviewError) {
+    return res.status(error.status).json({ message: error.message });
+  }
+  logger.error({ err: error }, `Error in ${where}`);
+  return res.status(500).json({ message: 'Internal Server Error' });
 };
 
-export const addReviewToProduct = async (req, res) => {
-  const { productId } = req.params;
-  const { rating, comment } = req.body;
-  const userId = req.user._id; // User ID from authenticated session
-
-  // Basic validation
-  if (!mongoose.Types.ObjectId.isValid(productId)) {
-    return res.status(400).json({ message: 'Invalid Product ID format.' });
-  }
-  if (rating === undefined || rating < 1 || rating > 5) {
-    return res
-      .status(400)
-      .json({ message: 'Rating is required and must be between 1 and 5.' });
-  }
-
+const submit = (itemType, param) => async (req, res) => {
   try {
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found.' });
-    }
-
-    const hasPurchased = await hasPurchasedItem({
-      userId,
-      itemId: productId,
-      itemType: 'Product',
+    const { review, averageRating } = await addReview({
+      itemId: req.params[param],
+      itemType,
+      customerId: req.user.id,
+      rating: req.body?.rating,
+      comment: req.body?.comment,
     });
-
-    if (!hasPurchased) {
-      return res.status(403).json({
-        message: 'Only verified purchasers can review this product.',
-      });
-    }
-
-    // Check if the user has already reviewed this product
-    const alreadyReviewed = product.reviews.some(
-      (review) => review.userId.toString() === userId.toString()
-    );
-
-    if (alreadyReviewed) {
-      return res
-        .status(400)
-        .json({ message: 'Product already reviewed by this user.' });
-    }
-
-    const newReview = {
-      userId,
-      rating,
-      comment: comment || '', // Comment is optional
-      isVerifiedPurchase: true,
-      isApproved: false,
-    };
-
-    product.reviews.push(newReview);
-
-    // Mongoose pre-save hook will automatically update averageRating
-    await product.save();
-
-    // The review just pushed is the one to return. This used to re-read the
-    // product and populate `reviews.userId`, which no longer resolves — accounts
-    // are in PostgreSQL, so the field holds a UUID Mongo cannot join on.
-    const addedReview = product.reviews[product.reviews.length - 1];
 
     res.status(201).json({
       message: 'Review submitted and pending approval.',
-      review: addedReview,
-      averageRating: product.averageRating,
+      review,
+      averageRating,
     });
   } catch (error) {
-    logger.error({ err: error }, 'Error in addReviewToProduct controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, `add${itemType}Review`);
   }
 };
 
-export const addReviewToCollection = async (req, res) => {
-  const { collectionId } = req.params;
-  const { rating, comment } = req.body;
-  const userId = req.user._id; // User ID from authenticated session
-
-  // Basic validation
-  if (!mongoose.Types.ObjectId.isValid(collectionId)) {
-    return res.status(400).json({ message: 'Invalid Collection ID format.' });
-  }
-  if (rating === undefined || rating < 1 || rating > 5) {
-    return res
-      .status(400)
-      .json({ message: 'Rating is required and must be between 1 and 5.' });
-  }
-
+const listPending = (itemType) => async (req, res) => {
   try {
-    const collection = await Collection.findById(collectionId);
-    if (!collection) {
-      return res.status(404).json({ message: 'Collection not found.' });
-    }
-
-    const hasPurchased = await hasPurchasedItem({
-      userId,
-      itemId: collectionId,
-      itemType: 'Collection',
-    });
-
-    if (!hasPurchased) {
-      return res.status(403).json({
-        message: 'Only verified purchasers can review this collection.',
-      });
-    }
-
-    // Check if the user has already reviewed this collection
-    const alreadyReviewed = collection.reviews.some(
-      (review) => review.userId.toString() === userId.toString()
-    );
-
-    if (alreadyReviewed) {
-      return res
-        .status(400)
-        .json({ message: 'Collection already reviewed by this user.' });
-    }
-
-    const newReview = {
-      userId,
-      rating,
-      comment: comment || '', // Comment is optional
-      isVerifiedPurchase: true,
-      isApproved: false,
-    };
-
-    collection.reviews.push(newReview);
-
-    // Mongoose pre-save hook will automatically update averageRating
-    await collection.save();
-
-    const addedReview = collection.reviews[collection.reviews.length - 1];
-
-    res.status(201).json({
-      message: 'Review submitted and pending approval.',
-      review: addedReview,
-      averageRating: collection.averageRating,
-    });
+    res.status(200).json({ pending: await pendingReviews(itemType) });
   } catch (error) {
-    logger.error({ err: error }, 'Error in addReviewToCollection controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, `getPending${itemType}Reviews`);
   }
 };
 
-export const getPendingProductReviews = async (req, res) => {
+/**
+ * Approving and rejecting take the review's own id.
+ *
+ * The route still carries the parent item in its path, because both frontends
+ * build the URL that way, but it is no longer needed to find the review: a
+ * review was a subdocument and is now a row.
+ */
+const approve = async (req, res) => {
   try {
-    const products = await Product.find({ 'reviews.isApproved': false })
-      .select('name reviews');
-
-    const pending = [];
-
-    products.forEach((product) => {
-      product.reviews.forEach((review) => {
-        if (!review.isApproved) {
-          pending.push({
-            type: 'Product',
-            parentId: product._id,
-            parentName: product.name,
-            review,
-          });
-        }
-      });
-    });
-
-    res.status(200).json({ pending });
-  } catch (error) {
-    logger.error({ err: error }, 'Error in getPendingProductReviews');
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
-
-export const getPendingCollectionReviews = async (req, res) => {
-  try {
-    const collections = await Collection.find({ 'reviews.isApproved': false })
-      .select('name reviews');
-
-    const pending = [];
-
-    collections.forEach((collection) => {
-      collection.reviews.forEach((review) => {
-        if (!review.isApproved) {
-          pending.push({
-            type: 'Collection',
-            parentId: collection._id,
-            parentName: collection.name,
-            review,
-          });
-        }
-      });
-    });
-
-    res.status(200).json({ pending });
-  } catch (error) {
-    logger.error({ err: error }, 'Error in getPendingCollectionReviews');
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
-
-export const approveProductReview = async (req, res) => {
-  try {
-    const { productId, reviewId } = req.params;
-
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found.' });
-    }
-
-    const review = product.reviews.id(reviewId);
-    if (!review) {
-      return res.status(404).json({ message: 'Review not found.' });
-    }
-
-    review.isApproved = true;
-    await product.save();
-
+    await approveReview(req.params.reviewId, req.admin.id);
     res.status(200).json({ message: 'Review approved.' });
   } catch (error) {
-    logger.error({ err: error }, 'Error in approveProductReview');
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, 'approveReview');
   }
 };
 
-export const rejectProductReview = async (req, res) => {
+const reject = async (req, res) => {
   try {
-    const { productId, reviewId } = req.params;
-
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found.' });
-    }
-
-    const review = product.reviews.id(reviewId);
-    if (!review) {
+    if (!(await rejectReview(req.params.reviewId))) {
       return res.status(404).json({ message: 'Review not found.' });
     }
-
-    review.remove();
-    await product.save();
-
     res.status(200).json({ message: 'Review rejected and removed.' });
   } catch (error) {
-    logger.error({ err: error }, 'Error in rejectProductReview');
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, 'rejectReview');
   }
 };
 
-export const approveCollectionReview = async (req, res) => {
-  try {
-    const { collectionId, reviewId } = req.params;
-
-    const collection = await Collection.findById(collectionId);
-    if (!collection) {
-      return res.status(404).json({ message: 'Collection not found.' });
-    }
-
-    const review = collection.reviews.id(reviewId);
-    if (!review) {
-      return res.status(404).json({ message: 'Review not found.' });
-    }
-
-    review.isApproved = true;
-    await collection.save();
-
-    res.status(200).json({ message: 'Review approved.' });
-  } catch (error) {
-    logger.error({ err: error }, 'Error in approveCollectionReview');
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
-
-export const rejectCollectionReview = async (req, res) => {
-  try {
-    const { collectionId, reviewId } = req.params;
-
-    const collection = await Collection.findById(collectionId);
-    if (!collection) {
-      return res.status(404).json({ message: 'Collection not found.' });
-    }
-
-    const review = collection.reviews.id(reviewId);
-    if (!review) {
-      return res.status(404).json({ message: 'Review not found.' });
-    }
-
-    review.remove();
-    await collection.save();
-
-    res.status(200).json({ message: 'Review rejected and removed.' });
-  } catch (error) {
-    logger.error({ err: error }, 'Error in rejectCollectionReview');
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
+export const addReviewToProduct = submit('Product', 'productId');
+export const addReviewToCollection = submit('Collection', 'collectionId');
+export const getPendingProductReviews = listPending('Product');
+export const getPendingCollectionReviews = listPending('Collection');
+export const approveProductReview = approve;
+export const approveCollectionReview = approve;
+export const rejectProductReview = reject;
+export const rejectCollectionReview = reject;
