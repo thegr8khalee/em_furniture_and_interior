@@ -1,28 +1,23 @@
 import { Sequelize } from 'sequelize';
-import { runMigrations } from '../../src/db/migrate.js';
 import { dialectOptionsFor } from '../../src/db/sequelize.js';
+import { ADMIN_URL, TEMPLATE_DATABASE, urlFor, workerDatabase } from './databaseNames.js';
 
 /**
- * A real PostgreSQL for the schema tests.
+ * A real PostgreSQL for every suite that touches the database.
  *
  * These tests exist to prove the database rejects bad data. A fake or in-memory
  * substitute enforces none of it, so it would report success while testing
  * nothing — the exact failure this whole migration is meant to remove.
  *
- * If no database is reachable, setup throws. It must never skip: a suite that
- * silently skips is indistinguishable from a suite that passes.
+ * If no database is reachable, `globalSetup` throws before any suite starts. It
+ * must never skip: a suite that silently skips is indistinguishable from a suite
+ * that passes.
+ *
+ * Each worker gets its own database, stamped out of the template that
+ * `globalSetup` migrated. Copying is a file operation; applying nine migrations
+ * per suite is a few hundred round trips, which was slow locally and slow enough
+ * against a hosted database to time out.
  */
-const ADMIN_URL =
-  process.env.TEST_DATABASE_URL || 'postgres://postgres@127.0.0.1:5433/postgres';
-
-const databaseName = () =>
-  `em_test_${process.env.JEST_WORKER_ID || '1'}`;
-
-const urlFor = (name) => {
-  const url = new URL(ADMIN_URL);
-  url.pathname = `/${name}`;
-  return url.toString();
-};
 
 /** A hosted database needs TLS; a local one does not. Same rule as the app. */
 const connectionOptions = (url) => ({ logging: false, dialectOptions: dialectOptionsFor(url) });
@@ -30,32 +25,22 @@ const connectionOptions = (url) => ({ logging: false, dialectOptions: dialectOpt
 let db = null;
 
 export const setupDatabase = async () => {
-  const name = databaseName();
-  const admin = new Sequelize(ADMIN_URL, connectionOptions(ADMIN_URL));
+  const name = workerDatabase();
+  const adminUrl = ADMIN_URL();
+  const admin = new Sequelize(adminUrl, connectionOptions(adminUrl));
 
-  try {
-    await admin.authenticate();
-  } catch (error) {
-    throw new Error(
-      `Schema tests need a real PostgreSQL at ${ADMIN_URL} and could not connect ` +
-        `(${error.message}). Start one, or set TEST_DATABASE_URL. These tests do ` +
-        'not skip: skipping would report a pass for constraints nobody verified.'
-    );
-  }
-
-  // Dropped and recreated per run so a failed run cannot leave state that makes
-  // the next one pass for the wrong reason.
+  // Dropped and recreated per suite so a failed run cannot leave state that
+  // makes the next one pass for the wrong reason.
   //
   // FORCE because a connection pooler keeps server connections warm after the
-  // client has gone: the previous run's session is still attached when this one
-  // tries to drop, and a plain DROP refuses while anyone is connected.
+  // client has gone: the previous suite's session is still attached when this
+  // one tries to drop, and a plain DROP refuses while anyone is connected.
   await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
-  await admin.query(`CREATE DATABASE "${name}"`);
+  await admin.query(`CREATE DATABASE "${name}" TEMPLATE "${TEMPLATE_DATABASE}"`);
   await admin.close();
 
   const url = urlFor(name);
   db = new Sequelize(url, connectionOptions(url));
-  await runMigrations({ db, silent: true });
 
   return db;
 };
@@ -73,7 +58,7 @@ export const teardownDatabase = async () => {
  * app.js, so the service layer's lazily-created connection lands on the test
  * database rather than a developer's real one.
  */
-export const currentDatabaseUrl = () => urlFor(databaseName());
+export const currentDatabaseUrl = () => urlFor(workerDatabase());
 
 export const getDb = () => {
   if (!db) throw new Error('setupDatabase() has not run');

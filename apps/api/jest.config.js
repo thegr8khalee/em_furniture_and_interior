@@ -23,6 +23,9 @@ export default {
   testEnvironment: 'node',
   testMatch: ['**/__tests__/**/*.test.js'],
   clearMocks: true,
+  // Builds the schema once and hands every worker a copy of it.
+  globalSetup: '<rootDir>/__tests__/globalSetup.js',
+  globalTeardown: '<rootDir>/__tests__/globalTeardown.js',
   setupFiles: ['<rootDir>/__tests__/setup.js'],
   collectCoverageFrom: [
     'src/**/*.js',
