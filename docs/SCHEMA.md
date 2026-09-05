@@ -710,16 +710,71 @@ balance, because a null start made every line count as "before the start". And
 `normal_balance` was selected without being grouped, so the P&L and balance
 sheet were a 500 rather than a report.
 
+### What the business buys
+
+`0012_purchasing.sql` adds the other half of the trading cycle. Twelve of the
+thirty accounts in the chart could never receive a posting, because nothing
+recorded a purchase: payables stayed empty, input VAT was structurally zero, and
+rent, salaries and marketing had no way in. The profit and loss showed revenue
+less cost of sales and stopped, which is a gross margin, not a profit.
+
+Two documents. An **expense** is money spent — approved once, which makes it a
+cost and a debt, and paid once, which settles the debt. A **purchase order** is
+an intention to buy, which becomes stock and a liability when the goods arrive.
+`/api/purchasing` serves both, plus vendors and a payables ageing.
+
+The postings, in `src/services/posting.js` beside the sales ones:
+
+    approve   DR cost account   net      pay   DR 2100 Payables   total
+              DR 2200 VAT       tax            CR bank or cash    total
+              CR 2100 Payables  total
+
+    receive   DR 1300 Inventory  qty x agreed cost
+              CR 2100 Payables   qty x agreed cost
+
+Each posting commits in the same transaction as the status change, so an expense
+that says "approved" with nothing behind it in the books is not a state that can
+exist. Receiving writes a `purchase_receipt` stock movement per line carrying
+the cost that was **agreed on the order**, not the product's current cost price:
+what the business owes is what it agreed to pay.
+
+Constraints that encode decisions rather than types. An expense's `account_id`
+is a composite foreign key to `(accounts.id, is_postable)`, so a cost cannot be
+filed under a summary account it would never appear beneath in any report.
+Approval is attributable (`expense_approval_is_attributed`) because approval is
+what turns a note into a liability. `total = net + tax` is checked, so a total
+typed by hand that does not add up is refused rather than reconciled later. And
+`journal_source` gained `expense_payment`: `(source, source_id)` is unique, so
+without a value of its own an expense's accrual and its settlement would
+collide.
+
+What each document refuses is as much of the design as what it does. Only an
+approved expense can be paid — paying something nobody approved puts money out
+of the bank against a debt the books never recognised. Only a **draft** can be
+voided: once it is in the books the way back is a reversing entry, not a status
+change, which is the difference between a ledger and a spreadsheet. A vendor
+with any history is deactivated rather than deleted. And a received order cannot
+be cancelled; the stock is here, so it has to be returned.
+
+`purchasing.manage` is a spending authority, held by `admin` and above; reading
+what was bought is `finance.view`. Approving, paying and receiving are each
+audited separately from recording, because they are the steps that move money.
+
+One bug came out of running this against Supabase rather than a local database.
+A report with no end date ended its window at the API process's own clock, so an
+order the database had written a moment earlier under a clock a second ahead
+fell outside "the last 30 days" and vanished from the dashboard. The default end
+is the end of today now, which is what a person means by "up to today" anyway.
+
 ## What is not built yet
 
 **The MongoDB migration is complete.** Every route reads and writes PostgreSQL;
 `mongoose` and `mongodb` are no longer dependencies. What remains is the ERP
 work the ledger was built for.
 
-In order —
-
 1. **Supabase Auth.** Accounts are in `customers` and `staff` now, and both
    tables carry a nullable `supabase_user_id` for it, but sign-in is still the
    local bcrypt password. The bootstrap step exists: `npm run bootstrap:staff`.
-2. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
-3. **Reports** — P&L, balance sheet, VAT return — queries over the ledger.
+2. **Console screens for the books and for purchasing.** The API is there and
+   tested; nothing in `apps/erp` reads `/api/books` or `/api/purchasing` yet, so
+   the owner can keep their books over HTTP but not on a screen.

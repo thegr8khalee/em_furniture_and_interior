@@ -34,8 +34,18 @@ const select = (db, sql, replacements = {}) =>
 
 const money = (value) => toMajor(Number(value ?? 0));
 
+const endOfToday = () => {
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  return end;
+};
+
 export const parseDateRange = (startDate, endDate) => {
-  const end = endDate ? new Date(endDate) : new Date();
+  // An unspecified end means "up to today", not "up to this instant". Ending
+  // the window at the API process's own clock drops a row the database wrote a
+  // moment ago under a clock a second ahead — which is how an order placed
+  // seconds before the dashboard loaded went missing from it.
+  const end = endDate ? new Date(endDate) : endOfToday();
   const start = startDate
     ? new Date(startDate)
     : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);

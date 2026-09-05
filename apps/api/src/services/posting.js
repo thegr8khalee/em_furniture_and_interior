@@ -147,6 +147,106 @@ export const postPaymentReceived = async (db, transactionId, { transaction } = {
   );
 };
 
+/**
+ * An approved expense is a cost and a debt, in the same moment.
+ *
+ *   DR  the expense account   net
+ *   DR  2200 VAT payable      tax        (input VAT, reclaimable)
+ *   CR  2100 Accounts payable total
+ *
+ * On the accrual basis a cost belongs to the period it was incurred in, not the
+ * period it was paid in — which is the whole reason approval and payment are two
+ * events here rather than one.
+ *
+ * Input VAT debits the same account output VAT credits, so `2200` nets to what
+ * is actually owed to the revenue service. That is what a VAT account is.
+ */
+export const postExpenseApproved = async (db, expenseId, { transaction } = {}) => {
+  const expense = await one(
+    db,
+    `SELECT e.id, e.expense_number, e.description, e.expense_date,
+            e.net_amount, e.tax_amount, e.total_amount, e.status,
+            a.code AS account_code, v.name AS vendor_name
+     FROM expenses e
+     JOIN accounts a ON a.id = e.account_id
+     LEFT JOIN vendors v ON v.id = e.vendor_id
+     WHERE e.id = :expenseId`,
+    { expenseId },
+    transaction
+  );
+
+  if (!expense) throw new LedgerError(`No expense ${expenseId}`);
+  if (expense.status === 'draft' || expense.status === 'void') {
+    // A draft is a note to self. It becomes a liability when somebody approves
+    // it, and not before.
+    return { posted: false, reason: `status_is_${expense.status}` };
+  }
+
+  const net = Number(expense.net_amount);
+  const tax = Number(expense.tax_amount);
+  const total = Number(expense.total_amount);
+
+  const lines = [{ account: expense.account_code, debit: net, description: expense.description }];
+  if (tax > 0) lines.push({ account: '2200', debit: tax, description: 'Input VAT' });
+  lines.push({ account: '2100', credit: total, description: expense.vendor_name ?? 'Supplier' });
+
+  return postOnce(
+    db,
+    {
+      date: expense.expense_date,
+      description: `${expense.expense_number}: ${expense.description}`,
+      source: 'expense',
+      sourceId: expense.id,
+      lines,
+    },
+    { transaction }
+  );
+};
+
+/**
+ * Paying a supplier clears the debt. It is not a cost — that was recognised
+ * when the expense was approved.
+ *
+ *   DR  2100 Accounts payable  total
+ *   CR  bank/cash              total
+ */
+export const postExpensePaid = async (db, expenseId, { transaction } = {}) => {
+  const expense = await one(
+    db,
+    `SELECT e.id, e.expense_number, e.total_amount, e.status, e.payment_method,
+            COALESCE(e.paid_on, e.expense_date) AS entry_date,
+            v.name AS vendor_name
+     FROM expenses e
+     LEFT JOIN vendors v ON v.id = e.vendor_id
+     WHERE e.id = :expenseId`,
+    { expenseId },
+    transaction
+  );
+
+  if (!expense) throw new LedgerError(`No expense ${expenseId}`);
+  if (expense.status !== 'paid') return { posted: false, reason: `status_is_${expense.status}` };
+
+  const account = SETTLEMENT_ACCOUNT[expense.payment_method];
+  if (!account) throw new LedgerError(`No settlement account for ${expense.payment_method}`);
+
+  const total = Number(expense.total_amount);
+
+  return postOnce(
+    db,
+    {
+      date: expense.entry_date,
+      description: `Paid ${expense.expense_number}${expense.vendor_name ? ` to ${expense.vendor_name}` : ''}`,
+      source: 'expense_payment',
+      sourceId: expense.id,
+      lines: [
+        { account: '2100', debit: total, description: 'Payable settled' },
+        { account, credit: total, description: `Paid by ${expense.payment_method}` },
+      ],
+    },
+    { transaction }
+  );
+};
+
 // What each kind of stock movement does to the books. Inventory (1300) is the
 // other side of every one of them.
 const STOCK_RULES = {

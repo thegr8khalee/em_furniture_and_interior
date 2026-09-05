@@ -32,6 +32,10 @@ export const PERMISSIONS = {
   // reported figures, and reopening one lets them move again. That is an
   // owner's decision, not a shop manager's.
   BOOKS_MANAGE: 'books.manage',
+  // Recording what the business buys: vendors, expenses and purchase orders.
+  // Approving an expense creates a liability and receiving an order creates
+  // stock, so this is a spending authority, not a data-entry one.
+  PURCHASING_MANAGE: 'purchasing.manage',
 };
 
 export const ROLES = {
@@ -59,6 +63,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.DESIGNERS_MANAGE,
     PERMISSIONS.INVENTORY_MANAGE,
     PERMISSIONS.FINANCE_VIEW,
+    PERMISSIONS.PURCHASING_MANAGE,
   ],
   [ROLES.EDITOR]: [PERMISSIONS.BLOG_MANAGE, PERMISSIONS.FAQ_MANAGE],
   [ROLES.SUPPORT]: [PERMISSIONS.ADMIN_DASHBOARD_VIEW],
