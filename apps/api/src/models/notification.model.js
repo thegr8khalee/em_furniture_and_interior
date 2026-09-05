@@ -7,10 +7,10 @@ const notificationSchema = new mongoose.Schema(
     message: { type: String, required: true },
     type: {
       type: String,
-      enum: ['order', 'promo', 'system'],
+      enum: ['order', 'promo', 'system', 'loyalty'],
       default: 'system'
     },
-    relatedOrder: { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
+    relatedOrder: { type: String }, // an orders.id UUID — orders are in PostgreSQL
     isRead: { type: Boolean, default: false }
   },
   { timestamps: true }

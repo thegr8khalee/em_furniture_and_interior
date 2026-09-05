@@ -228,13 +228,13 @@
       "Coupon": {
         "type": "object",
         "properties": {
-          "_id": { "type": "string" },
-          "code": { "type": "string" },
-          "discountType": { "type": "string" },
-          "discountValue": { "type": "number" },
-          "description": { "type": "string" },
+          "_id": { "type": "string", "format": "uuid" },
+          "code": { "type": "string", "description": "Always upper case." },
+          "discountType": { "type": "string", "enum": ["percentage", "fixed"] },
+          "discountValue": { "type": "number", "description": "A percentage for a percentage coupon, naira for a fixed one." },
+          "description": { "type": "string", "nullable": true },
           "minimumPurchase": { "type": "number" },
-          "maximumDiscount": { "type": "number" },
+          "maximumDiscount": { "type": "number", "nullable": true },
           "validFrom": { "type": "string", "format": "date-time" },
           "validUntil": { "type": "string", "format": "date-time" },
           "usageLimit": { "type": "integer" },
@@ -1130,6 +1130,10 @@
       "post": {
         "tags": ["Orders"],
         "summary": "Create a new order",
+        "description": "Line prices, the discount and the tax are taken from the database; any subtotal, taxAmount or totalAmount in the body is ignored. Send an Idempotency-Key header so a double-submitted checkout returns the first order instead of creating a second.",
+        "parameters": [
+          { "name": "Idempotency-Key", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Repeat it to get the same order back." }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1144,8 +1148,8 @@
                       "type": "object",
                       "required": ["item", "itemType", "quantity"],
                       "properties": {
-                        "item": { "type": "string", "description": "Product or Collection ObjectId" },
-                        "itemType": { "type": "string", "enum": ["Product", "Collection"] },
+                        "item": { "type": "string", "format": "uuid", "description": "A sellable item id — product or collection." },
+                        "itemType": { "type": "string", "enum": ["Product", "Collection"], "description": "Reported back on the order; the kind is read from the item itself." },
                         "quantity": { "type": "integer", "minimum": 1 }
                       }
                     }
@@ -1155,7 +1159,6 @@
                   "useSameAddressForBilling": { "type": "boolean", "default": true },
                   "couponCode": { "type": "string" },
                   "shippingCost": { "type": "number", "default": 0 },
-                  "taxAmount": { "type": "number", "default": 0 },
                   "notes": { "type": "string" },
                   "paymentMethod": { "type": "string", "default": "whatsapp" }
                 }
@@ -1164,7 +1167,9 @@
           }
         },
         "responses": {
-          "201": { "description": "Order created", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" }, "order": { "$ref": "#/components/schemas/Order" } } } } } }
+          "201": { "description": "Order created, or the existing order for a repeated Idempotency-Key", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" }, "order": { "$ref": "#/components/schemas/Order" } } } } } },
+          "400": { "description": "No items, a bad quantity, or an incomplete address", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "An item on the order does not exist", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
@@ -1774,17 +1779,17 @@
       "post": {
         "tags": ["Coupons"],
         "summary": "Validate a coupon",
+        "description": "Quotes the discount without spending a use. Refusals say which rule failed — expired, not yet started, fully redeemed, or below the minimum purchase. Product and category targeting is no longer part of a coupon, so cartItems is not required.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["code", "cartItems", "subtotal"],
+                "required": ["code", "subtotal"],
                 "properties": {
                   "code": { "type": "string" },
-                  "cartItems": { "type": "array", "items": { "type": "object" } },
-                  "subtotal": { "type": "number" }
+                  "subtotal": { "type": "number", "description": "Cart subtotal in naira." }
                 }
               }
             }

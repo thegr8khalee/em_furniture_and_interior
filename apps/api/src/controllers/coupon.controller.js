@@ -1,34 +1,40 @@
-import Coupon from '../models/coupon.model.js';
-import mongoose from 'mongoose';
+import { toMajor, toMinor } from '../lib/money.js';
 import { logger } from '../lib/logger.js';
+import {
+  CouponError,
+  createCoupon as createCouponRow,
+  deleteCoupon as deleteCouponRow,
+  getCoupon,
+  listCoupons,
+  quote,
+  updateCoupon as updateCouponRow,
+} from '../services/coupons.js';
+
+/*
+ * Coupons. The rules and the arithmetic are in services/coupons.js, which is
+ * also what checkout uses — so the figure quoted here and the figure charged
+ * there come from one piece of code rather than two that agreed when they were
+ * written.
+ */
+
+const fail = (error, res, where) => {
+  if (error instanceof CouponError) {
+    return res.status(error.status).json({ message: error.message });
+  }
+  logger.error({ err: error }, `Error in ${where} controller`);
+  return res.status(500).json({ message: 'Internal Server Error' });
+};
 
 export const validateCoupon = async (req, res) => {
-  const { code, cartItems, subtotal } = req.body;
+  const { code, subtotal } = req.body;
 
-  if (!code || !cartItems || subtotal === undefined) {
-    return res.status(400).json({
-      message: 'Coupon code, cart items, and subtotal are required.',
-    });
+  if (!code || subtotal === undefined) {
+    return res.status(400).json({ message: 'Coupon code and subtotal are required.' });
   }
 
   try {
-    const coupon = await Coupon.findOne({ code: code.toUpperCase() })
-      .populate('applicableProductIds', 'name category')
-      .populate('applicableCollectionIds', 'name')
-      .populate('excludedProductIds', 'name')
-      .populate('excludedCollectionIds', 'name');
-
-    if (!coupon) {
-      return res.status(404).json({ message: 'Invalid coupon code.' });
-    }
-
-    const validation = coupon.isValidForCart(cartItems, subtotal);
-
-    if (!validation.valid) {
-      return res.status(400).json({ message: validation.message });
-    }
-
-    const discount = coupon.calculateDiscount(subtotal);
+    const subtotalMinor = toMinor(Number(subtotal));
+    const { coupon, discount } = await quote(code, subtotalMinor);
 
     res.status(200).json({
       valid: true,
@@ -38,33 +44,28 @@ export const validateCoupon = async (req, res) => {
         discountType: coupon.discountType,
         discountValue: coupon.discountValue,
       },
-      discount,
-      finalTotal: Math.max(0, subtotal - discount),
+      discount: toMajor(discount),
+      finalTotal: toMajor(subtotalMinor - discount),
     });
   } catch (error) {
-    logger.error({ err: error }, 'Error in validateCoupon controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, 'validateCoupon');
   }
 };
 
+/**
+ * What a code is worth, before there is a cart to apply it to.
+ *
+ * Quoted against a zero subtotal, so a code with a minimum purchase is reported
+ * as not yet applicable rather than as valid — which is what the old endpoint
+ * did, and it let the storefront show a discount the checkout then refused.
+ */
 export const applyCoupon = async (req, res) => {
-  const { code } = req.body;
+  const { code, subtotal = 0 } = req.body;
 
-  if (!code) {
-    return res.status(400).json({ message: 'Coupon code is required.' });
-  }
+  if (!code) return res.status(400).json({ message: 'Coupon code is required.' });
 
   try {
-    const coupon = await Coupon.findOne({ code: code.toUpperCase() });
-
-    if (!coupon) {
-      return res.status(404).json({ message: 'Invalid coupon code.' });
-    }
-
-    const now = new Date();
-    if (!coupon.isActive || now < coupon.validFrom || now > coupon.validUntil) {
-      return res.status(400).json({ message: 'Coupon is not valid.' });
-    }
+    const { coupon } = await quote(code, toMinor(Number(subtotal)));
 
     res.status(200).json({
       coupon: {
@@ -77,169 +78,57 @@ export const applyCoupon = async (req, res) => {
       },
     });
   } catch (error) {
-    logger.error({ err: error }, 'Error in applyCoupon controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, 'applyCoupon');
   }
 };
 
 export const createCoupon = async (req, res) => {
-  const {
-    code,
-    description,
-    discountType,
-    discountValue,
-    minimumPurchase,
-    maximumDiscount,
-    validFrom,
-    validUntil,
-    usageLimit,
-    applicableCategories,
-    applicableProductIds,
-    applicableCollectionIds,
-    excludedProductIds,
-    excludedCollectionIds,
-  } = req.body;
-
-  if (!code || !discountType || !discountValue || !validUntil) {
-    return res.status(400).json({
-      message: 'Code, discount type, discount value, and valid until are required.',
-    });
-  }
-
   try {
-    const existingCoupon = await Coupon.findOne({ code: code.toUpperCase() });
-    if (existingCoupon) {
-      return res.status(400).json({ message: 'Coupon code already exists.' });
-    }
-
-    const newCoupon = new Coupon({
-      code: code.toUpperCase(),
-      description,
-      discountType,
-      discountValue,
-      minimumPurchase: minimumPurchase || 0,
-      maximumDiscount,
-      validFrom: validFrom || Date.now(),
-      validUntil,
-      usageLimit,
-      applicableCategories: applicableCategories || [],
-      applicableProductIds: applicableProductIds || [],
-      applicableCollectionIds: applicableCollectionIds || [],
-      excludedProductIds: excludedProductIds || [],
-      excludedCollectionIds: excludedCollectionIds || [],
-    });
-
-    const savedCoupon = await newCoupon.save();
-
-    res.status(201).json(savedCoupon);
+    res.status(201).json(await createCouponRow(req.body));
   } catch (error) {
-    logger.error({ err: error }, 'Error in createCoupon controller');
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map((err) => err.message);
-      return res.status(400).json({ message: 'Validation failed', errors });
-    }
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, 'createCoupon');
   }
 };
 
 export const updateCoupon = async (req, res) => {
-  const { couponId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(couponId)) {
-    return res.status(400).json({ message: 'Invalid coupon ID format.' });
-  }
-
   try {
-    const coupon = await Coupon.findById(couponId);
-    if (!coupon) {
-      return res.status(404).json({ message: 'Coupon not found.' });
-    }
-
-    const updates = req.body;
-    Object.keys(updates).forEach((key) => {
-      if (key !== 'code' && key !== 'usageCount') {
-        coupon[key] = updates[key];
-      }
-    });
-
-    const updatedCoupon = await coupon.save();
-    res.status(200).json(updatedCoupon);
+    res.status(200).json(await updateCouponRow(req.params.couponId, req.body));
   } catch (error) {
-    logger.error({ err: error }, 'Error in updateCoupon controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, 'updateCoupon');
   }
 };
 
 export const deleteCoupon = async (req, res) => {
-  const { couponId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(couponId)) {
-    return res.status(400).json({ message: 'Invalid coupon ID format.' });
-  }
-
   try {
-    const coupon = await Coupon.findByIdAndDelete(couponId);
-    if (!coupon) {
+    if (!(await deleteCouponRow(req.params.couponId))) {
       return res.status(404).json({ message: 'Coupon not found.' });
     }
-
     res.status(200).json({ message: 'Coupon deleted successfully.' });
   } catch (error) {
-    logger.error({ err: error }, 'Error in deleteCoupon controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, 'deleteCoupon');
   }
 };
 
 export const getCoupons = async (req, res) => {
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
+
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
-
-    const query = {};
-    if (req.query.isActive !== undefined) {
-      query.isActive = req.query.isActive === 'true';
-    }
-
-    const totalCoupons = await Coupon.countDocuments(query);
-    const coupons = await Coupon.find(query)
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
+    const { coupons, total } = await listCoupons({ page, limit });
 
     res.status(200).json({
       coupons,
-      currentPage: page,
-      totalCoupons,
-      hasMore: page * limit < totalCoupons,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    logger.error({ err: error }, 'Error in getCoupons controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, 'getCoupons');
   }
 };
 
 export const getCouponById = async (req, res) => {
-  const { couponId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(couponId)) {
-    return res.status(400).json({ message: 'Invalid coupon ID format.' });
-  }
-
   try {
-    const coupon = await Coupon.findById(couponId)
-      .populate('applicableProductIds', 'name')
-      .populate('applicableCollectionIds', 'name')
-      .populate('excludedProductIds', 'name')
-      .populate('excludedCollectionIds', 'name');
-
-    if (!coupon) {
-      return res.status(404).json({ message: 'Coupon not found.' });
-    }
-
-    res.status(200).json(coupon);
+    res.status(200).json(await getCoupon(req.params.couponId));
   } catch (error) {
-    logger.error({ err: error }, 'Error in getCouponById controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, 'getCouponById');
   }
 };

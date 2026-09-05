@@ -4,8 +4,8 @@ import { calculateTax } from '../../src/controllers/tax.controller.js';
 import {
   verifyPaystackSignature,
   chargeMatchesOrder,
-  toMinorUnit,
-} from '../../src/controllers/payments.controller.js';
+} from '../../src/services/payments.js';
+import { toMinor } from '../../src/lib/money.js';
 
 const WEBHOOK_SECRET = 'sk_test_paystack_secret';
 
@@ -104,46 +104,56 @@ describe('Paystack webhook signature verification', () => {
 });
 
 describe('Charge amount verification', () => {
+  // Both sides of this comparison are kobo now: the gateway works in minor
+  // units and so does `orders.total_amount`, so the payment path no longer
+  // converts to naira and back. `toMinor` is the one place that conversion
+  // still happens, on the way in from a form.
   test('converts naira to kobo', () => {
-    expect(toMinorUnit(1500)).toBe(150000);
-    expect(toMinorUnit(0)).toBe(0);
+    expect(toMinor(1500)).toBe(150000);
+    expect(toMinor(0)).toBe(0);
   });
 
   test('converts fractional amounts without floating-point drift', () => {
-    expect(toMinorUnit(19.99)).toBe(1999);
-    expect(toMinorUnit(1234.56)).toBe(123456);
-    expect(toMinorUnit(0.1 + 0.2)).toBe(30);
+    expect(toMinor(19.99)).toBe(1999);
+    expect(toMinor(1234.56)).toBe(123456);
+    expect(toMinor(0.1 + 0.2)).toBe(30);
   });
 
   test('accepts a charge matching the order total exactly', () => {
-    expect(chargeMatchesOrder({ amount: 150000, currency: 'NGN' }, { totalAmount: 1500 })).toBe(true);
+    expect(chargeMatchesOrder({ amount: 150000, currency: 'NGN' }, 150000)).toBe(true);
   });
 
   test('rejects an underpayment', () => {
-    expect(chargeMatchesOrder({ amount: 100, currency: 'NGN' }, { totalAmount: 1500 })).toBe(false);
+    expect(chargeMatchesOrder({ amount: 100, currency: 'NGN' }, 150000)).toBe(false);
   });
 
   test('rejects an overpayment', () => {
-    expect(chargeMatchesOrder({ amount: 999999, currency: 'NGN' }, { totalAmount: 1500 })).toBe(false);
+    expect(chargeMatchesOrder({ amount: 999999, currency: 'NGN' }, 150000)).toBe(false);
   });
 
   test('rejects a charge in the wrong currency', () => {
-    expect(chargeMatchesOrder({ amount: 150000, currency: 'USD' }, { totalAmount: 1500 })).toBe(false);
+    expect(chargeMatchesOrder({ amount: 150000, currency: 'USD' }, 150000)).toBe(false);
   });
 
   test('accepts the currency code in any case', () => {
-    expect(chargeMatchesOrder({ amount: 150000, currency: 'ngn' }, { totalAmount: 1500 })).toBe(true);
+    expect(chargeMatchesOrder({ amount: 150000, currency: 'ngn' }, 150000)).toBe(true);
   });
 
   test('rejects a malformed charge', () => {
-    expect(chargeMatchesOrder({}, { totalAmount: 1500 })).toBe(false);
-    expect(chargeMatchesOrder({ amount: null, currency: 'NGN' }, { totalAmount: 1500 })).toBe(false);
-    expect(chargeMatchesOrder({ amount: 150000, currency: 'NGN' }, {})).toBe(false);
+    expect(chargeMatchesOrder({}, 150000)).toBe(false);
+    expect(chargeMatchesOrder({ amount: null, currency: 'NGN' }, 150000)).toBe(false);
+    expect(chargeMatchesOrder({ amount: 150000, currency: 'NGN' }, undefined)).toBe(false);
   });
 
   test('matches on a total with kobo precision', () => {
-    expect(chargeMatchesOrder({ amount: 123456, currency: 'NGN' }, { totalAmount: 1234.56 })).toBe(true);
-    expect(chargeMatchesOrder({ amount: 123455, currency: 'NGN' }, { totalAmount: 1234.56 })).toBe(false);
+    expect(chargeMatchesOrder({ amount: 123456, currency: 'NGN' }, 123456)).toBe(true);
+    expect(chargeMatchesOrder({ amount: 123455, currency: 'NGN' }, 123456)).toBe(false);
+  });
+
+  // The database hands back bigint columns as strings; a comparison that did
+  // not coerce would reject every genuine charge.
+  test('accepts the expected amount as a string, which is how bigint arrives', () => {
+    expect(chargeMatchesOrder({ amount: 150000, currency: 'NGN' }, '150000')).toBe(true);
   });
 });
 

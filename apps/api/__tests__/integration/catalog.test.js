@@ -1,4 +1,3 @@
-import { jest } from '@jest/globals';
 import request from 'supertest';
 import { closeSequelize } from '../../src/db/sequelize.js';
 import {
@@ -17,7 +16,6 @@ import {
 // the CONTRACT: both frontends read `_id`, naira prices and `images[].url`, and
 // none of that may change just because the storage did.
 
-jest.setTimeout(30000);
 
 let app;
 

@@ -83,11 +83,45 @@ The mailer is the only double, since it reaches the Gmail API — and capturing
 the message is also how the test gets a reset link, which is how a real user
 gets one.
 
+### `__tests__/integration/orders.test.js`
+
+Checkout and the console's order management, over HTTP.
+
+- **The money is the server's.** Several tests send a deliberately wrong
+  `subtotal`, `taxAmount` or `totalAmount` and assert the server ignored it.
+  Promotional pricing, shipping added to the taxable amount, and collections as
+  well as products.
+- **Coupons** — percentage, fixed, capped, case-insensitive, expired, inactive,
+  below minimum, single-use spent twice, and a code claimed by an order that
+  then fails, which must give the use back.
+- **Idempotency** — the same `Idempotency-Key` returns the first order, creates
+  no second row, and sends no second email.
+- **Ownership** — one shopper cannot read, or print, another's order.
+- **The ledger** — confirming posts a balanced entry once; paying writes the
+  `sale` stock movements once, even when the status is flipped back and forth.
+- **Delivery** credits loyalty points once.
+
+### `__tests__/integration/checkout.test.js`
+
+Coupon administration and the Paystack flow. Paystack is a stub: what is under
+test is what this service does with a charge, not what Paystack does.
+
+- **Units** — a coupon created as "12.5%" is stored as 1250 basis points and
+  published as 12.5; a ₦2,500 coupon is stored as 250000 kobo.
+- **Initialization** asks for the total in kobo and reuses an attempt already in
+  flight rather than issuing a second reference.
+- **Application** — confirms the order, posts the sale and the payment, takes
+  the stock, and empties the basket. The second arrival of the same charge
+  changes nothing, whichever path it comes by.
+- **Refusal** — the wrong amount and the wrong currency are 409s that leave the
+  order unpaid and the transaction marked failed with a note.
+- **Bank transfer** proof is attached without marking anything paid.
+
 ## What is not covered yet
 
-Orders, payments beyond the signature and amount paths, reviews, consultations,
-notifications and analytics — the controllers still reading Mongo. They get
-suites as they move, the way the catalog, cart and account suites did.
+Reviews, consultations, notifications, inventory, analytics and finance — the
+controllers still reading Mongo. They get suites as they move, the way the
+catalog, cart, account, order and payment suites did.
 
 Two suites that once claimed to cover this ground asserted on objects they had
 built themselves, so they passed regardless of what the application did. They

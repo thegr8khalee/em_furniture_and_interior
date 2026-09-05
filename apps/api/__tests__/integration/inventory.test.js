@@ -1,4 +1,3 @@
-import { jest } from '@jest/globals';
 import {
   setupDatabase,
   teardownDatabase,
@@ -16,7 +15,6 @@ import {
 // this say 4?" has no answer when the number is the only record. Stock is an
 // append-only log; the balance is derived from it.
 
-jest.setTimeout(30000);
 
 beforeAll(async () => {
   await setupDatabase();

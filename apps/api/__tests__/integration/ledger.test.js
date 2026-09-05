@@ -1,4 +1,3 @@
-import { jest } from '@jest/globals';
 import { QueryTypes } from 'sequelize';
 import { setupDatabase, teardownDatabase, getDb, expectRejection } from '../helpers/database.js';
 import { postEntry, reverseEntry, trialBalance, LedgerError } from '../../src/services/ledger.js';
@@ -8,7 +7,6 @@ import { postEntry, reverseEntry, trialBalance, LedgerError } from '../../src/se
 // These tests are about the properties that make this a ledger instead: it
 // balances, it cannot be edited, and a closed period stays closed.
 
-jest.setTimeout(30000);
 
 const PERIOD_START = '2026-09-01';
 const IN_PERIOD = '2026-09-15';

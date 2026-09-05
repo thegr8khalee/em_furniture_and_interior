@@ -1,4 +1,3 @@
-import { jest } from '@jest/globals';
 import request from 'supertest';
 import { closeSequelize } from '../../src/db/sequelize.js';
 import {
@@ -21,7 +20,6 @@ import * as cart from '../../src/services/cart.js';
 // store and cannot mint a `customers` row yet — testing it through a fake login
 // would prove only that the fake works.
 
-jest.setTimeout(30000);
 
 let app;
 

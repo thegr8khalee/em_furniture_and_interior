@@ -1,4 +1,3 @@
-import { jest } from '@jest/globals';
 import {
   setupDatabase,
   teardownDatabase,
@@ -10,7 +9,6 @@ import {
   insertOrder,
 } from '../helpers/database.js';
 
-jest.setTimeout(30000);
 
 beforeAll(async () => {
   await setupDatabase();

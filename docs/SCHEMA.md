@@ -480,23 +480,91 @@ batched query per page (`findStaffByIds`, `findCustomersByIds`), and the order
 listing simply dropped it — the console renders the buyer from `shippingAddress`,
 which is captured on the order itself.
 
+### Orders, payments and coupons
+
+`src/services/orders.js`, `src/services/payments.js` and `src/services/coupons.js`
+are the fourth slice, and the one that makes the ledger do anything.
+
+**The money on an order is computed, not accepted.** The Mongo handler took
+`subtotal`, `taxAmount` and `totalAmount` from the request body — the schema
+comment on `orders_total_is_the_sum_of_its_parts` is about exactly that. Now line
+prices come from `sellable_items` (at the promotional price where there is one),
+the discount from the coupon row, and the tax from `TAX_RATE_PERCENTAGE`; the
+only figure still taken from the caller is shipping, because there is no
+shipping-rate table to derive it from. The database refuses the insert if the
+parts do not add up.
+
+**A double-submitted checkout produces one order.** `orders.idempotency_key` is
+unique; the same `Idempotency-Key` header returns the first order and does not
+send a second confirmation email.
+
+**A coupon is claimed in one statement.** `UPDATE coupons SET times_used =
+times_used + 1 WHERE ... AND (usage_limit IS NULL OR times_used < usage_limit)`
+— the check and the increment cannot be separated, so a single-use code cannot
+be spent by two simultaneous checkouts. It happens inside the order's
+transaction, so an order that fails after the claim gives the use back.
+`services/coupons.js` holds both the claim and the arithmetic, and the
+storefront's "check this code" endpoint quotes from the same function that
+checkout charges from.
+
+Coupon targeting — the five `applicable*` and `excluded*` arrays on the Mongo
+model — is not carried over. The console sends empty arrays on every create,
+nothing read them, and the schema has no columns for them. It comes back as a
+join table if anyone asks for it.
+
+**The ledger is wired.** Confirming an order posts the sale
+(`postOrderConfirmed`), a successful charge posts the receipt
+(`postPaymentReceived`), and both happen in the same transaction as the thing
+they describe — an order that says "confirmed" with no entry behind it is a hole
+nobody finds until a reconciliation fails months later. Paying also writes the
+negative `sale` rows in `stock_movements`, guarded by what is already in the
+ledger rather than by a flag, so a status flipped back and forth does not ship
+the goods twice.
+
+**A charge is applied exactly once.** It arrives twice by design — the redirect
+and the webhook — and often at the same instant. The transaction is claimed with
+`UPDATE ... WHERE id = :id AND status <> 'success' RETURNING id`, and only the
+winner touches the order. `already_applied` is a success, not an error: replying
+non-2xx to a webhook makes Paystack retry for days over an order that is already
+paid. Amounts are kobo end to end, since Paystack works in minor units and so
+does the database.
+
+**Status history is a trigger.** `orders_record_status` writes
+`order_status_events`, so a bulk update is recorded too; the handler only
+attributes the row to the operator and attaches their note. The Mongoose version
+pushed onto an array and recorded nothing that did not go through it.
+
+Two bugs fixed in passing: the customer-facing invoice, receipt and quotation
+routes looked the order up by id and printed it with **no ownership check at
+all**, so anyone who guessed an id could print anyone's order; and
+`delivered_at`, which the schema requires on a delivered order, is now set by
+the service rather than expected from the caller.
+
+The account number the bank-transfer form collected is no longer stored. The
+transfer is identified by its reference, and a bank account number sitting in an
+admin list is a liability rather than a record.
+
 ## What is not built yet
 
 **The system is mid-migration and not deployable in this state.** The catalog —
-reads and writes — carts and wishlists, and accounts are on PostgreSQL.
-Everything else still reads Mongo, which is empty.
+reads and writes — carts and wishlists, accounts, orders, payments and coupons
+are on PostgreSQL. Everything else still reads Mongo, which is empty.
 
 In order —
 
-1. **Orders, payments, reviews** — the remaining controllers, payments last.
-   Wiring the posting rules to their callers happens here, and it is the bulk of
-   what remains. `inventory`, `analytics`, `sitemap` and the seed script still
-   import the Mongo catalog models and go with them. Guest orders are part of
-   this: `order.controller.js` still resolves a guest through the Mongo
-   `GuestSession` collection, which nothing writes to any more, so a guest order
-   attaches to no session.
-2. **Supabase Auth.** Accounts are in `customers` and `staff` now, and both
+1. **Reviews**, whose table already exists — `reviews`, with the rating
+   maintained by a trigger. `review.controller.js` still writes to the embedded
+   arrays on the Mongo product and collection documents, which nothing reads.
+2. **Inventory, analytics, finance and the sitemap**, which read Mongo
+   collections that no longer receive writes and therefore report zero. The
+   inventory tables (`stock_movements`, `product_stock`, `stock_reservations`)
+   and the ledger are already in place; these are queries over them.
+3. **Everything with no table yet** — blog, FAQs, projects, designers,
+   consultations, notifications, the loyalty ledger, promo banners, flash sales,
+   and the activity and audit logs. Each needs a migration first. The seed
+   script goes with them.
+4. **Supabase Auth.** Accounts are in `customers` and `staff` now, and both
    tables carry a nullable `supabase_user_id` for it, but sign-in is still the
    local bcrypt password. The bootstrap step exists: `npm run bootstrap:staff`.
-3. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
-4. **Reports** — P&L, balance sheet, VAT return — queries over the ledger.
+5. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
+6. **Reports** — P&L, balance sheet, VAT return — queries over the ledger.

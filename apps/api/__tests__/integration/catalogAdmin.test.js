@@ -1,4 +1,3 @@
-import { jest } from '@jest/globals';
 import { QueryTypes } from 'sequelize';
 import { setupDatabase, teardownDatabase, getDb, insertProduct } from '../helpers/database.js';
 import {
@@ -14,7 +13,6 @@ import {
 // The catalog write path. Its validation rules are carried over from the old
 // admin controller unchanged — these tests are what says so.
 
-jest.setTimeout(30000);
 
 /**
  * A stand-in for Cloudinary that records what it was asked to do.

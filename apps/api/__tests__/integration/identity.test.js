@@ -22,7 +22,6 @@ import {
 // the message is also the only way to get at a reset link, which is exactly how
 // a real user gets one.
 
-jest.setTimeout(30000);
 
 const sent = [];
 

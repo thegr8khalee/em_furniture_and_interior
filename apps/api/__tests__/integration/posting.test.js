@@ -1,4 +1,3 @@
-import { jest } from '@jest/globals';
 import { QueryTypes } from 'sequelize';
 import {
   setupDatabase,
@@ -19,7 +18,6 @@ import {
 // each rule balances, each is idempotent under retry, and nothing is invented
 // when a figure is genuinely unknown.
 
-jest.setTimeout(30000);
 
 const IN_PERIOD = '2026-09-15';
 
