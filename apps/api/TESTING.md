@@ -129,11 +129,37 @@ Who may review what, and what moderation does.
   appears in the other's moderation queue.
 - **Approval is attributed** — who, and when.
 
+### `__tests__/integration/stock.test.js`
+
+The console's stock screen, and the sitemap.
+
+- **Every assertion checks both** what the endpoint said and what the movement
+  ledger now contains, because the count is derived from the ledger.
+- An absolute figure becomes the movement that implies it; a delta cannot drive
+  the count below zero; a count that is already right writes nothing.
+- **An adjustment with no reason is refused** — that is how a discrepancy
+  becomes permanent.
+- A held reservation is unsellable without leaving the warehouse.
+
+### `__tests__/integration/reporting.test.js`
+
+The analytics and finance reports, over a small set of orders built by the
+suite: two paid, one unpaid, one refunded.
+
+- **Which orders count.** Revenue excludes the unpaid and the refunded; the
+  order count includes everything; the funnel counts every order at the top and
+  only paid ones at the bottom.
+- Sales group by category and by the address on the order; product performance
+  reports under the name the item was **sold** as, not its current name.
+- Lifetime value attributes to the account and ignores guest orders.
+- **The CSV and the screen agree**, because they ask the same function.
+
 ## What is not covered yet
 
-Consultations, notifications, inventory, analytics and finance — the
-controllers still reading Mongo. They get suites as they move, the way the
-catalog, cart, account, order and payment suites did.
+Blog, FAQs, projects, designers, consultations, notifications, the loyalty
+ledger and the marketing tables — everything still in Mongo, none of which has a
+PostgreSQL table yet. They get suites as they move, the way the catalog, cart,
+account, order, payment, review, stock and reporting suites did.
 
 Two suites that once claimed to cover this ground asserted on objects they had
 built themselves, so they passed regardless of what the application did. They

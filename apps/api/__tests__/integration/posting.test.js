@@ -23,11 +23,6 @@ const IN_PERIOD = '2026-09-15';
 
 beforeAll(async () => {
   await setupDatabase();
-  // A wide period so a row's created_at date always falls inside one.
-  await getDb().query(
-    `INSERT INTO accounting_periods (name, starts_on, ends_on)
-     VALUES ('open-window', '2020-01-01', '2035-12-31')`
-  );
 });
 
 afterAll(async () => {

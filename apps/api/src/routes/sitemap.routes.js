@@ -1,6 +1,6 @@
 import express from 'express';
-import Product from '../models/product.model.js';
-import Collection from '../models/collection.model.js';
+import { QueryTypes } from 'sequelize';
+import { getSequelize } from '../db/sequelize.js';
 import Project from '../models/project.model.js';
 import BlogPost from '../models/blogPost.model.js';
 import { logger } from '../lib/logger.js';
@@ -55,15 +55,32 @@ const STATIC_ROUTES = [
 
 router.get('/sitemap.xml', async (_req, res) => {
   try {
-    const [products, collections, projects, blogPosts] = await Promise.all([
-      Product.find({}, { _id: 1, updatedAt: 1 }).lean(),
-      Collection.find({}, { _id: 1, updatedAt: 1 }).lean(),
-      Project.find({}, { _id: 1, updatedAt: 1 }).lean(),
-      BlogPost.find(
-        { status: 'published' },
-        { slug: 1, updatedAt: 1, publishedAt: 1 }
-      ).lean(),
-    ]);
+    // The catalog is in PostgreSQL; projects and blog posts have not moved yet.
+    // One query rather than two, since both kinds live in `sellable_items`.
+    //
+    // Settled rather than all: a sitemap missing the blog is a smaller problem
+    // than no sitemap, and one source being unavailable should not take the
+    // other three with it. Whatever failed is logged and left out.
+    const [sellable, projects, blogPosts] = (
+      await Promise.allSettled([
+        getSequelize().query(
+          `SELECT id, kind, updated_at FROM sellable_items ORDER BY updated_at DESC`,
+          { type: QueryTypes.SELECT }
+        ),
+        Project.find({}, { _id: 1, updatedAt: 1 }).lean(),
+        BlogPost.find(
+          { status: 'published' },
+          { slug: 1, updatedAt: 1, publishedAt: 1 }
+        ).lean(),
+      ])
+    ).map((result, index) => {
+      if (result.status === 'fulfilled') return result.value;
+      logger.error({ err: result.reason, source: index }, 'Sitemap source unavailable');
+      return [];
+    });
+
+    const products = sellable.filter((row) => row.kind === 'product');
+    const collections = sellable.filter((row) => row.kind === 'collection');
 
     const urls = [
       ...STATIC_ROUTES.map((r) =>
@@ -75,16 +92,16 @@ router.get('/sitemap.xml', async (_req, res) => {
       ),
       ...products.map((p) =>
         urlEntry({
-          loc: `${SITE_URL}/product/${p._id}`,
-          lastmod: p.updatedAt,
+          loc: `${SITE_URL}/product/${p.id}`,
+          lastmod: p.updated_at,
           changefreq: 'weekly',
           priority: '0.8',
         })
       ),
       ...collections.map((c) =>
         urlEntry({
-          loc: `${SITE_URL}/collection/${c._id}`,
-          lastmod: c.updatedAt,
+          loc: `${SITE_URL}/collection/${c.id}`,
+          lastmod: c.updated_at,
           changefreq: 'weekly',
           priority: '0.8',
         })

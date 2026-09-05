@@ -36,12 +36,6 @@ beforeAll(async () => {
   process.env.TAX_RATE_PERCENTAGE = '7.5';
   ({ default: app } = await import('../../src/app.js'));
 
-  // Journal entries are refused outside an open period, so the ledger posting
-  // that order confirmation performs needs one to exist.
-  await getDb().query(
-    `INSERT INTO accounting_periods (name, starts_on, ends_on)
-     VALUES ('open-window', '2020-01-01', '2035-12-31')`
-  );
 });
 
 afterAll(async () => {

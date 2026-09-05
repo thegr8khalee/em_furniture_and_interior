@@ -1,169 +1,59 @@
-import Order from '../models/order.model.js';
 import { logger } from '../lib/logger.js';
+import { parseDateRange, revenueSummary } from '../services/reporting.js';
 
-const parseDateRange = (startDate, endDate) => {
-  const end = endDate ? new Date(endDate) : new Date();
-  const start = startDate
-    ? new Date(startDate)
-    : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+/*
+ * Revenue, summarised and exported. Both endpoints ask the same question of
+ * services/reporting.js and differ only in how they render the answer, which is
+ * what stops the CSV and the screen from disagreeing — under Mongo they were
+ * two copies of one aggregation pipeline.
+ */
 
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    return null;
-  }
-
-  return { start, end };
-};
-
-const buildMatch = (start, end, includeUnpaid, includeRefunded) => {
-  const match = {
-    createdAt: { $gte: start, $lte: end },
-  };
-
-  if (!includeUnpaid) {
-    match.paymentStatus = 'paid';
-  }
-
-  if (!includeRefunded) {
-    match.status = { $nin: ['cancelled', 'refunded'] };
-  }
-
-  return match;
-};
+const options = (req) => ({
+  includeUnpaid: req.query.includeUnpaid === 'true',
+  includeRefunded: req.query.includeRefunded === 'true',
+});
 
 export const getRevenueSummary = async (req, res) => {
+  const range = parseDateRange(req.query.startDate, req.query.endDate);
+  if (!range) return res.status(400).json({ message: 'Invalid date range.' });
+
   try {
-    const { startDate, endDate, includeUnpaid, includeRefunded } = req.query;
-    const range = parseDateRange(startDate, endDate);
+    const { summary, daily } = await revenueSummary(range, options(req));
 
-    if (!range) {
-      return res.status(400).json({ message: 'Invalid date range.' });
-    }
-
-    const match = buildMatch(
-      range.start,
-      range.end,
-      includeUnpaid === 'true',
-      includeRefunded === 'true'
-    );
-
-    const [totals, daily] = await Promise.all([
-      Order.aggregate([
-        { $match: match },
-        {
-          $group: {
-            _id: null,
-            orderCount: { $sum: 1 },
-            subtotal: { $sum: '$subtotal' },
-            discount: { $sum: '$discount' },
-            taxAmount: { $sum: '$taxAmount' },
-            shippingCost: { $sum: '$shippingCost' },
-            totalAmount: { $sum: '$totalAmount' },
-          },
-        },
-      ]),
-      Order.aggregate([
-        { $match: match },
-        {
-          $group: {
-            _id: {
-              $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
-            },
-            orderCount: { $sum: 1 },
-            totalAmount: { $sum: '$totalAmount' },
-            subtotal: { $sum: '$subtotal' },
-            discount: { $sum: '$discount' },
-            taxAmount: { $sum: '$taxAmount' },
-            shippingCost: { $sum: '$shippingCost' },
-          },
-        },
-        { $sort: { _id: 1 } },
-      ]),
-    ]);
-
-    const summary = totals[0] || {
-      orderCount: 0,
-      subtotal: 0,
-      discount: 0,
-      taxAmount: 0,
-      shippingCost: 0,
-      totalAmount: 0,
-    };
-
-    res.json({
-      success: true,
-      summary,
-      daily,
-      range: {
-        start: range.start,
-        end: range.end,
-      },
-    });
+    res.json({ success: true, summary, daily, range });
   } catch (error) {
     logger.error({ err: error }, 'Error generating revenue summary');
     res.status(500).json({ message: 'Server error' });
   }
 };
 
+const CSV_COLUMNS = ['date', 'orders', 'subtotal', 'discount', 'tax', 'shipping', 'totalAmount'];
+
 export const exportRevenueCsv = async (req, res) => {
+  const range = parseDateRange(req.query.startDate, req.query.endDate);
+  if (!range) return res.status(400).json({ message: 'Invalid date range.' });
+
   try {
-    const { startDate, endDate, includeUnpaid, includeRefunded } = req.query;
-    const range = parseDateRange(startDate, endDate);
+    const { daily } = await revenueSummary(range, options(req));
 
-    if (!range) {
-      return res.status(400).json({ message: 'Invalid date range.' });
-    }
-
-    const match = buildMatch(
-      range.start,
-      range.end,
-      includeUnpaid === 'true',
-      includeRefunded === 'true'
+    const rows = daily.map((row) =>
+      [
+        row._id,
+        row.orderCount,
+        row.subtotal,
+        row.discount,
+        row.taxAmount,
+        row.shippingCost,
+        row.totalAmount,
+      ].join(',')
     );
 
-    const daily = await Order.aggregate([
-      { $match: match },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
-          },
-          orderCount: { $sum: 1 },
-          subtotal: { $sum: '$subtotal' },
-          discount: { $sum: '$discount' },
-          taxAmount: { $sum: '$taxAmount' },
-          shippingCost: { $sum: '$shippingCost' },
-          totalAmount: { $sum: '$totalAmount' },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
-
-    const header =
-      'date,orders,subtotal,discount,tax,shipping,totalAmount\n';
-    const rows = daily
-      .map((row) =>
-        [
-          row._id,
-          row.orderCount,
-          row.subtotal || 0,
-          row.discount || 0,
-          row.taxAmount || 0,
-          row.shippingCost || 0,
-          row.totalAmount || 0,
-        ].join(',')
-      )
-      .join('\n');
-
-    const csv = `${header}${rows}`;
+    const from = range.start.toISOString().slice(0, 10);
+    const to = range.end.toISOString().slice(0, 10);
 
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="revenue-${range.start.toISOString().slice(0, 10)}-${range.end
-        .toISOString()
-        .slice(0, 10)}.csv"`
-    );
-    res.status(200).send(csv);
+    res.setHeader('Content-Disposition', `attachment; filename="revenue-${from}-${to}.csv"`);
+    res.status(200).send(`${CSV_COLUMNS.join(',')}\n${rows.join('\n')}`);
   } catch (error) {
     logger.error({ err: error }, 'Error exporting revenue CSV');
     res.status(500).json({ message: 'Server error' });

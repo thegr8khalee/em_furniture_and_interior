@@ -13,10 +13,8 @@ const IN_PERIOD = '2026-09-15';
 
 beforeAll(async () => {
   await setupDatabase();
-  await getDb().query(
-    `INSERT INTO accounting_periods (name, starts_on, ends_on)
-     VALUES ('2026-09', '${PERIOD_START}', '2026-09-30')`
-  );
+  // The accounting calendar is part of the schema now — every month from 2024
+  // to 2035 exists and is open, so no suite has to make one.
 });
 
 afterAll(async () => {
@@ -284,8 +282,8 @@ describe('Accounting periods', () => {
   test('refuses a posting into a closed period', async () => {
     const db = getDb();
     await db.query(
-      `INSERT INTO accounting_periods (name, starts_on, ends_on, status, closed_at)
-       VALUES ('2026-08', '2026-08-01', '2026-08-31', 'closed', now())`
+      `UPDATE accounting_periods SET status = 'closed', closed_at = now()
+        WHERE name = '2026-08'`
     );
 
     await expect(
@@ -302,17 +300,19 @@ describe('Accounting periods', () => {
 
   test('refuses a posting with no period at all', async () => {
     // Better to refuse than to let a posting land nowhere and quietly miss
-    // every report.
+    // every report. The calendar runs to 2035 for exactly this reason: a date
+    // mistyped far into the future fails loudly instead of landing in a period
+    // nobody will ever look at.
     await expect(
       postEntry(getDb(), {
-        date: '2030-01-01',
+        date: '2099-01-01',
         description: 'Far future',
         lines: [
           { account: '1110', debit: 100 },
           { account: '4100', credit: 100 },
         ],
       })
-    ).rejects.toThrow(/no accounting period covers 2030-01-01/);
+    ).rejects.toThrow(/no accounting period covers 2099-01-01/);
   });
 
   test('refuses overlapping periods', async () => {

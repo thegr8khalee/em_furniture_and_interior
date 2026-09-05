@@ -1,110 +1,62 @@
-import Product from '../models/product.model.js';
-import InventoryAdjustment from '../models/inventoryAdjustment.model.js';
 import { logger } from '../lib/logger.js';
+import {
+  InventoryError,
+  adjustStock,
+  listStock,
+  movementsFor,
+} from '../services/inventory.js';
+
+/*
+ * Stock. The balance is derived from `stock_movements`, so there is nothing
+ * here that sets a quantity — an adjustment records the movement that explains
+ * the new figure, and the figure follows.
+ */
+
+const fail = (error, res, where) => {
+  if (error instanceof InventoryError) {
+    return res.status(error.status).json({ message: error.message });
+  }
+  logger.error({ err: error }, where);
+  return res.status(500).json({ message: 'Server error' });
+};
 
 export const getInventoryProducts = async (req, res) => {
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
+
   try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 20;
-    const skip = (page - 1) * limit;
-    const { search, lowStock } = req.query;
-
-    const query = {};
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { sku: { $regex: search, $options: 'i' } },
-      ];
-    }
-
-    if (lowStock === 'true') {
-      query.$expr = { $lte: ['$stockQuantity', '$lowStockThreshold'] };
-    }
-
-    const [products, total] = await Promise.all([
-      Product.find(query)
-        .sort({ updatedAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .select('name sku stockQuantity lowStockThreshold warehouseLocation'),
-      Product.countDocuments(query),
-    ]);
+    const { products, total } = await listStock({
+      page,
+      limit,
+      search: req.query.search || null,
+      lowStock: req.query.lowStock === 'true',
+    });
 
     res.json({
       success: true,
       products,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    logger.error({ err: error }, 'Error fetching inventory products');
-    res.status(500).json({ message: 'Server error' });
+    fail(error, res, 'Error fetching inventory products');
   }
 };
 
 export const adjustInventory = async (req, res) => {
   try {
-    const { productId } = req.params;
-    const { delta, newQuantity, reason } = req.body;
+    const { product } = await adjustStock(req.params.productId, req.body, req.admin.id);
 
-    if (delta === undefined && newQuantity === undefined) {
-      return res.status(400).json({ message: 'Provide delta or newQuantity.' });
-    }
-
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found.' });
-    }
-
-    const previousQuantity = product.stockQuantity || 0;
-    let updatedQuantity = previousQuantity;
-
-    if (newQuantity !== undefined) {
-      const parsed = parseInt(newQuantity, 10);
-      if (isNaN(parsed) || parsed < 0) {
-        return res
-          .status(400)
-          .json({ message: 'New quantity must be a non-negative number.' });
-      }
-      updatedQuantity = parsed;
-    } else {
-      const parsedDelta = parseInt(delta, 10);
-      if (isNaN(parsedDelta)) {
-        return res.status(400).json({ message: 'Delta must be a number.' });
-      }
-      updatedQuantity = Math.max(0, previousQuantity + parsedDelta);
-    }
-
-    product.stockQuantity = updatedQuantity;
-    await product.save();
-
-    await InventoryAdjustment.create({
-      product: product._id,
-      delta: updatedQuantity - previousQuantity,
-      previousQuantity,
-      newQuantity: updatedQuantity,
-      reason,
-      adjustedBy: req.admin?._id,
-    });
-
-    res.json({
-      success: true,
-      message: 'Inventory updated successfully.',
-      product: {
-        _id: product._id,
-        name: product.name,
-        sku: product.sku,
-        stockQuantity: product.stockQuantity,
-        lowStockThreshold: product.lowStockThreshold,
-        warehouseLocation: product.warehouseLocation,
-      },
-    });
+    res.json({ success: true, message: 'Inventory updated successfully.', product });
   } catch (error) {
-    logger.error({ err: error }, 'Error adjusting inventory');
-    res.status(500).json({ message: 'Server error' });
+    fail(error, res, 'Error adjusting inventory');
+  }
+};
+
+/** Why the count is what it is. */
+export const getInventoryHistory = async (req, res) => {
+  try {
+    res.json({ success: true, movements: await movementsFor(req.params.productId) });
+  } catch (error) {
+    fail(error, res, 'Error fetching inventory history');
   }
 };

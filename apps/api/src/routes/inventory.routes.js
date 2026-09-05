@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getInventoryProducts,
   adjustInventory,
+  getInventoryHistory,
 } from '../controllers/inventory.controller.js';
 import { protectAdminRoute } from '../middleware/protectAdminRoute.js';
 import { requirePermissions } from '../middleware/requirePermissions.js';
@@ -15,6 +16,15 @@ router.get(
   protectAdminRoute,
   requirePermissions([PERMISSIONS.INVENTORY_MANAGE]),
   getInventoryProducts
+);
+
+// Why a count is what it is: the movements the balance is derived from. This
+// is what the separate InventoryAdjustment collection used to describe.
+router.get(
+  '/admin/products/:productId/history',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.INVENTORY_MANAGE]),
+  getInventoryHistory
 );
 
 router.put(

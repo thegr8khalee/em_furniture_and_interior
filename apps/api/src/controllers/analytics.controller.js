@@ -1,157 +1,57 @@
-import Order from '../models/order.model.js';
-import Product from '../models/product.model.js';
-import { countCustomers } from '../services/identity.js';
 import ConsultationRequest from '../models/consultationRequest.model.js';
 import { logger } from '../lib/logger.js';
+import {
+  conversionFunnel,
+  customerLifetimeValue,
+  overviewStats,
+  parseDateRange,
+  productPerformance,
+  salesByCategory,
+  salesByRegion,
+} from '../services/reporting.js';
 
-const parseDateRange = (startDate, endDate) => {
-  const end = endDate ? new Date(endDate) : new Date();
-  const start = startDate
-    ? new Date(startDate)
-    : new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+/*
+ * The console's reports. Every one of these was a Mongo aggregation pipeline
+ * over the orders collection; they are joins, and they live in
+ * services/reporting.js as joins.
+ *
+ * Designer performance is the exception below: consultations and designers are
+ * still Mongo collections, so it stays an aggregation until they move.
+ */
 
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    return null;
+const report = (load, where) => async (req, res) => {
+  const range = parseDateRange(req.query.startDate, req.query.endDate);
+  if (!range) return res.status(400).json({ message: 'Invalid date range.' });
+
+  try {
+    res.json({ success: true, ...(await load(range, req)), range });
+  } catch (error) {
+    logger.error({ err: error }, where);
+    res.status(500).json({ message: 'Server error' });
   }
-
-  return { start, end };
 };
 
 // Sales by Category
-export const getSalesByCategory = async (req, res) => {
-  try {
-    const { startDate, endDate } = req.query;
-    const range = parseDateRange(startDate, endDate);
-
-    if (!range) {
-      return res.status(400).json({ message: 'Invalid date range.' });
-    }
-
-    const match = {
-      createdAt: { $gte: range.start, $lte: range.end },
-      status: { $nin: ['cancelled', 'refunded'] },
-      paymentStatus: 'paid',
-    };
-
-    const salesByCategory = await Order.aggregate([
-      { $match: match },
-      { $unwind: '$items' },
-      {
-        $lookup: {
-          from: 'products',
-          localField: 'items.item',
-          foreignField: '_id',
-          as: 'productDetails',
-        },
-      },
-      { $unwind: { path: '$productDetails', preserveNullAndEmptyArrays: true } },
-      {
-        $group: {
-          _id: '$productDetails.category',
-          totalRevenue: { $sum: '$items.subtotal' },
-          orderCount: { $sum: 1 },
-          itemCount: { $sum: '$items.quantity' },
-        },
-      },
-      { $sort: { totalRevenue: -1 } },
-    ]);
-
-    res.json({
-      success: true,
-      data: salesByCategory,
-      range: { start: range.start, end: range.end },
-    });
-  } catch (error) {
-    logger.error({ err: error }, 'Error fetching sales by category');
-    res.status(500).json({ message: 'Server error' });
-  }
-};
+export const getSalesByCategory = report(
+  async (range) => ({ data: await salesByCategory(range) }),
+  'Error fetching sales by category'
+);
 
 // Sales by Region
-export const getSalesByRegion = async (req, res) => {
-  try {
-    const { startDate, endDate } = req.query;
-    const range = parseDateRange(startDate, endDate);
-
-    if (!range) {
-      return res.status(400).json({ message: 'Invalid date range.' });
-    }
-
-    const match = {
-      createdAt: { $gte: range.start, $lte: range.end },
-      status: { $nin: ['cancelled', 'refunded'] },
-      paymentStatus: 'paid',
-    };
-
-    const salesByRegion = await Order.aggregate([
-      { $match: match },
-      {
-        $group: {
-          _id: {
-            state: '$shippingAddress.state',
-            city: '$shippingAddress.city',
-          },
-          totalRevenue: { $sum: '$totalAmount' },
-          orderCount: { $sum: 1 },
-        },
-      },
-      { $sort: { totalRevenue: -1 } },
-      { $limit: 50 },
-    ]);
-
-    res.json({
-      success: true,
-      data: salesByRegion,
-      range: { start: range.start, end: range.end },
-    });
-  } catch (error) {
-    logger.error({ err: error }, 'Error fetching sales by region');
-    res.status(500).json({ message: 'Server error' });
-  }
-};
+export const getSalesByRegion = report(
+  async (range) => ({ data: await salesByRegion(range) }),
+  'Error fetching sales by region'
+);
 
 // Product Performance
-export const getProductPerformance = async (req, res) => {
-  try {
-    const { startDate, endDate, limit = 20 } = req.query;
-    const range = parseDateRange(startDate, endDate);
-
-    if (!range) {
-      return res.status(400).json({ message: 'Invalid date range.' });
-    }
-
-    const match = {
-      createdAt: { $gte: range.start, $lte: range.end },
-      status: { $nin: ['cancelled', 'refunded'] },
-      paymentStatus: 'paid',
-    };
-
-    const productPerformance = await Order.aggregate([
-      { $match: match },
-      { $unwind: '$items' },
-      {
-        $group: {
-          _id: '$items.item',
-          productName: { $first: '$items.name' },
-          totalRevenue: { $sum: '$items.subtotal' },
-          unitsSold: { $sum: '$items.quantity' },
-          orderCount: { $sum: 1 },
-        },
-      },
-      { $sort: { totalRevenue: -1 } },
-      { $limit: parseInt(limit, 10) },
-    ]);
-
-    res.json({
-      success: true,
-      data: productPerformance,
-      range: { start: range.start, end: range.end },
-    });
-  } catch (error) {
-    logger.error({ err: error }, 'Error fetching product performance');
-    res.status(500).json({ message: 'Server error' });
-  }
-};
+export const getProductPerformance = report(
+  async (range, req) => ({
+    data: await productPerformance(range, {
+      limit: Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 200),
+    }),
+  }),
+  'Error fetching product performance'
+);
 
 // Designer Performance
 export const getDesignerPerformance = async (req, res) => {
@@ -233,61 +133,10 @@ export const getDesignerPerformance = async (req, res) => {
 // Customer Lifetime Value
 export const getCustomerLifetimeValue = async (req, res) => {
   try {
-    const { limit = 50 } = req.query;
-
-    const customerLTV = await Order.aggregate([
-      {
-        $match: {
-          user: { $ne: null },
-          status: { $nin: ['cancelled', 'refunded'] },
-          paymentStatus: 'paid',
-        },
-      },
-      {
-        $group: {
-          _id: '$user',
-          totalSpent: { $sum: '$totalAmount' },
-          orderCount: { $sum: 1 },
-          averageOrderValue: { $avg: '$totalAmount' },
-          firstOrder: { $min: '$createdAt' },
-          lastOrder: { $max: '$createdAt' },
-        },
-      },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'userDetails',
-        },
-      },
-      { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
-      {
-        $project: {
-          userId: '$_id',
-          userName: {
-            $concat: [
-              '$userDetails.firstName',
-              ' ',
-              '$userDetails.lastName',
-            ],
-          },
-          email: '$userDetails.email',
-          totalSpent: 1,
-          orderCount: 1,
-          averageOrderValue: 1,
-          firstOrder: 1,
-          lastOrder: 1,
-        },
-      },
-      { $sort: { totalSpent: -1 } },
-      { $limit: parseInt(limit, 10) },
-    ]);
-
-    res.json({
-      success: true,
-      data: customerLTV,
+    const data = await customerLifetimeValue({
+      limit: Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 500),
     });
+    res.json({ success: true, data });
   } catch (error) {
     logger.error({ err: error }, 'Error fetching customer LTV');
     res.status(500).json({ message: 'Server error' });
@@ -295,117 +144,22 @@ export const getCustomerLifetimeValue = async (req, res) => {
 };
 
 // Conversion Funnel
-export const getConversionFunnel = async (req, res) => {
-  try {
-    const { startDate, endDate } = req.query;
-    const range = parseDateRange(startDate, endDate);
-
-    if (!range) {
-      return res.status(400).json({ message: 'Invalid date range.' });
-    }
-
-    const match = {
-      createdAt: { $gte: range.start, $lte: range.end },
-    };
-
-    const [totalUsers, ordersStarted, ordersCompleted, paidOrders] = await Promise.all([
-      countCustomers({ from: range.start, to: range.end }),
-      Order.countDocuments(match),
-      Order.countDocuments({
-        ...match,
-        status: { $in: ['confirmed', 'processing', 'shipped', 'delivered'] },
-      }),
-      Order.countDocuments({
-        ...match,
-        paymentStatus: 'paid',
-      }),
-    ]);
-
-    const funnel = [
-      { stage: 'Registered Users', count: totalUsers },
-      { stage: 'Orders Created', count: ordersStarted },
-      { stage: 'Orders Confirmed', count: ordersCompleted },
-      { stage: 'Orders Paid', count: paidOrders },
-    ];
-
-    const conversionRates = {
-      registrationToOrder: totalUsers > 0 ? (ordersStarted / totalUsers) * 100 : 0,
-      orderToConfirmed: ordersStarted > 0 ? (ordersCompleted / ordersStarted) * 100 : 0,
-      confirmedToPaid: ordersCompleted > 0 ? (paidOrders / ordersCompleted) * 100 : 0,
-      overallConversion: totalUsers > 0 ? (paidOrders / totalUsers) * 100 : 0,
-    };
-
-    res.json({
-      success: true,
-      funnel,
-      conversionRates,
-      range: { start: range.start, end: range.end },
-    });
-  } catch (error) {
-    logger.error({ err: error }, 'Error fetching conversion funnel');
-    res.status(500).json({ message: 'Server error' });
-  }
-};
+export const getConversionFunnel = report(
+  (range) => conversionFunnel(range),
+  'Error fetching conversion funnel'
+);
 
 // Overview Dashboard Stats
-export const getOverviewStats = async (req, res) => {
-  try {
-    const { startDate, endDate } = req.query;
-    const range = parseDateRange(startDate, endDate);
-
-    if (!range) {
-      return res.status(400).json({ message: 'Invalid date range.' });
-    }
-
-    const match = {
+export const getOverviewStats = report(async (range) => {
+  const [stats, totalConsultations] = await Promise.all([
+    overviewStats(range),
+    // Still a Mongo collection. Counted separately rather than pretending it is
+    // part of the same query, and zero rather than a failed dashboard if the
+    // collection is unreachable.
+    ConsultationRequest.countDocuments({
       createdAt: { $gte: range.start, $lte: range.end },
-    };
+    }).catch(() => 0),
+  ]);
 
-    const [
-      totalRevenue,
-      totalOrders,
-      totalCustomers,
-      totalConsultations,
-      averageOrderValue,
-    ] = await Promise.all([
-      Order.aggregate([
-        {
-          $match: {
-            ...match,
-            status: { $nin: ['cancelled', 'refunded'] },
-            paymentStatus: 'paid',
-          },
-        },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-      ]).then((res) => res[0]?.total || 0),
-      Order.countDocuments(match),
-      countCustomers({ from: range.start, to: range.end }),
-      ConsultationRequest.countDocuments(match),
-      Order.aggregate([
-        {
-          $match: {
-            ...match,
-            status: { $nin: ['cancelled', 'refunded'] },
-            paymentStatus: 'paid',
-          },
-        },
-        { $group: { _id: null, avg: { $avg: '$totalAmount' } } },
-      ]).then((res) => res[0]?.avg || 0),
-    ]);
-
-    res.json({
-      success: true,
-      stats: {
-        totalRevenue,
-        totalOrders,
-        totalCustomers,
-        totalConsultations,
-        averageOrderValue,
-      },
-      range: { start: range.start, end: range.end },
-    });
-  } catch (error) {
-    logger.error({ err: error }, 'Error fetching overview stats');
-    res.status(500).json({ message: 'Server error' });
-  }
-};
+  return { stats: { ...stats, totalConsultations } };
+}, 'Error fetching overview stats');

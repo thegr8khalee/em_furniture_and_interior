@@ -73,10 +73,6 @@ beforeAll(async () => {
   stubPaystack();
   ({ default: app } = await import('../../src/app.js'));
 
-  await getDb().query(
-    `INSERT INTO accounting_periods (name, starts_on, ends_on)
-     VALUES ('open-window', '2020-01-01', '2035-12-31')`
-  );
 });
 
 afterAll(async () => {

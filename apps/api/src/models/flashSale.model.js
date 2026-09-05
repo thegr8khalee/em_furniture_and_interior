@@ -10,8 +10,10 @@ const flashSaleSchema = new mongoose.Schema(
       required: true,
     },
     discountValue: { type: Number, required: true, min: 0 },
-    productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
-    collectionIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Collection' }],
+    // sellable_items ids — the catalog is in PostgreSQL, so these cannot be
+    // ObjectIds and cannot be populated. They move with this collection.
+    productIds: [{ type: String }],
+    collectionIds: [{ type: String }],
     bannerImageUrl: { type: String, trim: true },
     isActive: { type: Boolean, default: true },
     startDate: { type: Date, required: true },

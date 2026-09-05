@@ -570,24 +570,62 @@ Approve and reject take the review's own id. The routes still carry the parent
 item, because both frontends build the URL that way, but a review was a
 subdocument and is now a row.
 
+### Stock, reports and the accounting calendar
+
+`src/services/inventory.js` and `src/services/reporting.js` finish the reads the
+console depends on.
+
+**There is no quantity to set.** `stock_movements` is the ledger and the balance
+is derived from it, so "set the count to 12" is recorded as the movement that
+takes it to 12. The Mongo version assigned `product.stockQuantity` and wrote a
+parallel `InventoryAdjustment` document describing what it had just done, so the
+count and its explanation could disagree — and did, after any correction applied
+by hand. `stock_adjustment_needs_a_note` refuses an adjustment nobody explained.
+The list publishes `stockQuantity` as what is *sellable* — on hand less what is
+held for confirmed orders — with `onHand` and `reserved` beside it, so the
+difference is visible rather than surprising.
+
+**The reports are joins**, because that is what the aggregation pipelines were.
+One rule runs through all of them and is stated once: a sale counts when it is
+paid and not cancelled or refunded. It had already drifted — the conversion
+funnel counted every order regardless, which is right for a funnel and wrong
+everywhere else, and nothing said so. Customer lifetime value now shows a name:
+the old pipeline concatenated `firstName` and `lastName`, which the user document
+never had, so every row said "undefined undefined".
+
+**A fresh installation could not record its first sale.** `assert_period_open`
+refuses a journal entry whose date falls in no accounting period, and nothing
+created any — so confirming an order raised "no accounting period covers
+2026-09-05" and took the order down with it. It was invisible until the posting
+rules were wired to their callers, because until then nothing posted.
+`0010_accounting_calendar.sql` opens a month at a time from 2024 to 2035. The
+range is deliberately finite: a calendar that ran forever would let a posting
+mistyped as 2099 land in a period nobody ever looks at, where running out is a
+loud failure with an obvious fix.
+
+The seeder places its orders through the ordering service rather than inserting
+them, so a seeded database has priced, numbered orders, a balanced ledger and a
+stock history to look at. It skips the sections whose collections are still in
+Mongo when no Mongo is configured, so a developer with only a PostgreSQL still
+gets a working shop.
+
 ## What is not built yet
 
 **The system is mid-migration and not deployable in this state.** The catalog —
-reads and writes — carts and wishlists, accounts, orders, payments, coupons
-and reviews are on PostgreSQL. Everything else still reads Mongo, which is empty.
+reads and writes — carts and wishlists, accounts, orders, payments, coupons,
+reviews, stock, the sales reports and the sitemap are on PostgreSQL. What is left
+in Mongo has no table yet: blog, FAQs, projects, designers, consultations,
+notifications, the loyalty ledger, promo banners, flash sales, and the activity
+and audit logs.
 
 In order —
 
-1. **Inventory, analytics, finance and the sitemap**, which read Mongo
-   collections that no longer receive writes and therefore report zero. The
-   inventory tables (`stock_movements`, `product_stock`, `stock_reservations`)
-   and the ledger are already in place; these are queries over them.
-2. **Everything with no table yet** — blog, FAQs, projects, designers,
+1. **Everything with no table yet** — blog, FAQs, projects, designers,
    consultations, notifications, the loyalty ledger, promo banners, flash sales,
    and the activity and audit logs. Each needs a migration first. The seed
    script goes with them.
-3. **Supabase Auth.** Accounts are in `customers` and `staff` now, and both
+2. **Supabase Auth.** Accounts are in `customers` and `staff` now, and both
    tables carry a nullable `supabase_user_id` for it, but sign-in is still the
    local bcrypt password. The bootstrap step exists: `npm run bootstrap:staff`.
-4. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
-5. **Reports** — P&L, balance sheet, VAT return — queries over the ledger.
+3. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
+4. **Reports** — P&L, balance sheet, VAT return — queries over the ledger.
