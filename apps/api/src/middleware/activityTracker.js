@@ -1,96 +1,73 @@
-import ActivityLog from '../models/activityLog.model.js';
+import { recordActivity } from '../services/logs.js';
+import { ensureGuestSession } from '../services/cart.js';
 import { logger } from '../lib/logger.js';
 
 /**
- * Middleware to track user activity
- * Can be used for both authenticated and guest users
+ * Records what a shopper did.
+ *
+ * Fire and forget, deliberately: an activity log is worth having and never
+ * worth delaying a page for, let alone failing one. `recordActivity` does not
+ * throw, so the floating promise cannot become an unhandled rejection.
+ *
+ * It used to read `req.guest`, which nothing has ever set — `identifyGuest`
+ * puts the anonymous shopper on `req.guestSession` — so every guest activity
+ * was silently dropped, and the whole middleware short-circuited for anyone not
+ * signed in.
  */
 export const trackActivity = (activityType, resourceType = null) => {
-  return async (req, res, next) => {
-    try {
-      // Extract user/guest info
-      const userId = req.user?._id || null;
-      const guestId = req.guest?._id || null;
+  return (req, _res, next) => {
+    const customerId = req.user?.id ?? null;
+    const anonymousId = req.guestSession?.anonymousId ?? null;
 
-      // Only track if we have a user or guest
-      if (!userId && !guestId) {
-        return next();
-      }
+    if (!customerId && !anonymousId) return next();
 
-      // Extract resource info from params or body
-      const resourceId = 
-        req.params.id || 
-        req.params.productId || 
-        req.params.collectionId || 
-        req.params.projectId || 
-        req.params.slug ||
-        req.body.productId ||
-        null;
+    const resourceId =
+      req.params.id ||
+      req.params.productId ||
+      req.params.collectionId ||
+      req.params.projectId ||
+      req.params.slug ||
+      req.body?.productId ||
+      null;
 
-      // Create activity log entry
-      const activityData = {
-        user: userId,
-        guest: guestId,
-        activityType,
-        resourceType,
-        resourceId,
-        metadata: {
-          method: req.method,
-          path: req.path,
-          query: req.query,
-          body: activityType === 'SEARCH' ? { query: req.query.q || req.body.query } : undefined,
-        },
-        sessionId: req.sessionID || req.cookies?.sessionId,
-        ipAddress: req.ip || req.connection.remoteAddress,
-        userAgent: req.get('user-agent'),
-        referrer: req.get('referrer'),
-        page: req.originalUrl,
-      };
+    const entry = {
+      customerId,
+      activityType,
+      resourceType,
+      resourceId,
+      metadata: {
+        method: req.method,
+        path: req.path,
+        query: req.query,
+        ...(activityType === 'SEARCH'
+          ? { search: req.query.q ?? req.body?.query ?? null }
+          : {}),
+      },
+      sessionId: req.cookies?.sessionId ?? null,
+      ipAddress: req.ip || req.connection?.remoteAddress,
+      userAgent: req.get('user-agent'),
+      referrer: req.get('referrer'),
+      page: req.originalUrl,
+    };
 
-      // Don't await - fire and forget to not slow down the request
-      ActivityLog.create(activityData).catch((error) => {
-        logger.error({ err: error }, 'Activity tracking error');
-      });
-    } catch (error) {
-      logger.error({ err: error }, 'Activity tracking middleware error');
-    }
+    // A guest's session row is created on their first write; a page view should
+    // not create one, so the activity is recorded against the session only when
+    // it already exists.
+    const resolve = customerId
+      ? Promise.resolve(entry)
+      : ensureGuestSession(anonymousId)
+          .then((guestSessionId) => ({ ...entry, guestSessionId }))
+          .catch(() => entry);
+
+    resolve
+      .then((resolved) => recordActivity(resolved))
+      .catch((error) => logger.error({ err: error }, 'Activity tracking error'));
 
     next();
   };
 };
 
 /**
- * Manually track an activity
- * Useful for activities that don't go through standard middleware
+ * Records an activity from somewhere that is not a route.
  */
-export const logActivity = async ({
-  user,
-  guest,
-  activityType,
-  resourceType,
-  resourceId,
-  metadata,
-  sessionId,
-  ipAddress,
-  userAgent,
-  referrer,
-  page,
-}) => {
-  try {
-    await ActivityLog.create({
-      user,
-      guest,
-      activityType,
-      resourceType,
-      resourceId,
-      metadata,
-      sessionId,
-      ipAddress,
-      userAgent,
-      referrer,
-      page,
-    });
-  } catch (error) {
-    logger.error({ err: error }, 'Failed to log activity');
-  }
-};
+export const logActivity = (entry) => recordActivity(entry);

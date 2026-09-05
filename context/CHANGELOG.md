@@ -122,3 +122,49 @@
 | pdfkit for documents | Server-side PDF generation without external service dependency |
 | Gmail API over SMTP | OAuth2 security, avoids "less secure app" issues with Google |
 | DaisyUI over custom components | Rapid development with themed, accessible components on top of Tailwind |
+
+---
+
+## [September 2026] — PostgreSQL
+
+The API moved off MongoDB entirely, slice by slice, each one shipping with the
+tests for what it moved. `mongoose` and `mongodb` are no longer dependencies and
+`src/models/` no longer exists. `docs/SCHEMA.md` carries the reasoning; this is
+the order it happened in.
+
+| Slice | What moved |
+|-------|------------|
+| Schema | 11 migrations, applied by a runner that takes an advisory lock and refuses to run twice |
+| Catalog | Product and collection reads, then admin CRUD |
+| Carts | One `carts` table for shoppers and guests, replacing two drifted code paths |
+| Accounts | `customers` and `staff`, and the bootstrap script for the first operator |
+| Orders | Pricing, coupons, the ledger postings and the stock movements |
+| Payments | Paystack, claimed once whichever path delivers the charge |
+| Reviews | One table for both kinds of item, rating maintained by trigger |
+| Stock | Balances derived from the movement ledger, not a counter |
+| Reports | Aggregation pipelines rewritten as joins |
+| Content | Blog, FAQs, projects, designers, consultations, notifications, loyalty, marketing, logs |
+
+### What the move fixed
+
+Rules that were conventions became constraints: an order's total has to be the
+sum of its parts, a coupon cannot be spent past its limit, a review is one per
+customer per item, a delivered order earns its points once, a scheduled
+consultation has a time and a designer.
+
+Defects found and fixed on the way, in the order they surfaced:
+
+- The customer-facing invoice, receipt and quotation routes had **no ownership
+  check**, so anyone who guessed an order id could print anyone's order.
+- `POST /api/admin/signup` signed the caller in as the account it had just
+  created, and required only `admin.dashboard.view` — which `support` holds — so
+  a support account could mint a colleague with more access than itself.
+- The audit logger wrote the request body verbatim, so auditing operator
+  creation would have logged the new password into a page the console displays.
+- A fresh installation could not record its first sale: no accounting period
+  existed, so confirming an order raised an exception and took the order with it.
+- `trackActivity` read a property nothing sets, so every guest activity was
+  dropped; three routes ran it with no `identifyGuest`, so there was nobody to
+  attribute anything to.
+- Order totals, tax included, were taken from the request body and trusted.
+- Marking an order paid cleared a cart that had not existed since the cart slice.

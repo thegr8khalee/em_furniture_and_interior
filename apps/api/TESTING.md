@@ -154,12 +154,56 @@ suite: two paid, one unpaid, one refunded.
 - Lifetime value attributes to the account and ignores guest orders.
 - **The CSV and the screen agree**, because they ask the same function.
 
+### `__tests__/integration/content.test.js`
+
+Blog posts, FAQs, portfolio projects and the marketing tables.
+
+- **Publication** — a published post gets a date, a draft is invisible to the
+  public list and its own page, and going back to draft clears the date.
+- Two posts with the same title get different slugs; retitling re-slugs, editing
+  anything else does not.
+- A project's price is stored in kobo and published in naira; its gallery keeps
+  the order it was given.
+- **"Showing right now"** means the same to the storefront and the console: a
+  future, expired, or switched-off banner is not live.
+- A flash sale targets products and collections through one table, and drops a
+  target that names nothing rather than refusing the whole sale.
+
+### `__tests__/integration/interiors.test.js`
+
+Designers and consultations.
+
+- **A consultation cannot be scheduled without a time or without a designer** —
+  the state that looks booked on every screen and is in nobody's diary. Both
+  refusals come from the database.
+- A designer who has taken consultations is deactivated rather than deleted, so
+  their name stays on the record.
+- A signed-in enquirer's request is linked to their account.
+- The designer performance report counts each of their consultations by status.
+
+### `__tests__/integration/engagement.test.js`
+
+Notifications, loyalty points and the two logs.
+
+- **The balance and the ledger move together.** Every loyalty assertion checks
+  both, and delivering the same order twice pays once.
+- A shopper cannot read, mark or delete another shopper's notification.
+- The audit log records a refused action as failed and **holds no credential**.
+- The activity log attributes a guest to their session and a customer to their
+  account — and names them, which the old report could not.
+
 ## What is not covered yet
 
-Blog, FAQs, projects, designers, consultations, notifications, the loyalty
-ledger and the marketing tables — everything still in Mongo, none of which has a
-PostgreSQL table yet. They get suites as they move, the way the catalog, cart,
-account, order, payment, review, stock and reporting suites did.
+Every route now has a suite behind it. What is thin rather than absent:
+
+- **The document templates.** The invoice, receipt and quotation PDFs are
+  generated and their status codes checked, but nothing asserts what is on the
+  page.
+- **The mailer.** Every suite replaces it with a double; the Gmail integration
+  itself is only exercised by hand.
+- **Cloudinary.** Uploads go through `services/imageStore.js`, which is injected
+  and stubbed, so the two calls inside it are the only uncovered lines on that
+  path — deliberately, since covering them needs live credentials.
 
 Two suites that once claimed to cover this ground asserted on objects they had
 built themselves, so they passed regardless of what the application did. They

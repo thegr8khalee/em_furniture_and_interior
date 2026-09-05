@@ -258,18 +258,35 @@
       "Consultation": {
         "type": "object",
         "properties": {
-          "_id": { "type": "string" },
+          "_id": { "type": "string", "format": "uuid" },
+          "customerId": { "type": "string", "format": "uuid", "nullable": true, "description": "Set when the enquirer was signed in." },
           "fullName": { "type": "string" },
           "email": { "type": "string", "format": "email" },
           "phone": { "type": "string" },
-          "budgetMin": { "type": "number" },
-          "budgetMax": { "type": "number" },
+          "budgetMin": { "type": "number", "description": "Naira." },
+          "budgetMax": { "type": "number", "description": "Naira. Must not be below budgetMin." },
           "stylePreferences": { "type": "array", "items": { "type": "string" } },
-          "preferredDesigner": { "type": "string" },
-          "preferredMeetingType": { "type": "string" },
-          "status": { "type": "string" },
+          "roomPhotos": { "type": "array", "items": { "type": "object", "properties": { "url": { "type": "string" }, "public_id": { "type": "string" } } } },
+          "floorPlan": { "type": "object", "nullable": true, "properties": { "url": { "type": "string" }, "public_id": { "type": "string" } } },
+          "preferredDesigner": { "$ref": "#/components/schemas/DesignerRef" },
+          "assignedDesigner": { "$ref": "#/components/schemas/DesignerRef" },
+          "preferredMeetingType": { "type": "string", "enum": ["calendly", "zoom", "meet", "phone", "none"] },
+          "meetingLink": { "type": "string" },
+          "scheduledAt": { "type": "string", "format": "date-time", "nullable": true, "description": "Required when status is scheduled." },
+          "status": { "type": "string", "enum": ["new", "scheduled", "completed", "cancelled"] },
           "notes": { "type": "string" },
+          "adminNotes": { "type": "string" },
           "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "DesignerRef": {
+        "type": "object",
+        "nullable": true,
+        "description": "The designer, named. Null when none is set.",
+        "properties": {
+          "_id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "title": { "type": "string" }
         }
       },
       "Designer": {
@@ -301,16 +318,17 @@
       "FlashSale": {
         "type": "object",
         "properties": {
-          "_id": { "type": "string" },
+          "_id": { "type": "string", "format": "uuid" },
           "name": { "type": "string" },
-          "description": { "type": "string" },
-          "discountType": { "type": "string" },
-          "discountValue": { "type": "number" },
+          "description": { "type": "string", "nullable": true },
+          "discountType": { "type": "string", "enum": ["percentage", "fixed"] },
+          "discountValue": { "type": "number", "description": "A percentage for a percentage sale, naira for a fixed one." },
           "startDate": { "type": "string", "format": "date-time" },
-          "endDate": { "type": "string", "format": "date-time" },
-          "productIds": { "type": "array", "items": { "type": "string" } },
-          "collectionIds": { "type": "array", "items": { "type": "string" } },
-          "bannerImageUrl": { "type": "string" },
+          "endDate": { "type": "string", "format": "date-time", "description": "Must be after startDate." },
+          "items": { "type": "array", "description": "What the sale targets, named.", "items": { "type": "object", "properties": { "_id": { "type": "string", "format": "uuid" }, "name": { "type": "string" }, "itemType": { "type": "string", "enum": ["product", "collection"] } } } },
+          "productIds": { "type": "array", "items": { "type": "string", "format": "uuid" }, "description": "Derived from items." },
+          "collectionIds": { "type": "array", "items": { "type": "string", "format": "uuid" }, "description": "Derived from items." },
+          "bannerImageUrl": { "type": "string", "nullable": true },
           "isActive": { "type": "boolean" }
         }
       },
@@ -2028,16 +2046,17 @@
       "put": {
         "tags": ["Consultations"],
         "summary": "Update consultation (admin)",
+        "description": "Moving a consultation to `scheduled` requires both a designer and a time — either sent here or already on the record. Without them the update is refused, because a consultation that reads as booked and is in nobody's diary loses the customer.",
         "security": [{ "cookieAuth": [] }],
-        "parameters": [{ "name": "consultationId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "parameters": [{ "name": "consultationId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "status": { "type": "string" },
-                  "assignedDesigner": { "type": "string" },
+                  "status": { "type": "string", "enum": ["new", "scheduled", "completed", "cancelled"] },
+                  "assignedDesigner": { "type": "string", "format": "uuid" },
                   "meetingLink": { "type": "string" },
                   "scheduledAt": { "type": "string", "format": "date-time" },
                   "adminNotes": { "type": "string" }
@@ -2046,7 +2065,11 @@
             }
           }
         },
-        "responses": { "200": { "description": "Consultation updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "consultation": { "$ref": "#/components/schemas/Consultation" } } } } } } }
+        "responses": {
+          "200": { "description": "Consultation updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "consultation": { "$ref": "#/components/schemas/Consultation" } } } } } },
+          "400": { "description": "Scheduled with no time or no designer, or an unknown status", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "description": "No such consultation", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
       }
     },
     "/api/designers": {

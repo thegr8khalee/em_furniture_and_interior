@@ -1,292 +1,116 @@
-import AuditLog from '../models/auditLog.model.js';
-import ActivityLog from '../models/activityLog.model.js';
-import { findCustomersByIds, findStaffByIds } from '../services/identity.js';
 import { logger } from '../lib/logger.js';
+import {
+  activityStats,
+  auditStats,
+  listActivityLogs,
+  listAuditLogs,
+  purgeAuditLogs,
+} from '../services/logs.js';
 
-/**
- * Replaces the id on `field` with the account it names.
- *
- * Log entries are still in Mongo while the accounts they point at are in
- * PostgreSQL, so the join cannot be a `.populate`. The rows are `.lean()`, so
- * this rewrites them in place; an id with no matching account becomes null,
- * which is what `.populate` did for a deleted one.
+/*
+ * Reading the two logs. Writing them is in the middleware; the queries are in
+ * services/logs.js.
  */
-const attachAccounts = async (rows, field, lookup) => {
-  if (rows.length === 0) return;
 
-  const accounts = await lookup(rows.map((row) => row[field]));
-  for (const row of rows) {
-    row[field] = accounts.get(row[field]) ?? null;
-  }
+const fail = (res, error, message) => {
+  logger.error({ err: error }, message);
+  return res.status(500).json({ message });
 };
+
+const paginate = (req) => ({
+  page: Math.max(parseInt(req.query.page, 10) || 1, 1),
+  limit: Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200),
+});
+
+const pagination = (page, limit, total) => ({
+  page,
+  limit,
+  total,
+  pages: Math.ceil(total / limit),
+});
 
 // Get audit logs with filtering and pagination
 export const getAuditLogs = async (req, res) => {
+  const { page, limit } = paginate(req);
+
   try {
-    const {
-      page = 1,
-      limit = 50,
-      action,
-      resourceType,
-      actor,
-      startDate,
-      endDate,
-      status,
-    } = req.query;
-
-    const query = {};
-
-    if (action) query.action = action;
-    if (resourceType) query.resourceType = resourceType;
-    if (actor) query.actor = actor;
-    if (status) query.status = status;
-
-    if (startDate || endDate) {
-      query.createdAt = {};
-      if (startDate) query.createdAt.$gte = new Date(startDate);
-      if (endDate) query.createdAt.$lte = new Date(endDate);
-    }
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    const [logs, total] = await Promise.all([
-      AuditLog.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit))
-        .lean(),
-      AuditLog.countDocuments(query),
-    ]);
-
-    // `actor` is a staff.id in PostgreSQL, so the operator behind each entry is
-    // resolved here rather than by `.populate` — one query for the page.
-    await attachAccounts(logs, 'actor', findStaffByIds);
-
-    res.json({
-      success: true,
-      data: logs,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit)),
-      },
+    const { logs, total } = await listAuditLogs({
+      page,
+      limit,
+      action: req.query.action,
+      resourceType: req.query.resourceType,
+      actor: req.query.actor,
+      status: req.query.status,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
     });
+
+    res.json({ success: true, data: logs, pagination: pagination(page, limit, total) });
   } catch (error) {
-    logger.error({ err: error }, 'Error fetching audit logs');
-    res.status(500).json({ message: 'Failed to fetch audit logs' });
+    fail(res, error, 'Failed to fetch audit logs');
   }
 };
 
-// Get audit log statistics
 export const getAuditLogStats = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-
-    const match = {};
-    if (startDate || endDate) {
-      match.createdAt = {};
-      if (startDate) match.createdAt.$gte = new Date(startDate);
-      if (endDate) match.createdAt.$lte = new Date(endDate);
-    }
-
-    const [actionStats, resourceStats, actorStats, statusStats] = await Promise.all([
-      AuditLog.aggregate([
-        { $match: match },
-        { $group: { _id: '$action', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-      ]),
-      AuditLog.aggregate([
-        { $match: match },
-        { $group: { _id: '$resourceType', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-      ]),
-      AuditLog.aggregate([
-        { $match: match },
-        {
-          $group: {
-            _id: '$actor',
-            actorEmail: { $first: '$actorEmail' },
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-      ]),
-      AuditLog.aggregate([
-        { $match: match },
-        { $group: { _id: '$status', count: { $sum: 1 } } },
-      ]),
-    ]);
-
-    res.json({
-      success: true,
-      stats: {
-        byAction: actionStats,
-        byResource: resourceStats,
-        byActor: actorStats,
-        byStatus: statusStats,
-      },
+    const stats = await auditStats({
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
     });
+    res.json({ success: true, stats });
   } catch (error) {
-    logger.error({ err: error }, 'Error fetching audit log stats');
-    res.status(500).json({ message: 'Failed to fetch audit log statistics' });
+    fail(res, error, 'Failed to fetch audit log statistics');
   }
 };
 
 // Get activity logs with filtering and pagination
 export const getActivityLogs = async (req, res) => {
+  const { page, limit } = paginate(req);
+
   try {
-    const {
-      page = 1,
-      limit = 50,
-      activityType,
-      resourceType,
-      userId,
-      startDate,
-      endDate,
-    } = req.query;
-
-    const query = {};
-
-    if (activityType) query.activityType = activityType;
-    if (resourceType) query.resourceType = resourceType;
-    if (userId) query.user = userId;
-
-    if (startDate || endDate) {
-      query.createdAt = {};
-      if (startDate) query.createdAt.$gte = new Date(startDate);
-      if (endDate) query.createdAt.$lte = new Date(endDate);
-    }
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    const [logs, total] = await Promise.all([
-      ActivityLog.find(query)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(parseInt(limit))
-        .lean(),
-      ActivityLog.countDocuments(query),
-    ]);
-
-    await attachAccounts(logs, 'user', findCustomersByIds);
-
-    res.json({
-      success: true,
-      data: logs,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit)),
-      },
+    const { logs, total } = await listActivityLogs({
+      page,
+      limit,
+      activityType: req.query.activityType,
+      resourceType: req.query.resourceType,
+      userId: req.query.userId,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
     });
+
+    res.json({ success: true, data: logs, pagination: pagination(page, limit, total) });
   } catch (error) {
-    logger.error({ err: error }, 'Error fetching activity logs');
-    res.status(500).json({ message: 'Failed to fetch activity logs' });
+    fail(res, error, 'Failed to fetch activity logs');
   }
 };
 
-// Get activity log statistics
 export const getActivityLogStats = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-
-    const match = {};
-    if (startDate || endDate) {
-      match.createdAt = {};
-      if (startDate) match.createdAt.$gte = new Date(startDate);
-      if (endDate) match.createdAt.$lte = new Date(endDate);
-    }
-
-    const [activityStats, resourceStats, userStats, hourlyStats] = await Promise.all([
-      ActivityLog.aggregate([
-        { $match: match },
-        { $group: { _id: '$activityType', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-      ]),
-      ActivityLog.aggregate([
-        { $match: match },
-        { $group: { _id: '$resourceType', count: { $sum: 1 } } },
-        { $sort: { count: -1 } },
-      ]),
-      ActivityLog.aggregate([
-        { $match: { ...match, user: { $ne: null } } },
-        {
-          $group: {
-            _id: '$user',
-            count: { $sum: 1 },
-          },
-        },
-        {
-          $lookup: {
-            from: 'users',
-            localField: '_id',
-            foreignField: '_id',
-            as: 'userDetails',
-          },
-        },
-        { $unwind: { path: '$userDetails', preserveNullAndEmptyArrays: true } },
-        {
-          $project: {
-            userId: '$_id',
-            userName: {
-              $concat: ['$userDetails.firstName', ' ', '$userDetails.lastName'],
-            },
-            email: '$userDetails.email',
-            count: 1,
-          },
-        },
-        { $sort: { count: -1 } },
-        { $limit: 10 },
-      ]),
-      ActivityLog.aggregate([
-        { $match: match },
-        {
-          $group: {
-            _id: { $hour: '$createdAt' },
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { _id: 1 } },
-      ]),
-    ]);
-
-    res.json({
-      success: true,
-      stats: {
-        byActivity: activityStats,
-        byResource: resourceStats,
-        topUsers: userStats,
-        byHour: hourlyStats,
-      },
+    const stats = await activityStats({
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
     });
+    res.json({ success: true, stats });
   } catch (error) {
-    logger.error({ err: error }, 'Error fetching activity log stats');
-    res.status(500).json({ message: 'Failed to fetch activity log statistics' });
+    fail(res, error, 'Failed to fetch activity log statistics');
   }
 };
 
 // Delete old audit logs (admin only)
 export const cleanupAuditLogs = async (req, res) => {
   try {
-    const { daysToKeep = 90 } = req.body;
+    const { deletedCount, days } = await purgeAuditLogs(req.body?.daysToKeep ?? 90);
 
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - parseInt(daysToKeep));
-
-    const result = await AuditLog.deleteMany({
-      createdAt: { $lt: cutoffDate },
-    });
+    if (days === null) {
+      return res.status(400).json({ message: 'daysToKeep must be a whole number of days.' });
+    }
 
     res.json({
       success: true,
-      message: `Deleted ${result.deletedCount} audit log entries older than ${daysToKeep} days`,
-      deletedCount: result.deletedCount,
+      message: `Deleted ${deletedCount} audit log entries older than ${days} days`,
+      deletedCount,
     });
   } catch (error) {
-    logger.error({ err: error }, 'Error cleaning up audit logs');
-    res.status(500).json({ message: 'Failed to cleanup audit logs' });
+    fail(res, error, 'Failed to cleanup audit logs');
   }
 };

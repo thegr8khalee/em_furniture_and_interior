@@ -5,9 +5,9 @@ if (process.env.NODE_ENV !== 'production') {
   dotenv.config();
 }
 
-import mongoose from 'mongoose';
 import app from './app.js';
 import { connectDB } from './lib/db.js';
+import { closeSequelize } from './db/sequelize.js';
 import { logger } from './lib/logger.js';
 
 const PORT = process.env.PORT || 5000;
@@ -30,7 +30,7 @@ const startServer = async () => {
   const shutdown = (signal) => {
     logger.info({ signal }, 'Shutting down gracefully');
     server.close(async () => {
-      await mongoose.connection.close(false).catch(() => {});
+      await closeSequelize().catch(() => {});
       logger.info('HTTP server closed');
       process.exit(0);
     });

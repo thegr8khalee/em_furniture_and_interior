@@ -10,10 +10,20 @@ import { PERMISSIONS } from '@em/shared/permissions';
 import { createLimiter } from '../middleware/rateLimiter.js';
 import { createAuditLog } from '../middleware/auditLogger.js';
 import { trackActivity } from '../middleware/activityTracker.js';
+import { identifyGuest } from '../middleware/identifyGuest.js';
 
 const router = express.Router();
 
-router.post('/', createLimiter, trackActivity('CONSULTATION_SUBMITTED', 'consultation'), createConsultationRequest);
+// identifyGuest so a signed-in enquirer's request is linked to their account,
+// and so the activity tracker has somebody to attribute the visit to. Without
+// it `req.user` was never set here and every consultation looked anonymous.
+router.post(
+  '/',
+  createLimiter,
+  identifyGuest,
+  trackActivity('CONSULTATION_SUBMITTED', 'consultation'),
+  createConsultationRequest
+);
 
 router.get(
   '/admin',

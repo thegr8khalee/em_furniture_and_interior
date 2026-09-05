@@ -1,172 +1,84 @@
-import BlogPost from '../models/blogPost.model.js';
 import { logger } from '../lib/logger.js';
+import {
+  ContentError,
+  createPost,
+  deletePost,
+  getPostBySlug,
+  listAllPosts,
+  listPublishedPosts,
+  updatePost,
+} from '../services/content.js';
 
-const slugify = (value) => {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-};
+/*
+ * The blog. Slugs, publication dates and the rest are in services/content.js.
+ */
 
-const buildUniqueSlug = async (title) => {
-  const baseSlug = slugify(title);
-  let slug = baseSlug;
-  let suffix = 1;
-
-  while (await BlogPost.findOne({ slug })) {
-    slug = `${baseSlug}-${suffix}`;
-    suffix += 1;
+const fail = (error, res, where) => {
+  if (error instanceof ContentError) {
+    return res.status(error.status).json({ message: error.message });
   }
-
-  return slug;
+  logger.error({ err: error }, where);
+  return res.status(500).json({ message: 'Failed to complete the request.' });
 };
+
+const paginate = (req, fallback) => ({
+  page: Math.max(parseInt(req.query.page || '1', 10), 1),
+  limit: Math.min(Math.max(parseInt(req.query.limit || String(fallback), 10), 1), 50),
+});
 
 export const getBlogPosts = async (req, res) => {
+  const { page, limit } = paginate(req, 12);
+
   try {
-    const page = Math.max(parseInt(req.query.page || '1', 10), 1);
-    const limit = Math.min(parseInt(req.query.limit || '12', 10), 50);
-    const skip = (page - 1) * limit;
-
-    const query = { status: 'published' };
-
-    const [items, total] = await Promise.all([
-      BlogPost.find(query)
-        .sort({ publishedAt: -1, createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      BlogPost.countDocuments(query),
-    ]);
-
+    const { items, total } = await listPublishedPosts({ page, limit });
     res.status(200).json({ items, total, page, limit });
   } catch (error) {
-    logger.error({ err: error }, 'Error fetching blog posts');
-    res.status(500).json({ message: 'Failed to fetch blog posts.' });
+    fail(error, res, 'Error fetching blog posts');
   }
 };
 
 export const getBlogPostBySlug = async (req, res) => {
   try {
-    const { slug } = req.params;
-    const post = await BlogPost.findOne({ slug, status: 'published' }).lean();
-
-    if (!post) {
-      return res.status(404).json({ message: 'Blog post not found.' });
-    }
-
-    res.status(200).json(post);
+    res.status(200).json(await getPostBySlug(req.params.slug));
   } catch (error) {
-    logger.error({ err: error }, 'Error fetching blog post');
-    res.status(500).json({ message: 'Failed to fetch blog post.' });
+    fail(error, res, 'Error fetching blog post');
   }
 };
 
 export const adminListBlogPosts = async (req, res) => {
+  const { page, limit } = paginate(req, 20);
+
   try {
-    const page = Math.max(parseInt(req.query.page || '1', 10), 1);
-    const limit = Math.min(parseInt(req.query.limit || '20', 10), 50);
-    const skip = (page - 1) * limit;
-
-    const [items, total] = await Promise.all([
-      BlogPost.find({})
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      BlogPost.countDocuments({}),
-    ]);
-
+    const { items, total } = await listAllPosts({ page, limit });
     res.status(200).json({ items, total, page, limit });
   } catch (error) {
-    logger.error({ err: error }, 'Error fetching admin blog list');
-    res.status(500).json({ message: 'Failed to fetch blog posts.' });
+    fail(error, res, 'Error fetching admin blog list');
   }
 };
 
 export const createBlogPost = async (req, res) => {
   try {
-    const { title, excerpt, content, coverImage, tags, status } = req.body;
-
-    if (!title || !content) {
-      return res.status(400).json({ message: 'Title and content are required.' });
-    }
-
-    const slug = await buildUniqueSlug(title);
-    const normalizedStatus = status === 'published' ? 'published' : 'draft';
-
-    const post = await BlogPost.create({
-      title,
-      slug,
-      excerpt: excerpt || '',
-      content,
-      coverImage,
-      tags: Array.isArray(tags) ? tags : [],
-      status: normalizedStatus,
-      publishedAt: normalizedStatus === 'published' ? new Date() : null,
-      author: req.admin?._id,
-    });
-
-    res.status(201).json(post);
+    res.status(201).json(await createPost(req.body, req.admin?.id));
   } catch (error) {
-    logger.error({ err: error }, 'Error creating blog post');
-    res.status(500).json({ message: 'Failed to create blog post.' });
+    fail(error, res, 'Error creating blog post');
   }
 };
 
 export const updateBlogPost = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { title, excerpt, content, coverImage, tags, status } = req.body;
-
-    const post = await BlogPost.findById(id);
-    if (!post) {
-      return res.status(404).json({ message: 'Blog post not found.' });
-    }
-
-    if (title && title !== post.title) {
-      post.title = title;
-      post.slug = await buildUniqueSlug(title);
-    }
-
-    if (excerpt !== undefined) post.excerpt = excerpt;
-    if (content !== undefined) post.content = content;
-    if (coverImage !== undefined) post.coverImage = coverImage;
-    if (tags !== undefined) post.tags = Array.isArray(tags) ? tags : [];
-
-    if (status) {
-      const normalizedStatus = status === 'published' ? 'published' : 'draft';
-      post.status = normalizedStatus;
-      if (normalizedStatus === 'published' && !post.publishedAt) {
-        post.publishedAt = new Date();
-      }
-      if (normalizedStatus === 'draft') {
-        post.publishedAt = null;
-      }
-    }
-
-    await post.save();
-
-    res.status(200).json(post);
+    res.status(200).json(await updatePost(req.params.id, req.body));
   } catch (error) {
-    logger.error({ err: error }, 'Error updating blog post');
-    res.status(500).json({ message: 'Failed to update blog post.' });
+    fail(error, res, 'Error updating blog post');
   }
 };
 
 export const deleteBlogPost = async (req, res) => {
   try {
-    const { id } = req.params;
-    const post = await BlogPost.findByIdAndDelete(id);
-
-    if (!post) {
+    if (!(await deletePost(req.params.id))) {
       return res.status(404).json({ message: 'Blog post not found.' });
     }
-
     res.status(200).json({ message: 'Blog post deleted successfully.' });
   } catch (error) {
-    logger.error({ err: error }, 'Error deleting blog post');
-    res.status(500).json({ message: 'Failed to delete blog post.' });
+    fail(error, res, 'Error deleting blog post');
   }
 };

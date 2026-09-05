@@ -1,4 +1,5 @@
 import { Sequelize } from 'sequelize';
+import { runMigrations } from '../../src/db/migrate.js';
 import { dialectOptionsFor } from '../../src/db/sequelize.js';
 import { ADMIN_URL, TEMPLATE_DATABASE, urlFor, workerDatabase } from './databaseNames.js';
 
@@ -14,9 +15,15 @@ import { ADMIN_URL, TEMPLATE_DATABASE, urlFor, workerDatabase } from './database
  * that passes.
  *
  * Each worker gets its own database, stamped out of the template that
- * `globalSetup` migrated. Copying is a file operation; applying nine migrations
+ * `globalSetup` migrated. Copying is a file operation; applying every migration
  * per suite is a few hundred round trips, which was slow locally and slow enough
  * against a hosted database to time out.
+ *
+ * Copying is not always possible. `CREATE DATABASE ... TEMPLATE` needs the
+ * source to have no sessions on it, and a connection pooler keeps one warm and
+ * reopens it the moment it is terminated — so against a pooled hosted database
+ * the copy always fails. That is a fallback, not an error: the worker migrates
+ * its own database instead, exactly as it used to.
  */
 
 /** A hosted database needs TLS; a local one does not. Same rule as the app. */
@@ -36,11 +43,22 @@ export const setupDatabase = async () => {
   // client has gone: the previous suite's session is still attached when this
   // one tries to drop, and a plain DROP refuses while anyone is connected.
   await admin.query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
-  await admin.query(`CREATE DATABASE "${name}" TEMPLATE "${TEMPLATE_DATABASE}"`);
+
+  let copied = true;
+  try {
+    await admin.query(`CREATE DATABASE "${name}" TEMPLATE "${TEMPLATE_DATABASE}"`);
+  } catch (error) {
+    if (!`${error.message}`.includes('being accessed by other users')) throw error;
+    copied = false;
+    await admin.query(`CREATE DATABASE "${name}"`);
+  }
+
   await admin.close();
 
   const url = urlFor(name);
   db = new Sequelize(url, connectionOptions(url));
+
+  if (!copied) await runMigrations({ db, silent: true });
 
   return db;
 };

@@ -53,13 +53,13 @@ react-hot-toast (Lightweight, customizable toast notifications)
 
 Lucide React (Beautiful & consistent open-source icons)
 
-Backend: (Assumed to be a separate repository, e.g., Node.js/Express, MongoDB)
+Backend: apps/api (Node.js/Express, PostgreSQL)
 
 Node.js (JavaScript runtime)
 
 Express.js (Web application framework)
 
-MongoDB (NoSQL database)
+PostgreSQL (relational database, via Sequelize and hand-written SQL)
 
 Nodemailer (For sending emails via Contact Us form)
 

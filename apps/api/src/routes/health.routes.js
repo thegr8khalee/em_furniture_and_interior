@@ -1,20 +1,12 @@
 import express from 'express';
-import mongoose from 'mongoose';
+import { databaseIsReachable } from '../lib/db.js';
 
 const router = express.Router();
-
-const CONNECTION_STATES = {
-  0: 'disconnected',
-  1: 'connected',
-  2: 'connecting',
-  3: 'disconnecting',
-  99: 'uninitialized',
-};
 
 /**
  * Liveness. Answers "is this process alive and turning its event loop?" and
  * deliberately never touches the database — restarting the container because
- * Mongo blipped turns a database incident into an outage.
+ * the database blipped turns a database incident into an outage.
  */
 router.get('/healthz', (req, res) => {
   res.json({ status: 'ok', uptime: Math.round(process.uptime()) });
@@ -26,19 +18,11 @@ router.get('/healthz', (req, res) => {
  * rather than send it traffic that is going to 500.
  */
 router.get('/readyz', async (req, res) => {
-  const state = CONNECTION_STATES[mongoose.connection.readyState] || 'unknown';
-
-  if (mongoose.connection.readyState !== 1) {
-    return res.status(503).json({ status: 'unavailable', database: state });
+  if (await databaseIsReachable()) {
+    return res.json({ status: 'ok', database: 'connected' });
   }
 
-  try {
-    await mongoose.connection.db.admin().ping();
-    res.json({ status: 'ok', database: state });
-  } catch (error) {
-    req.log?.error({ err: error }, 'Readiness check failed to ping the database');
-    res.status(503).json({ status: 'unavailable', database: state });
-  }
+  res.status(503).json({ status: 'unavailable', database: 'disconnected' });
 });
 
 export default router;

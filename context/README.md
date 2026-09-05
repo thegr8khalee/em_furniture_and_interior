@@ -1,5 +1,12 @@
 # EM Furniture and Interior — Context Hub
 
+> [!IMPORTANT]
+> **This document describes the MongoDB system, which no longer exists.** The
+> API is on PostgreSQL: there are no Mongoose models, and `mongoose` is not a
+> dependency. [`docs/SCHEMA.md`](../docs/SCHEMA.md) is the current description
+> of the data model and of every decision taken while moving. This file is kept
+> for the history of how the system got here, and is being rewritten.
+
 > Master index and navigation for the project knowledge base.
 
 ---

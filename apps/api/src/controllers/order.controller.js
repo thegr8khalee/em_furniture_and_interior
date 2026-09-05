@@ -2,7 +2,6 @@ import { resolveOwner } from '../lib/owner.js';
 import { CartError, clearCart } from '../services/cart.js';
 import { generateInvoicePDF, generateOrderDocumentPDF } from '../lib/invoiceGenerator.js';
 import { createNotification } from './notification.controller.js';
-import LoyaltyTransaction from '../models/loyaltyTransaction.model.js';
 import { sendEmail } from '../services/gmail.service.js';
 import { logger } from '../lib/logger.js';
 import {
@@ -193,17 +192,6 @@ const announceStatus = async (order, status, points) => {
         type: 'loyalty',
         relatedOrder: order._id,
       }).catch((error) => logger.error({ err: error }, 'Could not create the loyalty notification'));
-
-      // The balance moved inside the order's transaction; this is the line item
-      // the shopper sees in their points history, which is still in Mongo. It
-      // moves when the loyalty ledger does.
-      await LoyaltyTransaction.create({
-        user: order.user,
-        order: order._id,
-        type: 'earn',
-        points,
-        description: `Points earned from order ${order.orderNumber}`,
-      }).catch((error) => logger.error({ err: error }, 'Could not record the loyalty transaction'));
     }
   }
 

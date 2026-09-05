@@ -1,8 +1,14 @@
 import crypto from 'crypto';
 import request from 'supertest';
 
-// The app must build and answer without a database connection — these tests
-// cover exactly the paths that run before Mongo is reached.
+// The app must build and answer without a database — these tests cover exactly
+// the paths that run before one is reached.
+//
+// The connection string points at a port nothing is listening on, on purpose:
+// readiness is supposed to report 503 when the database is unreachable, and a
+// test that proves it needs an unreachable database rather than the absence of
+// a driver.
+process.env.DATABASE_URL = 'postgres://postgres@127.0.0.1:1/nowhere';
 process.env.PAYSTACK_SECRET_KEY = 'sk_test_paystack_secret';
 process.env.JWT_SECRET = 'test_jwt_secret';
 process.env.LOG_LEVEL = 'silent';
@@ -28,7 +34,7 @@ describe('Health and readiness probes', () => {
 
     expect(res.status).toBe(503);
     expect(res.body.status).toBe('unavailable');
-    expect(res.body.database).not.toBe('connected');
+    expect(res.body.database).toBe('disconnected');
   });
 
   test('probes sit outside /api so the API rate limiter cannot throttle them', async () => {

@@ -3,6 +3,7 @@ import { getSequelize } from '../db/sequelize.js';
 import { isValidId } from './catalog.js';
 import { toMajor, toMinor, percentOf, sumMinor } from '../lib/money.js';
 import { claim } from './coupons.js';
+import { applyLoyalty } from './engagement.js';
 import { postOrderConfirmed } from './posting.js';
 import { logger } from '../lib/logger.js';
 
@@ -626,10 +627,23 @@ export const setOrderStatus = async (orderId, changes, staffId = null, db = getS
       loyaltyPoints = Math.floor(toMajor(Number(row.total_amount)) * LOYALTY_POINTS_PER_NAIRA);
 
       if (loyaltyPoints > 0) {
-        await db.query(
-          'UPDATE customers SET loyalty_points = loyalty_points + :points WHERE id = :customerId',
-          { replacements: { points: loyaltyPoints, customerId: row.customer_id }, ...opts }
+        // The balance and the line explaining it are written together, inside
+        // this transaction. Mongo moved the balance in one place and wrote the
+        // history in another, so a balance could not be explained from its
+        // history — and `loyalty_one_earn_per_order` now makes a second award
+        // for the same order impossible rather than merely unlikely.
+        await applyLoyalty(
+          db,
+          {
+            customerId: row.customer_id,
+            orderId,
+            type: 'earn',
+            points: loyaltyPoints,
+            description: `Points earned from order ${row.order_number}`,
+          },
+          opts
         );
+
         await db.query(
           `UPDATE orders SET loyalty_points_earned = :points, loyalty_points_credited = true
             WHERE id = :orderId`,

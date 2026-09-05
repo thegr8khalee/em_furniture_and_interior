@@ -609,23 +609,79 @@ stock history to look at. It skips the sections whose collections are still in
 Mongo when no Mongo is configured, so a developer with only a PostgreSQL still
 gets a working shop.
 
+### The last collections — content, interiors, engagement, marketing, logs
+
+`0011_content_and_engagement.sql` adds the twelve tables that had no PostgreSQL
+home, and with them the migration is finished: nothing reads Mongo, `mongoose`
+and `mongodb` are gone from the dependencies, and `src/models/` no longer
+exists.
+
+Nothing here is a new capability. Each table is the Mongo document with its
+implicit rules made explicit, and the rules that surfaced are the ones the
+handlers were relying on and not enforcing:
+
+- **A published post has a publication date** (`blog_published_is_dated`). One
+  handler set it, so a post published by any other route had none and the blog
+  ordered by a null.
+- **A scheduled consultation has a time and a designer**
+  (`consultation_scheduled_has_a_time`, `..._has_a_designer`). The handler set
+  the status and nothing else, so a consultation could read "scheduled" on every
+  screen and be in nobody's diary. That is the state that loses a customer.
+- **A budget does not run backwards** (`consultation_budget_ordered`).
+- **A read notification says when it was read** (`notification_read_is_dated`).
+- **Loyalty points move in the direction their type implies**, and **an order
+  earns its points once** (`loyalty_direction_matches_type`,
+  `loyalty_one_earn_per_order`). Mongo incremented the balance in one place and
+  wrote the history in another, so a balance could not be explained from its
+  history and a retried delivery paid twice. They are one transaction now.
+- **A flash sale's window runs forwards**, and its targeting is one
+  `flash_sale_items` table rather than two parallel arrays of ids that nothing
+  could join on — and that stopped resolving entirely when the catalog moved.
+
+Two deliberate looseness decisions. `audit_logs.resource_type` and
+`activity_logs.activity_type` are text, not enums: a resource type is added
+whenever a screen is, and a log that refuses to record an unfamiliar one loses
+the entry that mattered most. And `audit_logs.actor_email` is denormalised, so
+an entry stays readable after the account it names is deleted — a trail that
+says "null did this" is not a trail.
+
+Mongo expired activity logs with a TTL index. Postgres has no equivalent, so
+retention is a job; the statement it runs is written in the migration so the
+intent did not disappear with the index.
+
+**Three latent bugs came out of this.** `trackActivity` read `req.guest`, which
+nothing has ever set — the anonymous shopper is on `req.guestSession` — so every
+guest activity was dropped and the middleware short-circuited for anyone not
+signed in. The consultation, product and collection routes ran the tracker with
+no `identifyGuest` in front of it, so there was no principal to attribute
+anything to, and a signed-in enquirer's consultation was never linked to their
+account. And the activity report's top-shoppers list concatenated `firstName`
+and `lastName`, fields the user document never had, so every row read "undefined
+undefined"; it is a join now.
+
+Deleting a designer who has taken consultations deactivates them instead.
+`assigned_designer_id` is `ON DELETE SET NULL`, so removing the row would take
+their name off every consultation they ever ran.
+
+### Health, startup and the seeder
+
+`/readyz` asks PostgreSQL rather than Mongoose, and startup refuses to bind the
+port without a database, as before. The seeder writes everything through the
+same services the API uses, so `npm run seed` exercises the real validation
+rather than a second, more forgiving path into the same tables — and a seeded
+database has orders that are priced and numbered, a ledger that balances, stock
+with a history, and content on every page.
+
 ## What is not built yet
 
-**The system is mid-migration and not deployable in this state.** The catalog —
-reads and writes — carts and wishlists, accounts, orders, payments, coupons,
-reviews, stock, the sales reports and the sitemap are on PostgreSQL. What is left
-in Mongo has no table yet: blog, FAQs, projects, designers, consultations,
-notifications, the loyalty ledger, promo banners, flash sales, and the activity
-and audit logs.
+**The MongoDB migration is complete.** Every route reads and writes PostgreSQL;
+`mongoose` and `mongodb` are no longer dependencies. What remains is the ERP
+work the ledger was built for.
 
 In order —
 
-1. **Everything with no table yet** — blog, FAQs, projects, designers,
-   consultations, notifications, the loyalty ledger, promo banners, flash sales,
-   and the activity and audit logs. Each needs a migration first. The seed
-   script goes with them.
-2. **Supabase Auth.** Accounts are in `customers` and `staff` now, and both
+1. **Supabase Auth.** Accounts are in `customers` and `staff` now, and both
    tables carry a nullable `supabase_user_id` for it, but sign-in is still the
    local bcrypt password. The bootstrap step exists: `npm run bootstrap:staff`.
-3. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
-4. **Reports** — P&L, balance sheet, VAT return — queries over the ledger.
+2. **Expenses, vendors and purchase orders**, each a form plus a posting rule.
+3. **Reports** — P&L, balance sheet, VAT return — queries over the ledger.

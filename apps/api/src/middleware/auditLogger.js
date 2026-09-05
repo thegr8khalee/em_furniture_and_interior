@@ -1,5 +1,4 @@
-import AuditLog from '../models/auditLog.model.js';
-import { logger } from '../lib/logger.js';
+import { recordAudit } from '../services/logs.js';
 
 /**
  * Fields never worth keeping, and dangerous to keep.
@@ -31,82 +30,61 @@ const redact = (body) => {
 };
 
 /**
- * Middleware to log audit trail for admin actions
- * Should be applied after authentication middleware
+ * Records what an operator did.
+ *
+ * Applied after authentication, and written when the response finishes so the
+ * outcome is known — a refused action is as worth recording as a successful
+ * one, and the old version only logged the successful ones for `changes`.
+ *
+ * `recordAudit` never throws: a logging failure that turned a completed action
+ * into a 500 would lose the action as well as the record of it.
  */
 export const createAuditLog = (action, resourceType) => {
-  return async (req, res, next) => {
-    // Store original response methods
+  return (req, res, next) => {
     const originalJson = res.json;
     const originalSend = res.send;
 
-    // Capture response data
     let responseData = null;
-    let responseStatus = null;
 
-    // Override res.json to capture response
     res.json = function (data) {
       responseData = data;
-      responseStatus = res.statusCode;
       return originalJson.call(this, data);
     };
 
-    // Override res.send to capture response
     res.send = function (data) {
       responseData = data;
-      responseStatus = res.statusCode;
       return originalSend.call(this, data);
     };
 
-    // Wait for response to complete
-    res.on('finish', async () => {
-      try {
-        // Only log successful actions (2xx status codes)
-        if (responseStatus >= 200 && responseStatus < 300) {
-          const logEntry = {
-            actor: req.admin._id,
-            actorEmail: req.admin.email,
-            action,
-            resourceType,
-            resourceId: req.params.id || req.params.productId || req.params.collectionId || req.params.orderId,
-            resourceName: req.body?.name || req.body?.title || req.body?.orderNumber,
-            changes: redact(req.body),
-            metadata: {
-              method: req.method,
-              path: req.path,
-              query: req.query,
-            },
-            ipAddress: req.ip || req.connection.remoteAddress,
-            userAgent: req.get('user-agent'),
-            status: 'success',
-          };
+    res.on('finish', () => {
+      const succeeded = res.statusCode >= 200 && res.statusCode < 300;
 
-          await AuditLog.create(logEntry);
-        } else if (responseStatus >= 400) {
-          // Log failed actions
-          const logEntry = {
-            actor: req.admin._id,
-            actorEmail: req.admin.email,
-            action,
-            resourceType,
-            resourceId: req.params.id || req.params.productId || req.params.collectionId,
-            metadata: {
-              method: req.method,
-              path: req.path,
-              query: req.query,
-            },
-            ipAddress: req.ip || req.connection.remoteAddress,
-            userAgent: req.get('user-agent'),
-            status: 'failed',
-            errorMessage: typeof responseData === 'string' ? responseData : JSON.stringify(responseData),
-          };
-
-          await AuditLog.create(logEntry);
-        }
-      } catch (error) {
-        // Don't fail the request if audit logging fails
-        logger.error({ err: error }, 'Audit log error');
-      }
+      recordAudit({
+        actorId: req.admin?.id,
+        actorEmail: req.admin?.email,
+        action,
+        resourceType,
+        resourceId:
+          req.params.id ||
+          req.params.productId ||
+          req.params.collectionId ||
+          req.params.orderId ||
+          req.params.projectId ||
+          req.params.couponId ||
+          req.params.designerId ||
+          null,
+        resourceName: req.body?.name || req.body?.title || req.body?.orderNumber || null,
+        changes: succeeded ? redact(req.body) : undefined,
+        metadata: { method: req.method, path: req.path, query: req.query },
+        ipAddress: req.ip || req.connection?.remoteAddress,
+        userAgent: req.get('user-agent'),
+        status: succeeded ? 'success' : 'failed',
+        errorMessage: succeeded
+          ? null
+          : typeof responseData === 'string'
+            ? responseData
+            : JSON.stringify(responseData ?? null),
+      });
     });
 
     next();
@@ -114,39 +92,6 @@ export const createAuditLog = (action, resourceType) => {
 };
 
 /**
- * Manually create an audit log entry
- * Useful for actions that don't go through standard middleware
+ * Records an action from somewhere that is not a route.
  */
-export const logAuditAction = async ({
-  actor,
-  actorEmail,
-  action,
-  resourceType,
-  resourceId,
-  resourceName,
-  changes,
-  metadata,
-  ipAddress,
-  userAgent,
-  status = 'success',
-  errorMessage,
-}) => {
-  try {
-    await AuditLog.create({
-      actor,
-      actorEmail,
-      action,
-      resourceType,
-      resourceId,
-      resourceName,
-      changes,
-      metadata,
-      ipAddress,
-      userAgent,
-      status,
-      errorMessage,
-    });
-  } catch (error) {
-    logger.error({ err: error }, 'Failed to create audit log');
-  }
-};
+export const logAuditAction = ({ actor, ...entry }) => recordAudit({ actorId: actor, ...entry });

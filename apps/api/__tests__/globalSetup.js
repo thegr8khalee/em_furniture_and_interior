@@ -46,7 +46,22 @@ export default async () => {
 
   await runMigrations({ db, silent: true });
 
-  // Nothing may be connected to a template while it is being copied, so this
-  // connection has to go before any worker starts.
   await db.close();
+
+  // Closing the client is not enough behind a connection pooler: it keeps the
+  // server connection warm, so the template still has a session attached and
+  // `CREATE DATABASE ... TEMPLATE` fails for every worker with "source database
+  // is being accessed by other users". Nothing may be connected to a template
+  // while it is copied, so anything still attached is ended here.
+  const closer = new Sequelize(ADMIN_URL(), {
+    logging: false,
+    dialectOptions: dialectOptionsFor(ADMIN_URL()),
+  });
+
+  await closer.query(
+    `SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+      WHERE datname = :template AND pid <> pg_backend_pid()`,
+    { replacements: { template: TEMPLATE_DATABASE } }
+  );
+  await closer.close();
 };

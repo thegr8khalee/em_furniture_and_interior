@@ -1,64 +1,45 @@
-import LoyaltyTransaction from '../models/loyaltyTransaction.model.js';
 import { logger } from '../lib/logger.js';
+import { EngagementError, loyaltyHistory, loyaltySummary } from '../services/engagement.js';
+
+const fail = (error, res, where) => {
+  if (error instanceof EngagementError) {
+    return res.status(error.status).json({ message: error.message });
+  }
+  logger.error({ err: error }, where);
+  return res.status(500).json({ message: 'Internal Server Error' });
+};
 
 export const getLoyaltySummary = async (req, res) => {
   try {
-    // The balance is a column on the account, which `protectRoute` has already
-    // read; the second lookup it used to do here answered the same question
-    // twice. The transaction ledger has not moved yet, so the totals below are
-    // still a Mongo aggregate keyed on the account's UUID.
-    const userId = req.user.id;
-
-    const totals = await LoyaltyTransaction.aggregate([
-      { $match: { user: userId } },
-      {
-        $group: {
-          _id: '$type',
-          points: { $sum: '$points' },
-        },
-      },
-    ]);
-
-    const totalEarned = totals.find((t) => t._id === 'earn')?.points || 0;
-    const totalRedeemed = totals.find((t) => t._id === 'redeem')?.points || 0;
+    const { totalEarned, totalRedeemed, totalAdjusted } = await loyaltySummary(req.user.id);
 
     res.json({
       success: true,
+      // The balance is the account's; the totals are the ledger's. Publishing
+      // both is what makes a disagreement between them visible.
       balance: req.user.loyaltyPoints,
       totalEarned,
       totalRedeemed,
+      totalAdjusted,
     });
   } catch (error) {
-    logger.error({ err: error }, 'Error fetching loyalty summary');
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, 'Error fetching loyalty summary');
   }
 };
 
 export const getLoyaltyHistory = async (req, res) => {
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
+
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const skip = (page - 1) * limit;
-
-    const transactions = await LoyaltyTransaction.find({ user: req.user._id })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await LoyaltyTransaction.countDocuments({ user: req.user._id });
+    const { transactions, total } = await loyaltyHistory(req.user.id, { page, limit });
 
     res.json({
       success: true,
       transactions,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    logger.error({ err: error }, 'Error fetching loyalty history');
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, 'Error fetching loyalty history');
   }
 };

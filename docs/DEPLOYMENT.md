@@ -27,7 +27,7 @@ there — installing inside `apps/api` alone would not link `@em/shared`.
 Use `/healthz` as the health check, never `/readyz`. Liveness must not fail
 because the database blipped; restarting the container turns a database incident
 into an outage. `/readyz` exists for a load balancer to drain an instance, and
-reports 503 while Mongo is unreachable.
+reports 503 while PostgreSQL is unreachable.
 
 Puppeteer's Chromium is cached at `<repo>/.cache/puppeteer` via the root
 `.puppeteerrc.cjs`, because Render wipes `~/.cache` between deploys. If PDF
@@ -43,7 +43,8 @@ request handling; moving it to its own service is tracked as follow-up work.
 
 ```
 NODE_ENV=production
-MONGODB_URI=...
+DATABASE_URL=...                 # the pooled connection the app serves on
+DIRECT_DATABASE_URL=...          # session mode; migrations only
 JWT_SECRET=...
 PAYSTACK_SECRET_KEY=...          # also the webhook HMAC key
 STOREFRONT_URL=https://<storefront domain>

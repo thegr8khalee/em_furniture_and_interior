@@ -1,8 +1,6 @@
 import express from 'express';
 import { QueryTypes } from 'sequelize';
 import { getSequelize } from '../db/sequelize.js';
-import Project from '../models/project.model.js';
-import BlogPost from '../models/blogPost.model.js';
 import { logger } from '../lib/logger.js';
 
 const router = express.Router();
@@ -55,29 +53,22 @@ const STATIC_ROUTES = [
 
 router.get('/sitemap.xml', async (_req, res) => {
   try {
-    // The catalog is in PostgreSQL; projects and blog posts have not moved yet.
-    // One query rather than two, since both kinds live in `sellable_items`.
-    //
-    // Settled rather than all: a sitemap missing the blog is a smaller problem
-    // than no sitemap, and one source being unavailable should not take the
-    // other three with it. Whatever failed is logged and left out.
-    const [sellable, projects, blogPosts] = (
-      await Promise.allSettled([
-        getSequelize().query(
-          `SELECT id, kind, updated_at FROM sellable_items ORDER BY updated_at DESC`,
-          { type: QueryTypes.SELECT }
-        ),
-        Project.find({}, { _id: 1, updatedAt: 1 }).lean(),
-        BlogPost.find(
-          { status: 'published' },
-          { slug: 1, updatedAt: 1, publishedAt: 1 }
-        ).lean(),
-      ])
-    ).map((result, index) => {
-      if (result.status === 'fulfilled') return result.value;
-      logger.error({ err: result.reason, source: index }, 'Sitemap source unavailable');
-      return [];
-    });
+    // Everything the sitemap lists is in PostgreSQL now, so this is three
+    // queries rather than four sources across two databases.
+    const db = getSequelize();
+    const [sellable, projects, blogPosts] = await Promise.all([
+      db.query(`SELECT id, kind, updated_at FROM sellable_items ORDER BY updated_at DESC`, {
+        type: QueryTypes.SELECT,
+      }),
+      db.query(`SELECT id, updated_at FROM projects ORDER BY updated_at DESC`, {
+        type: QueryTypes.SELECT,
+      }),
+      db.query(
+        `SELECT slug, updated_at, published_at FROM blog_posts
+          WHERE status = 'published' ORDER BY published_at DESC`,
+        { type: QueryTypes.SELECT }
+      ),
+    ]);
 
     const products = sellable.filter((row) => row.kind === 'product');
     const collections = sellable.filter((row) => row.kind === 'collection');
@@ -108,8 +99,8 @@ router.get('/sitemap.xml', async (_req, res) => {
       ),
       ...projects.map((p) =>
         urlEntry({
-          loc: `${SITE_URL}/project/${p._id}`,
-          lastmod: p.updatedAt,
+          loc: `${SITE_URL}/project/${p.id}`,
+          lastmod: p.updated_at,
           changefreq: 'monthly',
           priority: '0.7',
         })
@@ -117,7 +108,7 @@ router.get('/sitemap.xml', async (_req, res) => {
       ...blogPosts.map((b) =>
         urlEntry({
           loc: `${SITE_URL}/blog/${b.slug}`,
-          lastmod: b.updatedAt || b.publishedAt,
+          lastmod: b.updated_at || b.published_at,
           changefreq: 'monthly',
           priority: '0.7',
         })

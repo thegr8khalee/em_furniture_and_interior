@@ -1,71 +1,66 @@
-import Project from '../models/project.model.js';
 import { logger } from '../lib/logger.js';
+import { ContentError, countProjects, getProject, listProjects } from '../services/content.js';
+
+/*
+ * Portfolio projects, for the storefront. The console's create, update and
+ * delete are in admin.controller.js, alongside the catalog's.
+ */
+
+const fail = (error, res, where) => {
+  if (error instanceof ContentError) {
+    return res.status(error.status).json({ message: error.message });
+  }
+  logger.error({ err: error }, where);
+  return res.status(500).json({ message: 'Internal Server Error' });
+};
 
 export const getProjects = async (req, res) => {
-  // 1. Get and sanitize pagination parameters from query
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 10;
 
-  // Ensure parameters are valid positive numbers
   if (page <= 0 || limit <= 0) {
-    return res
-      .status(400)
-      .json({ message: 'Page and limit must be positive numbers.' });
+    return res.status(400).json({ message: 'Page and limit must be positive numbers.' });
   }
 
-  // Calculate skip value for Mongoose query
-  const skip = (page - 1) * limit;
-
   try {
-    // 2. Fetch the total count of documents (for calculating total pages)
-    const totalProjects = await Project.countDocuments({});
+    const { projects, total } = await listProjects({
+      page,
+      limit: Math.min(limit, 100),
+      category: req.query.category || null,
+      search: req.query.search || null,
+    });
 
-    // 3. Fetch the projects for the current page
-    const projects = await Project.find({})
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 }); // Optional: sort by creation date descending
+    const totalPages = Math.ceil(total / limit);
 
-    // 4. Calculate pagination metadata
-    const totalPages = Math.ceil(totalProjects / limit);
-
-    // 5. Send paginated response
     res.status(200).json({
       data: projects,
       pagination: {
-        totalItems: totalProjects,
-        limit: limit,
+        totalItems: total,
+        limit,
         currentPage: page,
-        totalPages: totalPages,
+        totalPages,
         hasNextPage: page < totalPages,
         hasPrevPage: page > 1,
       },
       message: 'Projects retrieved successfully.',
     });
   } catch (error) {
-    logger.error({ err: error }, 'Error in getProjects controller');
-    res.status(500).json({ message: 'Internal Server Error' });
+    fail(error, res, 'Error in getProjects controller');
   }
 };
 
-export const getProjectsCount = async (req, res) => {
+export const getProjectsCount = async (_req, res) => {
   try {
-    const count = await Project.countDocuments();
-    res.json({ count });
+    res.json({ count: await countProjects() });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    fail(error, res, 'Error in getProjectsCount controller');
   }
 };
 
 export const getProjectById = async (req, res) => {
-  const { projectId } = req.params;
   try {
-    const project = await Project.findById(projectId);
-    if (!project) {
-      return res.status(404).json({ message: 'Project not found' });
-    }
-    res.json(project);
+    res.status(200).json(await getProject(req.params.id ?? req.params.projectId));
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    fail(error, res, 'Error in getProjectById controller');
   }
 };
