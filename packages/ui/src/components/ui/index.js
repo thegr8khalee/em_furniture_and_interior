@@ -8,4 +8,5 @@ export { default as PageHeader } from './PageHeader.jsx';
 export { default as Badge } from './Badge.jsx';
 export { default as Modal } from './Modal.jsx';
 export { default as Pagination } from './Pagination.jsx';
+export { default as SupabaseSignIn } from './SupabaseSignIn.jsx';
 export * from './Skeleton.jsx';

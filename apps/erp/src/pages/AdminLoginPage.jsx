@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@em/domain'; // Import your Zustand auth store
 import { Loader2 } from 'lucide-react';
-import { useAdminStore } from '@em/domain';
+import { useAdminStore, getSupabase, isSupabaseConfigured } from '@em/domain';
+import { SupabaseSignIn } from '@em/ui';
 import { Helmet } from 'react-helmet-async';
 
 const AdminLoginPage = () => {
@@ -17,7 +18,7 @@ const AdminLoginPage = () => {
 
   // Access authUser and isAdmin from the store to handle redirection if already logged in as admin
   const { authUser, isAdmin, isLoading, isCheckingAuth } = useAuthStore();
-  const { adminLogin } = useAdminStore();
+  const { adminLogin, adminLoginWithSupabase } = useAdminStore();
   // Effect to redirect if an admin is already logged in
   // This handles cases where an admin manually navigates to /admin/login while already authenticated
   React.useEffect(() => {
@@ -145,6 +146,14 @@ const AdminLoginPage = () => {
               </button>
             </div>
           </form>
+
+          {/* Links a Supabase identity to an operator that already exists; it
+              never creates one. Hidden entirely unless Supabase is configured. */}
+          <SupabaseSignIn
+            getClient={getSupabase}
+            configured={isSupabaseConfigured}
+            onToken={adminLoginWithSupabase}
+          />
         </div>
       </div>
     </div>

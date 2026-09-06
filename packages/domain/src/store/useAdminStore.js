@@ -50,6 +50,33 @@ export const useAdminStore = create((set) => ({
     }
   },
 
+  /**
+   * The same exchange for the console.
+   *
+   * It links a Supabase identity to an operator that already exists and never
+   * creates one — anyone who can sign up to the Supabase project would otherwise
+   * become staff — so a stranger signing in here is told they are not an
+   * operator, which is the honest answer.
+   */
+  adminLoginWithSupabase: async (accessToken) => {
+    set({ isLoading: true });
+    try {
+      const res = await axiosInstance.post('/admin/supabase', { accessToken });
+      useAuthStore.setState({
+        authUser: res.data,
+        isAdmin: res.data?.role === 'admin',
+        permissions: res.data?.permissions || [],
+      });
+      toast.success('Logged in successfully');
+      return true;
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not complete that sign-in');
+      return false;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
   AdminLogout: async () => {
     try {
       await axiosInstance.post('/admin/logout');

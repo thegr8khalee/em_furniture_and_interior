@@ -2,6 +2,7 @@
 // storefront uses — cart, wishlist, compare, loyalty, orders — stay in apps/web
 // rather than making this a dumping ground.
 export { axiosInstance } from './lib/axios.js';
+export { getSupabase, isSupabaseConfigured, currentSupabaseToken } from './lib/supabase.js';
 export { useAuthStore } from './store/useAuthStore.js';
 export { useAdminStore } from './store/useAdminStore.js';
 export { useProductsStore } from './store/useProductsStore.js';

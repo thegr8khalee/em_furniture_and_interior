@@ -9,7 +9,8 @@
     "./store/*": "./src/store/*.js"
   },
   "dependencies": {
-    "@em/shared": "*"
+    "@em/shared": "*",
+    "@supabase/supabase-js": "^2.115.0"
   },
   "peerDependencies": {
     "axios": "*",

@@ -57,6 +57,30 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  /**
+   * Signs in with Supabase, and comes back with the ordinary session.
+   *
+   * The token is proof of identity, not the session: the API verifies it with
+   * Supabase and issues its own cookie, which is what every other request uses.
+   * A shopper who already has a password account with the same address is
+   * matched to it, so signing in with Google does not strand their orders in a
+   * second account they cannot see.
+   */
+  loginWithSupabase: async (accessToken) => {
+    set({ isLoading: true });
+    try {
+      const res = await axiosInstance.post('/auth/supabase', { accessToken });
+      set({ authUser: res.data });
+      toast.success('Welcome!');
+      return true;
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not complete that sign-in');
+      return false;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
   logout: async () => {
     try {
       await axiosInstance.post('/auth/logout');

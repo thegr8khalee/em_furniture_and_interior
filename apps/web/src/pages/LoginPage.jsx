@@ -1,11 +1,12 @@
 // src/pages/LoginPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; // Ensure Link is imported
-import { useAuthStore } from '@em/domain';
+import { useAuthStore, getSupabase, isSupabaseConfigured } from '@em/domain';
 // import { usePasswordStore } from '../store/usePasswordStore'; // NEW: Import usePasswordStore
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 // import toast from 'react-hot-toast'; // Ensure toast is imported for local messages
 import { PageWrapper } from '@em/ui/animations';
+import { SupabaseSignIn } from '@em/ui';
 import SEO from '../components/SEO';
 
 const LoginPage = () => {
@@ -19,6 +20,7 @@ const LoginPage = () => {
   // Access authUser and isAdmin from the store to handle redirection if already logged in as admin
   const {
     login,
+    loginWithSupabase,
     isLoading,
     authUser,
     isAdmin,
@@ -195,6 +197,13 @@ const LoginPage = () => {
                     'Sign In'
                   )}
                 </button>
+                {/* Only rendered when the project is configured, so this is
+                    nothing at all until someone sets Supabase up. */}
+                <SupabaseSignIn
+                  getClient={getSupabase}
+                  configured={isSupabaseConfigured}
+                  onToken={loginWithSupabase}
+                />
                 <div className="flex items-center justify-between text-sm">
                   <Link to="/signup" className="text-secondary font-medium hover:underline">
                     Create Account
