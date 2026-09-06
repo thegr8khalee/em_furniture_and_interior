@@ -4,6 +4,7 @@ import {
   adjustStock,
   listStock,
   movementsFor,
+  setCostPrice,
 } from '../services/inventory.js';
 
 /*
@@ -49,6 +50,26 @@ export const adjustInventory = async (req, res) => {
     res.json({ success: true, message: 'Inventory updated successfully.', product });
   } catch (error) {
     fail(error, res, 'Error adjusting inventory');
+  }
+};
+
+/**
+ * What a piece cost to buy.
+ *
+ * Behind the inventory permission, and absent from the public product shape:
+ * publishing a cost price beside a selling price publishes the margin.
+ */
+export const putCostPrice = async (req, res) => {
+  try {
+    const result = await setCostPrice(req.params.productId, req.body?.costPrice);
+
+    res.json({
+      success: true,
+      message: 'Cost price updated. Future sales will post a cost of goods sold.',
+      ...result,
+    });
+  } catch (error) {
+    fail(error, res, 'Error setting a cost price');
   }
 };
 

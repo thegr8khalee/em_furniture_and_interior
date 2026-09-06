@@ -354,6 +354,18 @@ describe('paying an expense', () => {
     expect(again.body.message).toMatch(/already paid/i);
   });
 
+  it('treats an empty payment date as today', async () => {
+    const expense = await anExpense();
+    await post(`/api/purchasing/expenses/${expense._id}/approve`);
+    const res = await post(`/api/purchasing/expenses/${expense._id}/pay`, {
+      paymentMethod: 'bank_transfer',
+      paidOn: '',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.expense.paidOn).toBeTruthy();
+  });
+
   it('needs to know how it was paid', async () => {
     const expense = await anExpense();
     await post(`/api/purchasing/expenses/${expense._id}/approve`);
@@ -469,6 +481,19 @@ describe('purchase orders', () => {
     );
   });
 
+  // A blank date input posts "", and ''::date is a syntax error rather than a
+  // null date, so an empty "expected on" used to be a 500.
+  it('treats an empty expected date as no date', async () => {
+    const res = await post('/api/purchasing/purchase-orders', {
+      vendorId,
+      expectedOn: '',
+      items: [{ product: chairId, quantity: 1, unitCost: 20000 }],
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.purchaseOrder.expectedOn).toBeNull();
+  });
+
   it('refuses a fractional quantity', async () => {
     const res = await post('/api/purchasing/purchase-orders', {
       vendorId,
@@ -560,6 +585,70 @@ describe('purchase orders', () => {
     );
 
     expect(after.on_hand).toBe(before.on_hand + 7);
+  });
+
+  // Receiving raises the debt; this settles it. Without it, 2100 accumulated
+  // every receipt for ever and the payables list disagreed with the books.
+  it('pays for what was received, clearing the payable', async () => {
+    const payable = await balanceOf('2100');
+    const bank = await balanceOf('1120');
+
+    const order = await anOrder();
+    await post(`/api/purchasing/purchase-orders/${order._id}/receive`);
+    const res = await post(`/api/purchasing/purchase-orders/${order._id}/pay`, {
+      paymentMethod: 'bank_transfer',
+      paidOn: '2026-02-10',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.purchaseOrder.paidOn).toBeTruthy();
+
+    // Received then paid nets the payable back to where it started.
+    expect(await balanceOf('2100')).toBe(payable);
+    expect(await balanceOf('1120')).toBe(bank - 200000);
+  });
+
+  // Paying for goods that have not arrived is a deposit or a mistake.
+  it('refuses to pay for an order that has not arrived', async () => {
+    const order = await anOrder();
+    const res = await post(`/api/purchasing/purchase-orders/${order._id}/pay`, {
+      paymentMethod: 'bank_transfer',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/received order/i);
+  });
+
+  it('refuses to pay twice', async () => {
+    const order = await anOrder();
+    await post(`/api/purchasing/purchase-orders/${order._id}/receive`);
+    await post(`/api/purchasing/purchase-orders/${order._id}/pay`, {
+      paymentMethod: 'bank_transfer',
+    });
+    const again = await post(`/api/purchasing/purchase-orders/${order._id}/pay`, {
+      paymentMethod: 'bank_transfer',
+    });
+
+    expect(again.status).toBe(400);
+    expect(again.body.message).toMatch(/already paid/i);
+  });
+
+  it('shows an unpaid receipt on the payables list', async () => {
+    const vendor = await post('/api/purchasing/vendors', { name: 'Unbilled Ltd' });
+    const id = vendor.body.vendor._id;
+
+    const order = await anOrder({ vendorId: id });
+    await post(`/api/purchasing/purchase-orders/${order._id}/receive`);
+
+    const owed = await get('/api/purchasing/payables');
+    expect(owed.body.payables.find((p) => p.vendor?._id === id).total).toBe(200000);
+
+    await post(`/api/purchasing/purchase-orders/${order._id}/pay`, {
+      paymentMethod: 'bank_transfer',
+    });
+
+    const after = await get('/api/purchasing/payables');
+    expect(after.body.payables.find((p) => p.vendor?._id === id)).toBeUndefined();
   });
 
   it('refuses to receive twice', async () => {

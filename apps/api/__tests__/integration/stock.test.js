@@ -335,6 +335,117 @@ describe('adjusting a count', () => {
   });
 });
 
+// A sale posts a cost of goods sold only when the product has a cost price, and
+// nothing set one: `cost_price` was null on every product ever created through
+// the console, so the ledger carried revenue with no cost of sales and the
+// profit and loss showed a 100% gross margin on everything.
+describe('what a piece cost to buy', () => {
+  let adminCookie;
+  let deskId;
+
+  beforeAll(async () => {
+    adminCookie = await signInAsOperator();
+    deskId = await insertProduct({ name: 'Costed Desk', price: 5000000, sku: 'COST-1' });
+  });
+
+  const setCost = (id, costPrice) =>
+    api('put', `/api/inventory/admin/products/${id}/cost`)
+      .set('Cookie', adminCookie)
+      .send({ costPrice });
+
+  it('is set from the inventory screen and read back there', async () => {
+    const res = await setCost(deskId, 30000);
+    expect(res.status).toBe(200);
+
+    const list = await api('get', '/api/inventory/admin/products?search=COST-1').set(
+      'Cookie',
+      adminCookie
+    );
+    expect(list.body.products[0].costPrice).toBe(30000);
+  });
+
+  // The margin is not public. A cost price beside a selling price is the margin.
+  it('is not published on the public product', async () => {
+    const res = await api('get', `/api/products/${deskId}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.costPrice).toBeUndefined();
+    expect(JSON.stringify(res.body)).not.toContain('costPrice');
+  });
+
+  it('can be cleared', async () => {
+    await setCost(deskId, 30000);
+    const res = await setCost(deskId, null);
+
+    expect(res.status).toBe(200);
+    expect(res.body.costPrice).toBeNull();
+  });
+
+  it('refuses a negative cost', async () => {
+    expect((await setCost(deskId, -1)).status).toBe(400);
+  });
+
+  it('404s for a product that is not there', async () => {
+    const res = await setCost('00000000-0000-0000-0000-000000000000', 100);
+    expect(res.status).toBe(404);
+  });
+
+  it('is behind the inventory permission', async () => {
+    const editor = await signInAsOperator('editor');
+    const res = await api('put', `/api/inventory/admin/products/${deskId}/cost`)
+      .set('Cookie', editor)
+      .send({ costPrice: 1 });
+
+    expect(res.status).toBe(403);
+  });
+
+  // The whole point of it: with a cost, selling posts a cost of goods sold.
+  it('makes a sale post a cost of goods sold', async () => {
+    await setCost(deskId, 30000);
+    await recordMovement(deskId, 5, 'purchase_receipt');
+
+    const before = await getDb().query(
+      `SELECT COALESCE(SUM(l.debit), 0)::bigint AS cost
+         FROM journal_lines l JOIN accounts a ON a.id = l.account_id
+        WHERE a.code = '5100'`,
+      { type: QueryTypes.SELECT }
+    );
+
+    const placed = await api('post', '/api/orders/create')
+      .set('Cookie', [`anonymousId=anon-${Math.random().toString(36).slice(2)}`])
+      .send({
+        shippingAddress: {
+          fullName: 'Ada Obi',
+          phone: '08030000000',
+          email: 'ada@example.com',
+          address: '12 Ikoyi Crescent',
+          city: 'Lagos',
+          state: 'Lagos',
+        },
+        items: [{ item: deskId, quantity: 2 }],
+      });
+
+    await api('put', `/api/orders/admin/${placed.body.order._id}/status`)
+      .set('Cookie', adminCookie)
+      .send({ status: 'confirmed' });
+    // The goods leave stock when the order is paid, and that is what posts the
+    // cost of them.
+    await api('put', `/api/orders/admin/${placed.body.order._id}/payment`)
+      .set('Cookie', adminCookie)
+      .send({ paymentStatus: 'paid' });
+
+    const after = await getDb().query(
+      `SELECT COALESCE(SUM(l.debit), 0)::bigint AS cost
+         FROM journal_lines l JOIN accounts a ON a.id = l.account_id
+        WHERE a.code = '5100'`,
+      { type: QueryTypes.SELECT }
+    );
+
+    // Two desks at ₦30,000 each, in kobo.
+    expect(Number(after[0].cost) - Number(before[0].cost)).toBe(6000000);
+  });
+});
+
 describe('the sitemap', () => {
   it('lists the catalog from PostgreSQL', async () => {
     const productId = await insertProduct({ name: 'Sitemap Sofa', price: 1000 });

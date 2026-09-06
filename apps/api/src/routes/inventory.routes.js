@@ -3,6 +3,7 @@ import {
   getInventoryProducts,
   adjustInventory,
   getInventoryHistory,
+  putCostPrice,
 } from '../controllers/inventory.controller.js';
 import { protectAdminRoute } from '../middleware/protectAdminRoute.js';
 import { requirePermissions } from '../middleware/requirePermissions.js';
@@ -33,6 +34,16 @@ router.put(
   requirePermissions([PERMISSIONS.INVENTORY_MANAGE]),
   createAuditLog('UPDATE', 'inventory'),
   adjustInventory
+);
+
+// A sale posts a cost of goods sold only if the product has a cost price, so
+// this is the control that makes the profit and loss mean anything.
+router.put(
+  '/admin/products/:productId/cost',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.INVENTORY_MANAGE]),
+  createAuditLog('UPDATE', 'product'),
+  putCostPrice
 );
 
 export default router;

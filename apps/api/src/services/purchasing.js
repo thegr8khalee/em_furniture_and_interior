@@ -2,7 +2,12 @@ import { QueryTypes } from 'sequelize';
 import { getSequelize } from '../db/sequelize.js';
 import { isValidId } from './catalog.js';
 import { toMajor, toMinor } from '../lib/money.js';
-import { postExpenseApproved, postExpensePaid, postStockMovement } from './posting.js';
+import {
+  postExpenseApproved,
+  postExpensePaid,
+  postPurchaseOrderPaid,
+  postStockMovement,
+} from './posting.js';
 
 /**
  * What the business buys, and what it owes for it.
@@ -37,6 +42,16 @@ const selectOne = async (db, sql, replacements = {}, opts = {}) =>
   (await select(db, sql, replacements, opts))[0] ?? null;
 
 const money = (kobo) => toMajor(Number(kobo ?? 0));
+
+/**
+ * An empty form field is an absent value, not a value of "".
+ *
+ * A blank date input posts `""`, and `''::date` is not a null date — it is a
+ * syntax error, so an optional "expected on" left empty turned creating a
+ * purchase order into a 500. Every optional value that can arrive from a form
+ * goes through this.
+ */
+const orNull = (value) => (value === '' || value === undefined ? null : value);
 
 const amount = (value, label) => {
   const number = Number(value);
@@ -341,9 +356,9 @@ export const createExpense = async (input, recordedBy = null, db = getSequelize(
         net,
         tax,
         total: net + tax,
-        notes: input.notes ?? null,
-        receiptUrl: input.receiptUrl ?? null,
-        receiptPublicId: input.receiptPublicId ?? null,
+        notes: orNull(input.notes),
+        receiptUrl: orNull(input.receiptUrl),
+        receiptPublicId: orNull(input.receiptPublicId),
         recordedBy: isValidId(String(recordedBy ?? '')) ? recordedBy : null,
       },
       opts
@@ -424,7 +439,7 @@ export const payExpense = async (id, { paymentMethod, paidOn }, db = getSequeliz
       `UPDATE expenses SET status = 'paid', payment_method = :method::payment_method,
               paid_on = COALESCE(:paidOn::date, CURRENT_DATE)
         WHERE id = :id`,
-      { replacements: { id, method: paymentMethod, paidOn: paidOn ?? null }, ...opts }
+      { replacements: { id, method: paymentMethod, paidOn: orNull(paidOn) }, ...opts }
     ).catch((error) => {
       if (error?.original?.code === '22P02') {
         throw new PurchasingError(`"${paymentMethod}" is not a payment method.`);
@@ -465,23 +480,42 @@ export const voidExpense = async (id, db = getSequelize()) => {
   return getExpense(id, db);
 };
 
-/** What is owed to suppliers, oldest first — the payables list. */
+/**
+ * What is owed to suppliers, oldest first.
+ *
+ * Two kinds of debt, one list. An **approved expense** is owed from the day it
+ * was approved; a **received purchase order** is owed from the day the goods
+ * arrived. Both credit `2100` in the ledger, so a report that showed only one of
+ * them disagreed with the balance sheet — which is the failure this whole design
+ * exists to prevent.
+ */
 export const payablesAgeing = async (db = getSequelize()) => {
   const rows = await select(
     db,
-    `SELECT v.id, v.name,
-            COALESCE(SUM(e.total_amount), 0)::bigint AS total,
-            COALESCE(SUM(e.total_amount) FILTER (
-              WHERE e.expense_date > CURRENT_DATE - 30), 0)::bigint AS current,
-            COALESCE(SUM(e.total_amount) FILTER (
-              WHERE e.expense_date <= CURRENT_DATE - 30
-                AND e.expense_date > CURRENT_DATE - 60), 0)::bigint AS thirty,
-            COALESCE(SUM(e.total_amount) FILTER (
-              WHERE e.expense_date <= CURRENT_DATE - 60), 0)::bigint AS sixty
-       FROM expenses e
-       LEFT JOIN vendors v ON v.id = e.vendor_id
-      WHERE e.status = 'approved'
+    `WITH owed AS (
+       SELECT e.vendor_id, e.total_amount AS amount, e.expense_date AS owed_since
+         FROM expenses e WHERE e.status = 'approved'
+       UNION ALL
+       SELECT po.vendor_id,
+              COALESCE((SELECT SUM(i.line_total) FROM purchase_order_items i
+                         WHERE i.purchase_order_id = po.id), 0),
+              po.received_on
+         FROM purchase_orders po
+        WHERE po.status = 'received' AND po.paid_on IS NULL
+     )
+     SELECT v.id, v.name,
+            COALESCE(SUM(o.amount), 0)::bigint AS total,
+            COALESCE(SUM(o.amount) FILTER (
+              WHERE o.owed_since > CURRENT_DATE - 30), 0)::bigint AS current,
+            COALESCE(SUM(o.amount) FILTER (
+              WHERE o.owed_since <= CURRENT_DATE - 30
+                AND o.owed_since > CURRENT_DATE - 60), 0)::bigint AS thirty,
+            COALESCE(SUM(o.amount) FILTER (
+              WHERE o.owed_since <= CURRENT_DATE - 60), 0)::bigint AS sixty
+       FROM owed o
+       LEFT JOIN vendors v ON v.id = o.vendor_id
       GROUP BY v.id, v.name
+     HAVING COALESCE(SUM(o.amount), 0) <> 0
       ORDER BY total DESC`
   );
 
@@ -500,6 +534,7 @@ export const payablesAgeing = async (db = getSequelize()) => {
 
 const PO_SELECT = `
   SELECT po.id, po.po_number, po.status, po.expected_on, po.received_on, po.notes,
+         po.paid_on, po.payment_method,
          po.created_by, po.received_by, po.created_at, po.updated_at,
          v.id AS vendor_id, v.name AS vendor_name,
          COALESCE(items.list, '[]'::json) AS items,
@@ -525,6 +560,8 @@ const publicPurchaseOrder = (row) => ({
   status: row.status,
   expectedOn: row.expected_on,
   receivedOn: row.received_on,
+  paidOn: row.paid_on,
+  paymentMethod: row.payment_method,
   notes: row.notes,
   items: (row.items ?? []).map((item) => ({
     _id: item._id,
@@ -600,8 +637,8 @@ export const createPurchaseOrder = async (input, createdBy = null, db = getSeque
       {
         number: await nextNumber(db, 'purchase_order', 'PO', opts),
         vendorId,
-        expectedOn: input.expectedOn ?? null,
-        notes: input.notes ?? null,
+        expectedOn: orNull(input.expectedOn),
+        notes: orNull(input.notes),
         createdBy: isValidId(String(createdBy ?? '')) ? createdBy : null,
       },
       opts
@@ -710,7 +747,7 @@ export const receivePurchaseOrder = async (
       {
         replacements: {
           id,
-          receivedOn,
+          receivedOn: orNull(receivedOn),
           staffId: isValidId(String(staffId ?? '')) ? staffId : null,
         },
         ...opts,
@@ -727,13 +764,61 @@ export const receivePurchaseOrder = async (
          FROM purchase_order_items i
         WHERE i.purchase_order_id = :id
        RETURNING id`,
-      { id, staffId: isValidId(String(staffId ?? '')) ? staffId : null, receivedOn },
+      { id, staffId: isValidId(String(staffId ?? '')) ? staffId : null, receivedOn: orNull(receivedOn) },
       opts
     );
 
     for (const movement of movements) {
       await postStockMovement(db, movement.id, opts);
     }
+  });
+
+  return getPurchaseOrder(id, db);
+};
+
+/**
+ * Pays for goods already received.
+ *
+ * Only a received order: paying for something that has not arrived is a deposit
+ * or a mistake, and neither is this. Receipt is what creates the debt.
+ */
+export const payPurchaseOrder = async (
+  id,
+  { paymentMethod, paidOn = null } = {},
+  db = getSequelize()
+) => {
+  if (!isValidId(String(id ?? ''))) throw new PurchasingError('Purchase order not found.', 404);
+  if (!paymentMethod) throw new PurchasingError('How was it paid?');
+
+  await db.transaction(async (transaction) => {
+    const opts = { transaction };
+
+    const order = await selectOne(
+      db,
+      'SELECT id, status, paid_on FROM purchase_orders WHERE id = :id FOR UPDATE',
+      { id },
+      opts
+    );
+    if (!order) throw new PurchasingError('Purchase order not found.', 404);
+    if (order.paid_on) throw new PurchasingError('This order is already paid.');
+    if (order.status !== 'received') {
+      throw new PurchasingError('Only a received order can be paid for.');
+    }
+
+    await db.query(
+      `UPDATE purchase_orders
+          SET paid_on = COALESCE(:paidOn::date, CURRENT_DATE),
+              payment_method = :method::payment_method
+        WHERE id = :id`,
+      { replacements: { id, paidOn: orNull(paidOn), method: paymentMethod }, ...opts }
+    ).catch((error) => {
+      if (error?.original?.code === '22P02') {
+        throw new PurchasingError(`"${paymentMethod}" is not a payment method.`);
+      }
+      throw error;
+    });
+
+    await postPurchaseOrderPaid(db, id, opts);
   });
 
   return getPurchaseOrder(id, db);

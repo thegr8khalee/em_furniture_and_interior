@@ -810,6 +810,64 @@ Three rules carry the design:
 Unset `SUPABASE_URL` or `SUPABASE_ANON_KEY` and the two routes answer 503 while
 every other sign-in carries on, so this is inert until it is configured.
 
+### The screens
+
+The console had one finance screen, and it summed the orders table: a sales
+report, which cannot express a cost, a liability or a bank balance. Two screens
+now read the ledger and the buying side.
+
+**Books** (`/admin/books`) — trial balance, profit and loss, balance sheet, VAT
+return, the journal, and the accounting calendar, each behind `finance.view`.
+Every account code on every report is clickable and opens that account's ledger
+with a running balance, because "why is this number that?" is the question a
+report provokes. The trial balance and the balance sheet publish their own
+balanced check, so a broken posting rule shows on the screen rather than in a
+reconciliation months later. Closing a month is on the Periods tab and only
+appears for `books.manage`.
+
+**Purchasing** (`/admin/purchasing`) — expenses, purchase orders, vendors and a
+payables ageing. Every button that changes a status posts in the same
+transaction, so no document here can say one thing while the ledger says
+another.
+
+Three bugs came out of driving these against a seeded database rather than
+reading the code.
+
+- **A blank date field is `""`, not null.** An optional "expected on" left empty
+  reached Postgres as `''::date`, which is a syntax error, so creating a purchase
+  order without one was a 500. Every optional value that can arrive from a form
+  now goes through one coercion.
+- **Nothing could settle what a receipt owed.** Receiving a purchase order
+  credits `2100`, and only expenses could be paid — so `2100` accumulated every
+  receipt for ever and the payables list showed nothing owed while the balance
+  sheet disagreed. `0013_purchase_order_settlement.sql` gives a received order a
+  `paid_on` and a `payment_method`, and the payables report is now the union of
+  approved expenses and received-unpaid orders.
+- **No product had a cost price.** `sellable_items.cost_price` existed and the
+  posting rule read it, but nothing ever wrote one: not the product form, not
+  the seeder. A stock movement with no cost is skipped rather than guessed at,
+  so every sale posted revenue and no cost of sales, and the profit and loss
+  showed a 100% gross margin on everything. It is set on the inventory screen
+  now — behind `inventory.manage`, and deliberately **not** on the public
+  product shape, because a cost price beside a selling price is the margin.
+
+### The seeded books
+
+The seeder produced a set of books that could not be read, in three ways, all of
+which the new screens made obvious at a glance.
+
+Opening stock arrived as `adjustment` movements, and a positive adjustment
+credits `5400 Stock write-offs` — so stocking the shop for the first time booked
+tens of millions of *negative* expense. Stock now arrives the way stock arrives:
+on a purchase order, received and paid.
+
+Nothing had put any money into the business, so paying for that stock overdrew a
+bank account that never had anything in it. The seeder now posts the one entry a
+seeded set of books legitimately posts by hand — the owner introducing capital.
+
+And orders were seeded before stock, so products were sold before they were
+bought and sat on a negative count. Stock is seeded first.
+
 ## What is not built yet
 
 **The MongoDB migration is complete.** Every route reads and writes PostgreSQL;
@@ -821,6 +879,9 @@ work the ledger was built for.
    `apps/web` nor `apps/erp` calls it yet, and no existing account has a user in
    Supabase Auth. Moving sign-ups over is a product decision with a migration
    behind it, not a code change.
-2. **Console screens for the books and for purchasing.** The API is there and
-   tested; nothing in `apps/erp` reads `/api/books` or `/api/purchasing` yet, so
-   the owner can keep their books over HTTP but not on a screen.
+2. **The knowledge base in `context/` still describes the Mongo system.** Each
+   file carries a banner pointing here, but the contents are stale.
+3. **`orders.customer_id` is `ON DELETE SET NULL` and `orders_has_a_buyer` says
+   an order must have one.** A schema test pins the conflict rather than
+   resolving it, because it is a product decision: when a customer deletes their
+   account, do their past orders keep their name or become anonymous?

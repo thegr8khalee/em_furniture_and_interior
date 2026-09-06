@@ -13,6 +13,9 @@ const InventoryManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showAdjustModal, setShowAdjustModal] = useState(false);
+  // What a piece cost to buy. Nothing set it before, so no sale ever posted a
+  // cost of goods sold and every margin in the books was the whole price.
+  const [costForm, setCostForm] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [adjustmentForm, setAdjustmentForm] = useState({
     delta: '',
@@ -43,6 +46,24 @@ const InventoryManagement = () => {
       console.error(error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCostSubmit = async (event) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      await axiosInstance.put(`/inventory/admin/products/${costForm.product._id}/cost`, {
+        costPrice: costForm.costPrice === '' ? null : Number(costForm.costPrice),
+      });
+      toast.success('Cost price saved');
+      setCostForm(null);
+      fetchProducts();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not save that cost price');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -117,6 +138,7 @@ const InventoryManagement = () => {
                   <th>SKU</th>
                   <th>Stock</th>
                   <th>Threshold</th>
+                  <th>Cost price</th>
                   <th>Location</th>
                   <th>Actions</th>
                 </tr>
@@ -146,11 +168,41 @@ const InventoryManagement = () => {
                           </Badge>
                         </td>
                         <td>{product.lowStockThreshold || 5}</td>
+                        <td>
+                          {/* A sale posts a cost of goods sold only if this is
+                              set, so an empty one is worth pointing at. */}
+                          {product.costPrice === null || product.costPrice === undefined ? (
+                            <span className="text-xs uppercase tracking-wide text-warning">
+                              not set
+                            </span>
+                          ) : (
+                            <span className="font-mono tabular-nums">
+                              ₦{Number(product.costPrice).toLocaleString()}
+                            </span>
+                          )}
+                        </td>
                         <td>{product.warehouseLocation || '-'}</td>
                         <td>
-                          <Button variant="ghost" size="sm" leftIcon={Edit2} onClick={() => openAdjustModal(product)}>
-                            Adjust
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" leftIcon={Edit2} onClick={() => openAdjustModal(product)}>
+                              Adjust
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setCostForm({
+                                  product,
+                                  costPrice:
+                                    product.costPrice === null || product.costPrice === undefined
+                                      ? ''
+                                      : String(product.costPrice),
+                                })
+                              }
+                            >
+                              Cost
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -191,6 +243,42 @@ const InventoryManagement = () => {
           </div>
         </form>
       </Modal>
+      <Modal
+        isOpen={Boolean(costForm)}
+        onClose={() => setCostForm(null)}
+        title={`Cost price: ${costForm?.product?.name || ''}`}
+        className="max-w-lg"
+      >
+        {costForm && (
+          <form onSubmit={handleCostSubmit} className="space-y-4">
+            <p className="text-sm text-neutral/60">
+              What this piece cost to buy. Selling it books this figure as cost of goods sold, which
+              is what turns revenue into a margin — a product with no cost price posts none. It is
+              never shown to customers.
+            </p>
+
+            <Input
+              label="Cost price (₦)"
+              type="number"
+              min="0"
+              step="0.01"
+              value={costForm.costPrice}
+              onChange={(e) => setCostForm({ ...costForm, costPrice: e.target.value })}
+              hint="Leave empty to clear it"
+            />
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="ghost" onClick={() => setCostForm(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" isLoading={isSubmitting}>
+                Save
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
     </AdminPageShell>
   );
 };

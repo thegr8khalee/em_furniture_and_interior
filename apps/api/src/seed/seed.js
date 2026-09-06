@@ -117,11 +117,18 @@ const generateProduct = (collections = []) => {
         ? faker.helpers.arrayElement(collections)
         : null;
 
+    // A cost between 45% and 70% of the selling price. Without one, the posting
+    // rule skips the stock movement rather than inventing a margin, and the
+    // seeded books show revenue with no cost of sales — a 100% gross margin,
+    // which is not a demonstration of anything.
+    const costPrice = Math.floor(price * faker.number.float({ min: 0.45, max: 0.7 }));
+
     return {
         name: `${faker.commerce.productName()} ${faker.string.alphanumeric(4).toUpperCase()}`,
         description: faker.commerce.productDescription(),
         items: `${faker.number.int({ min: 1, max: 5 })} items`,
         price,
+        costPrice,
         category: faker.helpers.arrayElement(categories),
         style: faker.helpers.arrayElement(styles),
         collectionId: collection ? collection._id : undefined,
@@ -172,6 +179,7 @@ const seedDB = async () => {
         consultation_room_photos, consultation_requests, designers,
         project_images, projects,
         blog_posts, faqs,
+        purchase_order_items, purchase_orders, expenses, vendors,
         guest_sessions, counters
       RESTART IDENTITY
     `);
@@ -244,6 +252,85 @@ const seedDB = async () => {
         createdProducts.push(await createProduct(generateProduct(createdCollections)));
     }
     console.log('Products created and linked.');
+
+    // --- 5a. Opening capital ---
+    //
+    // The business starts with money in the bank, because otherwise buying the
+    // opening stock overdraws an account that never had anything in it and the
+    // balance sheet reads like a disaster. This is the one entry a seeded set of
+    // books legitimately posts by hand: the owner putting money in.
+    console.log('Seeding opening capital...');
+    const { postEntry } = await import('../services/ledger.js');
+    await postEntry(getSequelize(), {
+      date: new Date().toISOString().slice(0, 10),
+      description: 'Opening capital introduced',
+      source: 'manual',
+      lines: [
+        // Kobo, like every other amount in the ledger: ₦80,000,000, which has to
+        // cover the opening stock bought below.
+        { account: '1120', debit: 8_000_000_000, description: 'Paid into the current account' },
+        { account: '3100', credit: 8_000_000_000, description: 'Owner capital' },
+      ],
+    });
+    console.log('Opening capital seeded.');
+
+    // --- 5b. The buying side ---
+    console.log('Seeding vendors, expenses and a purchase order...');
+    const { createVendor, createExpense, approveExpense, payExpense,
+            createPurchaseOrder, receivePurchaseOrder, payPurchaseOrder } =
+      await import('../services/purchasing.js');
+
+    const vendors = [];
+    for (const name of ['Lagos Timber Co', 'Ikeja Fabrics', 'Apapa Freight']) {
+        vendors.push(await createVendor({
+            name,
+            email: faker.internet.email().toLowerCase(),
+            phone: `080${faker.string.numeric(8)}`,
+        }));
+    }
+
+    // One of each state, so every branch of the screen has a row: a draft, one
+    // approved and still owed, and one paid.
+    const owner = createdAdmins[0]._id;
+    const costs = [
+        { accountCode: '5600', description: 'Workshop rent', netAmount: 450000, tax: 33750 },
+        { accountCode: '5500', description: 'Workshop wages', netAmount: 720000, tax: 0 },
+        { accountCode: '5700', description: 'Instagram campaign', netAmount: 120000, tax: 9000 },
+        { accountCode: '5200', description: 'Delivery van fuel', netAmount: 85000, tax: 6375 },
+    ];
+
+    for (const [index, cost] of costs.entries()) {
+        const expense = await createExpense({
+            vendorId: vendors[index % vendors.length]._id,
+            accountCode: cost.accountCode,
+            description: cost.description,
+            date: new Date().toISOString().slice(0, 10),
+            netAmount: cost.netAmount,
+            taxAmount: cost.tax,
+        }, owner);
+
+        if (index === 0) continue;                       // left as a draft
+        await approveExpense(expense._id, owner);
+        if (index > 2) continue;                         // approved, still owed
+        await payExpense(expense._id, { paymentMethod: 'bank_transfer' });
+    }
+
+    // A purchase order, received: stock in, and money owed for it.
+    const ordered = createdProducts.slice(0, 3);
+    if (ordered.length > 0) {
+        const purchaseOrder = await createPurchaseOrder({
+            vendorId: vendors[0]._id,
+            expectedOn: null,
+            items: ordered.map((product) => ({
+                product: product._id,
+                quantity: getRandomInt(2, 10),
+                unitCost: Math.floor(product.price * 0.5),
+            })),
+        }, owner);
+
+        await receivePurchaseOrder(purchaseOrder._id, { staffId: owner });
+    }
+    console.log('Purchasing seeded.');
 
     // --- 6. Blog Posts ---
     console.log('Seeding blog posts...');
@@ -365,6 +452,39 @@ const seedDB = async () => {
     }
     console.log('Flash sales seeded.');
 
+    // Opening stock arrives the way stock actually arrives: on a purchase order
+    // from a supplier, received. It used to be seeded with `adjustment`
+    // movements, and a positive adjustment credits 5400 Stock write-offs — so
+    // stocking the shop for the first time booked ₦54m of *negative* expense
+    // and the seeded profit and loss was nonsense. A receipt debits inventory
+    // and credits the supplier, which is what happened.
+    console.log('Seeding stock...');
+    const stocking = createdProducts.slice(0, 20);
+
+    if (stocking.length > 0) {
+      const openingOrder = await createPurchaseOrder({
+        vendorId: vendors[1]._id,
+        items: stocking.map((product) => ({
+          product: product._id,
+          quantity: getRandomInt(5, 50),
+          unitCost: Math.floor(product.price * 0.5),
+        })),
+      }, owner);
+
+      await receivePurchaseOrder(openingOrder._id, { staffId: owner });
+      await payPurchaseOrder(openingOrder._id, { paymentMethod: 'bank_transfer' });
+    }
+
+    // One genuine correction, so the adjustment path and its note are exercised.
+    if (stocking.length > 0) {
+      await adjustStock(
+        stocking[0]._id,
+        { delta: -2, reason: 'Damaged in the workshop' },
+        owner
+      );
+    }
+    console.log('Stock seeded.');
+
     // --- 12. Orders ---
     //
     // Placed through the ordering service rather than inserted, so every seeded
@@ -414,16 +534,6 @@ const seedDB = async () => {
     // A receipt per product rather than a separate adjustments collection: the
     // count is derived from these rows, so this is both the stock and the reason
     // for it.
-    console.log('Seeding stock...');
-    for (const product of createdProducts.slice(0, 20)) {
-      await adjustStock(
-        product._id,
-        { delta: getRandomInt(5, 50), reason: 'Opening stock' },
-        createdAdmins[0]._id
-      );
-    }
-    console.log('Stock seeded.');
-
     console.log('Database seeding complete! 🚀');
 
   } catch (error) {

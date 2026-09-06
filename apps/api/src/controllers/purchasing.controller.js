@@ -12,6 +12,7 @@ import {
   listPurchaseOrders,
   listVendors,
   payExpense,
+  payPurchaseOrder,
   payablesAgeing,
   receivePurchaseOrder,
   removeVendor,
@@ -140,7 +141,7 @@ export const postExpensePayment = async (req, res) => {
   try {
     const expense = await payExpense(req.params.expenseId, {
       paymentMethod: req.body?.paymentMethod,
-      paidOn: req.body?.paidOn ?? null,
+      paidOn: req.body?.paidOn || null,
     });
     res.json({ success: true, expense, message: `${expense.expenseNumber} paid.` });
   } catch (error) {
@@ -215,7 +216,7 @@ export const postPurchaseOrderSend = async (req, res) => {
 export const postPurchaseOrderReceipt = async (req, res) => {
   try {
     const purchaseOrder = await receivePurchaseOrder(req.params.orderId, {
-      receivedOn: req.body?.receivedOn ?? null,
+      receivedOn: req.body?.receivedOn || null,
       staffId: req.admin?.id ?? null,
     });
     res.json({
@@ -225,6 +226,22 @@ export const postPurchaseOrderReceipt = async (req, res) => {
     });
   } catch (error) {
     fail(error, res, 'Error receiving a purchase order');
+  }
+};
+
+export const postPurchaseOrderPayment = async (req, res) => {
+  try {
+    const purchaseOrder = await payPurchaseOrder(req.params.orderId, {
+      paymentMethod: req.body?.paymentMethod,
+      paidOn: req.body?.paidOn || null,
+    });
+    res.json({
+      success: true,
+      purchaseOrder,
+      message: `${purchaseOrder.poNumber} paid; the payable is cleared.`,
+    });
+  } catch (error) {
+    fail(error, res, 'Error paying a purchase order');
   }
 };
 

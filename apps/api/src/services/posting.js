@@ -247,6 +247,57 @@ export const postExpensePaid = async (db, expenseId, { transaction } = {}) => {
   );
 };
 
+/**
+ * Paying a supplier for goods already received.
+ *
+ * The mirror of `postExpensePaid`, for the other kind of payable. Receiving a
+ * purchase order raises the debt; this settles it.
+ *
+ *   DR  2100 Accounts payable   total
+ *   CR  bank or cash            total
+ */
+export const postPurchaseOrderPaid = async (db, orderId, { transaction } = {}) => {
+  const order = await one(
+    db,
+    `SELECT po.id, po.po_number, po.status, po.payment_method,
+            COALESCE(po.paid_on, po.received_on) AS entry_date,
+            v.name AS vendor_name,
+            COALESCE((SELECT SUM(i.line_total) FROM purchase_order_items i
+                       WHERE i.purchase_order_id = po.id), 0) AS total
+     FROM purchase_orders po
+     JOIN vendors v ON v.id = po.vendor_id
+     WHERE po.id = :orderId`,
+    { orderId },
+    transaction
+  );
+
+  if (!order) throw new LedgerError(`No purchase order ${orderId}`);
+  if (order.status !== 'received') {
+    return { posted: false, reason: `status_is_${order.status}` };
+  }
+
+  const total = Number(order.total);
+  if (total === 0) return { posted: false, reason: 'zero_value' };
+
+  const account = SETTLEMENT_ACCOUNT[order.payment_method];
+  if (!account) throw new LedgerError(`No settlement account for ${order.payment_method}`);
+
+  return postOnce(
+    db,
+    {
+      date: order.entry_date,
+      description: `Paid ${order.po_number} to ${order.vendor_name}`,
+      source: 'purchase',
+      sourceId: order.id,
+      lines: [
+        { account: '2100', debit: total, description: 'Payable settled' },
+        { account, credit: total, description: `Paid by ${order.payment_method}` },
+      ],
+    },
+    { transaction }
+  );
+};
+
 // What each kind of stock movement does to the books. Inventory (1300) is the
 // other side of every one of them.
 const STOCK_RULES = {

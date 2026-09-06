@@ -22,6 +22,8 @@ import {
   LogOut,
   ChevronDown,
   Receipt,
+  BookOpen,
+  Truck,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -55,6 +57,7 @@ const navGroups = [
       { to: '/admin/orders', label: 'Orders', icon: ShoppingCart, permission: PERMISSIONS.ORDERS_VIEW },
       { to: '/admin/coupons', label: 'Coupons', icon: Ticket, permission: PERMISSIONS.MARKETING_MANAGE },
       { to: '/admin/inventory', label: 'Inventory', icon: Warehouse, permission: PERMISSIONS.INVENTORY_MANAGE },
+      { to: '/admin/purchasing', label: 'Purchasing', icon: Truck, permission: PERMISSIONS.FINANCE_VIEW },
       { to: '/admin/documents', label: 'Document Builder', icon: Receipt, permission: PERMISSIONS.FINANCE_VIEW },
     ],
   },
@@ -69,7 +72,8 @@ const navGroups = [
     label: 'Reports',
     items: [
       { to: '/admin/analytics', label: 'Analytics', icon: BarChart3, permission: PERMISSIONS.ADMIN_DASHBOARD_VIEW },
-      { to: '/admin/finance', label: 'Finance', icon: DollarSign, permission: PERMISSIONS.FINANCE_VIEW },
+      { to: '/admin/books', label: 'Books', icon: BookOpen, permission: PERMISSIONS.FINANCE_VIEW },
+      { to: '/admin/finance', label: 'Sales revenue', icon: DollarSign, permission: PERMISSIONS.FINANCE_VIEW },
       { to: '/admin/security-logs', label: 'Security Logs', icon: Shield, permission: PERMISSIONS.ADMIN_DASHBOARD_VIEW },
     ],
   },

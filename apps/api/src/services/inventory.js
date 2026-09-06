@@ -2,6 +2,7 @@ import { QueryTypes } from 'sequelize';
 import { getSequelize } from '../db/sequelize.js';
 import { isValidId } from './catalog.js';
 import { postStockMovement } from './posting.js';
+import { toMajor, toMinor } from '../lib/money.js';
 
 /**
  * Stock, against PostgreSQL.
@@ -44,6 +45,11 @@ const publicStock = (row) => ({
   onHand: row.on_hand,
   reserved: row.reserved,
   lowStockThreshold: row.low_stock_threshold,
+  // What the piece cost to buy. Published here, on an admin-only route, and
+  // deliberately not on the public product shape: it is the margin.
+  costPrice: row.cost_price === null || row.cost_price === undefined
+    ? null
+    : toMajor(Number(row.cost_price)),
   warehouseLocation: row.warehouse_location,
   isLowStock: row.is_low,
   updatedAt: row.updated_at,
@@ -75,7 +81,7 @@ export const listStock = async (
   const rows = await select(
     db,
     `SELECT av.product_id, s.name, p.sku, av.on_hand, av.reserved, av.available,
-            av.low_stock_threshold, p.warehouse_location, s.updated_at
+            av.low_stock_threshold, s.cost_price, p.warehouse_location, s.updated_at
        FROM product_availability av
        JOIN products p ON p.id = av.product_id
        JOIN sellable_items s ON s.id = p.id
@@ -96,6 +102,40 @@ export const listStock = async (
   );
 
   return { products: rows.map(publicStock), total: counted.total };
+};
+
+/**
+ * Sets what a piece cost to buy.
+ *
+ * Nothing set this before, so `cost_price` was null on every product ever
+ * created through the console — and a stock movement with no unit cost and no
+ * cost price is skipped by the posting rule rather than guessed at. The result
+ * was a ledger with revenue and no cost of sales: a gross margin of 100% on
+ * every report, and inventory that never lost value when it was sold.
+ *
+ * It lives on the inventory screen rather than the product form because it is
+ * not a marketing attribute, and because that route is behind
+ * `inventory.manage`. The public product shape still does not carry it.
+ */
+export const setCostPrice = async (productId, costPrice, db = getSequelize()) => {
+  if (!isValidId(String(productId ?? ''))) throw new InventoryError('Product not found.', 404);
+
+  const cleared = costPrice === null || costPrice === '' || costPrice === undefined;
+  const amount = Number(costPrice);
+
+  if (!cleared && (!Number.isFinite(amount) || amount < 0)) {
+    throw new InventoryError('A cost price cannot be negative.');
+  }
+
+  const [, result] = await db.query(
+    `UPDATE sellable_items SET cost_price = :costPrice
+      WHERE id = :productId AND kind = 'product'`,
+    { replacements: { productId, costPrice: cleared ? null : toMinor(amount) } }
+  );
+
+  if ((result?.rowCount ?? 0) === 0) throw new InventoryError('Product not found.', 404);
+
+  return { productId, costPrice: cleared ? null : amount };
 };
 
 /**
@@ -129,7 +169,7 @@ export const adjustStock = async (
     const current = await selectOne(
       db,
       `SELECT av.product_id, s.name, p.sku, av.on_hand, av.reserved, av.available,
-              av.low_stock_threshold, p.warehouse_location, s.updated_at
+              av.low_stock_threshold, s.cost_price, p.warehouse_location, s.updated_at
          FROM product_availability av
          JOIN products p ON p.id = av.product_id
          JOIN sellable_items s ON s.id = p.id
@@ -175,7 +215,7 @@ export const adjustStock = async (
     const updated = await selectOne(
       db,
       `SELECT av.product_id, s.name, p.sku, av.on_hand, av.reserved, av.available,
-              av.low_stock_threshold, p.warehouse_location, s.updated_at
+              av.low_stock_threshold, s.cost_price, p.warehouse_location, s.updated_at
          FROM product_availability av
          JOIN products p ON p.id = av.product_id
          JOIN sellable_items s ON s.id = p.id

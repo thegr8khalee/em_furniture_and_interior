@@ -510,10 +510,9 @@ export const balanceSheet = async ({ asOf = null } = {}, db = getSequelize()) =>
  * The VAT return.
  *
  * Output VAT is what was charged to customers — the credit side of `2200`.
- * Input VAT is what was paid to suppliers, the debit side. Nothing posts input
- * VAT yet, because nothing records a purchase; the line is here and reads zero
- * rather than being omitted, so the shape of the return does not change when
- * purchases arrive.
+ * Input VAT is what was paid to suppliers, the debit side, which an approved
+ * expense writes. The net is what is owed to the revenue service, or
+ * reclaimable from it when purchases carried more VAT than sales did.
  */
 export const vatReturn = async (range, db = getSequelize()) => {
   const [row] = await select(

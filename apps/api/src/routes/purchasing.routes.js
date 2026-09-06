@@ -14,6 +14,7 @@ import {
   postExpenseVoid,
   postPurchaseOrder,
   postPurchaseOrderCancel,
+  postPurchaseOrderPayment,
   postPurchaseOrderReceipt,
   postPurchaseOrderSend,
   postVendor,
@@ -93,6 +94,14 @@ router.post(
   canSpend,
   createAuditLog('STATUS_CHANGE', 'purchase_order'),
   postPurchaseOrderReceipt
+);
+
+// Settling what the receipt made owed.
+router.post(
+  '/purchase-orders/:orderId/pay',
+  canSpend,
+  createAuditLog('STATUS_CHANGE', 'purchase_order'),
+  postPurchaseOrderPayment
 );
 
 router.post(

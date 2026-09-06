@@ -59,7 +59,7 @@ const parseKeywords = (seoKeywords) => {
  * place a fractional value could otherwise reach the database and be rounded
  * silently.
  */
-const validateCommercials = ({ price, discountedPrice, isPromo, isForeign, origin }) => {
+const validateCommercials = ({ price, discountedPrice, costPrice, isPromo, isForeign, origin }) => {
   const listPrice = parseFloat(price);
   const promoPrice =
     discountedPrice !== '' && discountedPrice !== undefined && discountedPrice !== null
@@ -81,11 +81,25 @@ const validateCommercials = ({ price, discountedPrice, isPromo, isForeign, origi
     throw new CatalogError('Origin is required if product is foreign.');
   }
 
+  // What the piece cost to buy. Optional, and never published on the public
+  // product shape — a cost price beside a selling price is the margin. Without
+  // one a sale posts revenue and no cost of sales, because the posting rule
+  // skips a movement it cannot price rather than inventing a figure.
+  const cost =
+    costPrice !== '' && costPrice !== undefined && costPrice !== null
+      ? parseFloat(costPrice)
+      : undefined;
+
+  if (cost !== undefined && (Number.isNaN(cost) || cost < 0)) {
+    throw new CatalogError('Cost price must be a non-negative number.');
+  }
+
   return {
     price: toMinor(listPrice),
     // Only stored when the promotion is on, matching the previous behaviour of
     // leaving a stale discount off the document entirely.
     discountedPrice: isPromo && promoPrice !== undefined ? toMinor(promoPrice) : null,
+    costPrice: cost === undefined ? null : toMinor(cost),
   };
 };
 
@@ -231,7 +245,7 @@ export const createProduct = async (body, { db = getSequelize(), store = cloudin
     );
   }
 
-  const { price, discountedPrice } = validateCommercials(body);
+  const { price, discountedPrice, costPrice } = validateCommercials(body);
   const { lead, min, max } = validateShipping(body);
   const keywords = parseKeywords(body.seoKeywords);
 
@@ -246,9 +260,9 @@ export const createProduct = async (body, { db = getSequelize(), store = cloudin
     const [[item]] = await db.query(
       `INSERT INTO sellable_items
          (kind, name, description, style, price, is_promo, discounted_price,
-          is_best_seller, is_foreign, origin)
+          is_best_seller, is_foreign, origin, cost_price)
        VALUES ('product', :name, :description, :style, :price, :isPromo, :discountedPrice,
-               :isBestSeller, :isForeign, :origin)
+               :isBestSeller, :isForeign, :origin, :costPrice)
        RETURNING id`,
       {
         replacements: {
@@ -261,6 +275,7 @@ export const createProduct = async (body, { db = getSequelize(), store = cloudin
           isBestSeller: Boolean(body.isBestSeller),
           isForeign: Boolean(body.isForeign),
           origin: body.isForeign ? body.origin : null,
+          costPrice,
         },
         transaction,
       }
@@ -317,7 +332,7 @@ export const updateProduct = async (
     isForeign: body.isForeign ?? existing.isForeign,
     origin: body.origin ?? existing.origin,
   };
-  const { price, discountedPrice } = validateCommercials(merged);
+  const { price, discountedPrice, costPrice } = validateCommercials(merged);
   const shipping = validateShipping({
     leadTimeDays: body.leadTimeDays ?? existing.leadTimeDays,
     shippingMinDays: body.shippingMinDays ?? existing.shippingMinDays,
@@ -344,7 +359,8 @@ export const updateProduct = async (
          discounted_price = :discountedPrice,
          is_best_seller = COALESCE(:isBestSeller, is_best_seller),
          is_foreign = :isForeign,
-         origin = :origin
+         origin = :origin,
+         cost_price = CASE WHEN :costGiven THEN :costPrice ELSE cost_price END
        WHERE id = :id`,
       {
         replacements: {
@@ -358,6 +374,8 @@ export const updateProduct = async (
           isBestSeller: body.isBestSeller ?? null,
           isForeign: Boolean(merged.isForeign),
           origin: merged.isForeign ? merged.origin : null,
+          costGiven: body.costPrice !== undefined,
+          costPrice,
         },
         transaction,
       }
