@@ -1,11 +1,8 @@
 # System Architecture
 
-> [!IMPORTANT]
-> **This document describes the MongoDB system, which no longer exists.** The
-> API is on PostgreSQL: there are no Mongoose models, and `mongoose` is not a
-> dependency. [`docs/SCHEMA.md`](../../docs/SCHEMA.md) is the current description
-> of the data model and of every decision taken while moving. This file is kept
-> for the history of how the system got here, and is being rewritten.
+> The topology, as it stands. The data model is in
+> [`docs/SCHEMA.md`](../../docs/SCHEMA.md); the API's internals are in
+> [BACKEND_ARCHITECTURE.md](BACKEND_ARCHITECTURE.md).
 
 > High-level topology and integration map for EM Furniture and Interior.
 
@@ -13,7 +10,15 @@
 
 ## 1. Architecture Overview
 
-EM Furniture and Interior follows a **monolithic modular** architecture — a single Express.js server handling all API domains, with a React SPA frontend served as static files in production.
+EM Furniture and Interior is a **modular monolith**: one Express server
+serving every API domain, against one PostgreSQL database, with two React
+applications in front of it — the storefront (`apps/web`) and the operations
+console (`apps/erp`) — deployed separately and sharing `packages/ui`,
+`packages/domain` and `packages/shared`.
+
+The database is PostgreSQL, hosted on Supabase. The API connects through the
+pooler in transaction mode for requests, and through a session-mode
+connection for migrations, which need one.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -72,8 +77,8 @@ EM Furniture and Interior follows a **monolithic modular** architecture — a si
 ┌──────────────┐                   ┌───────────────────────┐
 │   DATA LAYER │                   │  EXTERNAL SERVICES    │
 │              │                   │                       │
-│  MongoDB     │                   │  Cloudinary (images)  │
-│  └─ Mongoose │                   │  Paystack (payments)  │
+│  PostgreSQL     │                   │  Cloudinary (images)  │
+│  └─ Sequelize │                   │  Paystack (payments)  │
 │  └─ 20 models│                   │  Flutterwave (pay.)   │
 │  └─ Embedded │                   │  Stripe (payments)    │
 │    documents │                   │  Gmail API (email)    │
@@ -93,7 +98,7 @@ Browser → Cookie (JWT) → Express
   → protectRoute (verify JWT, load user)
   → activityTracker (fire-and-forget user action logging)
   → Controller (business logic)
-  → Model (MongoDB query)
+  → Model (PostgreSQL query)
   → Response (JSON)
 ```
 
@@ -105,7 +110,7 @@ Browser → Cookie (admin JWT) → Express
   → requirePermissions([...]) (check specific permissions)
   → auditLogger (intercept response for logging)
   → Controller (business logic)
-  → Model (MongoDB query)
+  → Model (PostgreSQL query)
   → Response (JSON) → auditLogger captures result
 ```
 
@@ -115,7 +120,7 @@ Browser → Cookie (admin JWT) → Express
 Browser → Cookie (anonymousId) → Express
   → identifyGuest (check JWT first, then anonymousId → load/create GuestSession)
   → Controller (business logic with req.guestSession)
-  → Model (MongoDB query)
+  → Model (PostgreSQL query)
   → Response (JSON)
 ```
 
@@ -169,7 +174,7 @@ Frontend (CheckoutPage)
 └─────────────────────┘    └─────────┬────────────┘
                                      │
                               ┌──────▼──────┐
-                              │  MongoDB    │
+                              │  PostgreSQL    │
                               │ (local/Atlas)│
                               └─────────────┘
 ```
@@ -186,7 +191,7 @@ Frontend (CheckoutPage)
 └──────────────────┬──────────────────────┘
                    │
             ┌──────▼──────┐
-            │ MongoDB Atlas│
+            │ PostgreSQL│
             └─────────────┘
 ```
 
@@ -212,7 +217,7 @@ Frontend (CheckoutPage)
 │  activityTracker (user behaviour)             │
 │  Rate limiters (fully wired to all route categories)  │
 ├─ DATA ───────────────────────────────────────┤
-│  Mongoose schema validation                   │
+│  Sequelize schema validation                   │
 │  Input sanitisation via Express middleware     │
 │  TTL indexes for auto-expiration              │
 └──────────────────────────────────────────────┘
@@ -224,7 +229,7 @@ Frontend (CheckoutPage)
 
 | External Service | Protocol | Direction | Auth Method |
 |-----------------|----------|-----------|-------------|
-| MongoDB Atlas | TCP/TLS | Bidirectional | Connection string |
+| PostgreSQL | TCP/TLS | Bidirectional | Connection string |
 | Cloudinary | HTTPS REST | Outbound | API key + secret |
 | Paystack | HTTPS REST | Outbound + redirect | Secret key |
 | Flutterwave | HTTPS REST | Outbound + redirect | Secret key |

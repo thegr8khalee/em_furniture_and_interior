@@ -34,7 +34,8 @@ Route  →  Controller  →  Service (optional)  →  Model
 | **Route** | HTTP method + path + middleware chain | `router.get('/products', getProducts)` |
 | **Controller** | Parse request, call service/model, format response | `products.controller.js` |
 | **Service** | Business logic, external API calls (optional — not all domains need one) | `gmail.service.js` |
-| **Model** | Mongoose schema definition, validation, indexes, methods | `product.model.js` |
+| **Migration** | The schema itself: tables, constraints, triggers | `0004_commerce.sql` |
+| **Service** | The rules and the SQL, in a transaction, taking a database handle | `orders.js` |
 | **Middleware** | Cross-cutting concerns (auth, logging, rate limiting) | `protectRoute.js` |
 | **Lib** | Shared utilities (DB connection, Cloudinary, JWT, permissions) | `lib/utils.js` |
 
@@ -62,9 +63,9 @@ Route  →  Controller  →  Service (optional)  →  Model
 | Context | Convention | Example |
 |---------|-----------|---------|
 | Functions | camelCase | `getProducts`, `addToCart` |
-| Mongoose models | PascalCase (singular) | `Product`, `Order`, `User` |
+| Tables and columns | snake_case, tables plural | `order_items`, `total_amount` |
 | Constants / permissions | SCREAMING_SNAKE_CASE | `PRODUCTS_MANAGE`, `FINANCE_VIEW` |
-| Environment variables | SCREAMING_SNAKE_CASE | `JWT_SECRET`, `MONGODB_URI` |
+| Environment variables | SCREAMING_SNAKE_CASE | `JWT_SECRET`, `DATABASE_URL` |
 | React components | PascalCase | `<ProductPage />`, `<Navbar />` |
 | Zustand store hooks | `use{Domain}Store` | `useAuthStore()` |
 | Route paths (backend) | kebab-case | `/api/flash-sales/active` |
@@ -80,7 +81,7 @@ Route  →  Controller  →  Service (optional)  →  Model
 backend/src/
 ├── index.js              # Entry point — middleware + route mounting
 ├── controllers/          # One file per domain
-├── models/               # One file per Mongoose model
+├── db/migrations/        # The schema, one numbered .sql file at a time
 ├── routes/               # One file per domain (+ admin variants)
 ├── middleware/            # Cross-cutting concerns
 ├── lib/                  # Shared utilities
@@ -157,7 +158,7 @@ frontend/src/
 | Step | Implementation |
 |------|---------------|
 | Identification | `identifyGuest` middleware checks JWT first, then `anonymousId` cookie |
-| Storage | MongoDB `GuestSession` model with 7-day TTL |
+| Storage | A `guest_sessions` row. Expired by a job rather than a TTL index — Postgres has none, so the statement lives in the migration |
 | Capabilities | Cart, wishlist, checkout, order placement |
 | Merge | Guest data merges into user account on signup |
 
@@ -185,7 +186,7 @@ frontend/src/
 | Framework | Jest (ESM with `--experimental-vm-modules`) | Vitest + React Testing Library |
 | Environment | Node | jsdom |
 | Test location | `__tests__/integration/` | `src/__tests__/` |
-| Mocking | Jest mocks for Mongoose, Cloudinary, gateways | Vitest mocks |
+| Mocking | Cloudinary, the payment gateways and outbound email only — the database is real | Vitest mocks |
 | Coverage | Collected (excludes seed, index, tests) | v8 provider (text, json, html) |
 | Test count | 72 (3 suites) | 43 (1 suite) |
 | Status | ✅ All passing | ✅ All passing |

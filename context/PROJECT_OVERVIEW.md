@@ -39,7 +39,7 @@ A purpose-built platform delivering **150+ features** across **8 implementation 
 |-------|-----------|
 | **Frontend** | React 19, Vite 7, Tailwind CSS 4 + DaisyUI 5, Zustand 5, Framer Motion 12, React Router 7 |
 | **Backend** | Node.js, Express 4, ES Modules |
-| **Database** | MongoDB with Mongoose 8 |
+| **Database** | PostgreSQL on Supabase, hand-written SQL through Sequelize |
 | **Auth** | JWT (HTTP-only cookies), bcryptjs |
 | **Payments** | Paystack, Flutterwave, Stripe |
 | **Storage** | Cloudinary (images), pdfkit (documents) |
@@ -53,7 +53,7 @@ A purpose-built platform delivering **150+ features** across **8 implementation 
 | Metric | Value |
 |--------|-------|
 | Backend controllers | 25 |
-| Mongoose models | 20 |
+| Tables | 42 |
 | Backend middleware | 7 |
 | REST API routes | 27 files, ~120 endpoints |
 | Frontend Zustand stores | 15 |
@@ -76,7 +76,7 @@ em_furniture_and_interior/
 │   ├── src/
 │   │   ├── index.js          # Express entry point
 │   │   ├── controllers/      # 25 controllers
-│   │   ├── models/           # 20 Mongoose models
+│   │   ├── db/migrations/   # The schema, one numbered .sql file at a time
 │   │   ├── routes/           # 27 route files
 │   │   ├── middleware/       # 7 middleware modules
 │   │   ├── lib/              # DB, Cloudinary, utils, permissions, invoices

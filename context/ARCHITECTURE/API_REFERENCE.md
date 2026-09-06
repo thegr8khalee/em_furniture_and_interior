@@ -1,6 +1,8 @@
 # API Reference
 
-> Full REST API contract for EM Furniture and Interior (~120 endpoints).
+> The REST contract for EM Furniture and Interior, against PostgreSQL.
+> Permission names come from `packages/shared/src/permissions.js`, which the
+> API and the console's sidebar both import so they cannot disagree.
 
 ---
 
@@ -53,6 +55,7 @@ All authenticated requests use JWT stored in HTTP-only cookies. Cookies are sent
 |--------|------|------|---------|-------------|
 | POST | `/api/auth/signup` | — | signup | Register new user |
 | POST | `/api/auth/login` | — | login | Login, set JWT cookie |
+| POST | `/api/auth/supabase` | — | supabaseSession | Exchange a Supabase access token for the session cookie; links or creates the customer |
 | POST | `/api/auth/logout` | — | logout | Clear JWT cookie |
 | GET | `/api/auth/check` | — | checkAuth | Check current auth status |
 | PUT | `/api/auth/update` | auth | updateProfile | Update user profile |
@@ -81,6 +84,7 @@ All authenticated requests use JWT stored in HTTP-only cookies. Cookies are sent
 | Method | Path | Auth | Handler | Description |
 |--------|------|------|---------|-------------|
 | POST | `/api/admin/signup` | admin + perm(ADMIN_DASHBOARD_VIEW) | adminSignup | Create admin account (protected) |
+| POST | `/api/admin/supabase` | — | adminSupabaseSession | Exchange a Supabase access token for an operator session; links an existing operator, never creates one |
 | POST | `/api/admin/login` | — | adminLogin | Admin login |
 | POST | `/api/admin/logout` | — | adminLogout | Admin logout |
 | POST | `/api/admin/operations/addProduct` | admin + perm(PRODUCTS_MANAGE) | addProduct | Create product |
@@ -336,7 +340,9 @@ All authenticated requests use JWT stored in HTTP-only cookies. Cookies are sent
 | Method | Path | Auth | Handler | Description |
 |--------|------|------|---------|-------------|
 | GET | `/api/inventory/admin/products` | admin + perm(INVENTORY_MANAGE) | getInventoryProducts | List products with stock info |
-| PUT | `/api/inventory/admin/products/:productId/adjust` | admin + perm(INVENTORY_MANAGE) | adjustInventory | Adjust stock quantity |
+| GET | `/api/inventory/admin/products/:productId/history` | admin + perm(INVENTORY_MANAGE) | getInventoryHistory | The movements the balance is derived from |
+| PUT | `/api/inventory/admin/products/:productId/adjust` | admin + perm(INVENTORY_MANAGE) | adjustInventory | Record the movement that explains a new count |
+| PUT | `/api/inventory/admin/products/:productId/cost` | admin + perm(INVENTORY_MANAGE) | putCostPrice | Set what a piece cost to buy — a sale posts a cost of goods sold only if this is set |
 
 ---
 
@@ -383,6 +389,56 @@ All log endpoints require: `admin` (router-level) + `perm(FINANCE_VIEW)` (per ro
 | POST | `/api/logs/audit/cleanup` | cleanupAuditLogs | Delete old audit logs |
 | GET | `/api/logs/activity` | getActivityLogs | List activity logs (paginated, filtered) |
 | GET | `/api/logs/activity/stats` | getActivityLogStats | Activity log statistics |
+
+---
+
+## 26. The books (`/api/books`)
+
+Everything here derives from `journal_lines`. Nothing recomputes a figure from
+orders or payments, which is what makes the reports and the postings incapable of
+disagreeing.
+
+| Method | Path | Auth | Handler | Description |
+|--------|------|------|---------|-------------|
+| GET | `/api/books/trial-balance` | admin + perm(FINANCE_VIEW) | getTrialBalance | Every account with a balance, `?asOf=` |
+| GET | `/api/books/journal` | admin + perm(FINANCE_VIEW) | getJournal | Entries, filterable by source, date and account |
+| GET | `/api/books/journal/:entryId` | admin + perm(FINANCE_VIEW) | getJournalEntry | One entry with both its sides |
+| GET | `/api/books/accounts` | admin + perm(FINANCE_VIEW) | getAccounts | The chart of accounts and what each holds |
+| GET | `/api/books/accounts/:code/ledger` | admin + perm(FINANCE_VIEW) | getAccountLedger | One account, line by line, with a running balance |
+| GET | `/api/books/reports/profit-and-loss` | admin + perm(FINANCE_VIEW) | getProfitAndLoss | Revenue, cost of sales, gross profit, operating costs, net |
+| GET | `/api/books/reports/balance-sheet` | admin + perm(FINANCE_VIEW) | getBalanceSheet | Assets, liabilities, equity, and its own balanced check |
+| GET | `/api/books/reports/vat` | admin + perm(FINANCE_VIEW) | getVatReturn | Output VAT, input VAT, net payable |
+| GET | `/api/books/periods` | admin + perm(FINANCE_VIEW) | getPeriods | The accounting calendar |
+| POST | `/api/books/periods/:periodId/close` | admin + perm(BOOKS_MANAGE) + audit | postClosePeriod | Stop any further posting into a month |
+| POST | `/api/books/periods/:periodId/reopen` | admin + perm(BOOKS_MANAGE) + audit | postReopenPeriod | Let it move again — audited, deliberately |
+
+---
+
+## 27. Purchasing (`/api/purchasing`)
+
+Reading is `finance.view`; spending is `purchasing.manage`. Every status change
+posts to the ledger in the same transaction.
+
+| Method | Path | Auth | Handler | Description |
+|--------|------|------|---------|-------------|
+| GET | `/api/purchasing/vendors` | admin + perm(FINANCE_VIEW) | getVendors | Suppliers, each with what is owed |
+| POST | `/api/purchasing/vendors` | admin + perm(PURCHASING_MANAGE) + audit | postVendor | Add one |
+| PATCH | `/api/purchasing/vendors/:vendorId` | admin + perm(PURCHASING_MANAGE) + audit | patchVendor | Update one |
+| DELETE | `/api/purchasing/vendors/:vendorId` | admin + perm(PURCHASING_MANAGE) + audit | deleteVendor | Delete, or deactivate if it has history |
+| GET | `/api/purchasing/expenses` | admin + perm(FINANCE_VIEW) | getExpenses | Filter by status, vendor, date |
+| GET | `/api/purchasing/expenses/:expenseId` | admin + perm(FINANCE_VIEW) | getOneExpense | One expense |
+| POST | `/api/purchasing/expenses` | admin + perm(PURCHASING_MANAGE) + audit | postExpense | Record a cost, as a draft |
+| POST | `/api/purchasing/expenses/:expenseId/approve` | admin + perm(PURCHASING_MANAGE) + audit | postExpenseApproval | Book the cost and the debt |
+| POST | `/api/purchasing/expenses/:expenseId/pay` | admin + perm(PURCHASING_MANAGE) + audit | postExpensePayment | Settle it; approved only |
+| POST | `/api/purchasing/expenses/:expenseId/void` | admin + perm(PURCHASING_MANAGE) + audit | postExpenseVoid | Drafts only — reverse a posted one instead |
+| GET | `/api/purchasing/payables` | admin + perm(FINANCE_VIEW) | getPayables | Ageing: approved expenses and received-unpaid orders |
+| GET | `/api/purchasing/purchase-orders` | admin + perm(FINANCE_VIEW) | getPurchaseOrders | Filter by status and vendor |
+| GET | `/api/purchasing/purchase-orders/:orderId` | admin + perm(FINANCE_VIEW) | getOnePurchaseOrder | One order with its lines |
+| POST | `/api/purchasing/purchase-orders` | admin + perm(PURCHASING_MANAGE) + audit | postPurchaseOrder | Create one |
+| POST | `/api/purchasing/purchase-orders/:orderId/send` | admin + perm(PURCHASING_MANAGE) + audit | postPurchaseOrderSend | Mark it sent |
+| POST | `/api/purchasing/purchase-orders/:orderId/receive` | admin + perm(PURCHASING_MANAGE) + audit | postPurchaseOrderReceipt | Stock in, payable up |
+| POST | `/api/purchasing/purchase-orders/:orderId/pay` | admin + perm(PURCHASING_MANAGE) + audit | postPurchaseOrderPayment | Settle what the receipt owed |
+| POST | `/api/purchasing/purchase-orders/:orderId/cancel` | admin + perm(PURCHASING_MANAGE) + audit | postPurchaseOrderCancel | Open orders only |
 
 ---
 

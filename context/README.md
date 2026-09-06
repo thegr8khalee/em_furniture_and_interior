@@ -1,11 +1,9 @@
 # EM Furniture and Interior — Context Hub
 
-> [!IMPORTANT]
-> **This document describes the MongoDB system, which no longer exists.** The
-> API is on PostgreSQL: there are no Mongoose models, and `mongoose` is not a
-> dependency. [`docs/SCHEMA.md`](../docs/SCHEMA.md) is the current description
-> of the data model and of every decision taken while moving. This file is kept
-> for the history of how the system got here, and is being rewritten.
+> The knowledge base for the project. [`docs/SCHEMA.md`](../docs/SCHEMA.md) is
+> the authority on the data model and on every decision taken while moving the
+> system from MongoDB to PostgreSQL; the architecture pages here describe the
+> system as it now stands.
 
 > Master index and navigation for the project knowledge base.
 
@@ -18,7 +16,7 @@
 | [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) | One-page executive summary — tech stack, problem, solution |
 | [CONCEPT_NOTE.md](CONCEPT_NOTE.md) | Business concept, market analysis, tech pillars |
 | [CONVENTIONS.md](CONVENTIONS.md) | Coding standards, naming rules, CSM architecture |
-| [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Backend build phases (0–8) with task status |
+| [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | How the system was originally planned — history now |
 | [FRONTEND_IMPLEMENTATION_PLAN.md](FRONTEND_IMPLEMENTATION_PLAN.md) | Frontend build phases (F0–F7) |
 | [API_INTEGRATIONS.md](API_INTEGRATIONS.md) | External service catalog (Paystack, Cloudinary, etc.) |
 | [USAGE_FLOW.md](USAGE_FLOW.md) | End-to-end user journeys |
@@ -26,6 +24,8 @@
 | [CHANGELOG.md](CHANGELOG.md) | Decisions and milestones log |
 | [BROWSER_TESTING_GUIDE.md](BROWSER_TESTING_GUIDE.md) | Manual QA walkthrough |
 | [blueprint.md](blueprint.md) | This folder's structural blueprint |
+| [`../docs/SCHEMA.md`](../docs/SCHEMA.md) | **The data model**, and the reasoning behind every table and constraint |
+| [`../docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md) | Running it: environments, migrations, the seeder |
 
 ### Architecture Deep Dives
 
@@ -34,8 +34,8 @@
 | [ARCHITECTURE/SYSTEM_ARCHITECTURE.md](ARCHITECTURE/SYSTEM_ARCHITECTURE.md) | High-level topology and integration map |
 | [ARCHITECTURE/BACKEND_ARCHITECTURE.md](ARCHITECTURE/BACKEND_ARCHITECTURE.md) | Node.js / Express deep dive |
 | [ARCHITECTURE/FRONTEND_ARCHITECTURE.md](ARCHITECTURE/FRONTEND_ARCHITECTURE.md) | React SPA patterns and conventions |
-| [ARCHITECTURE/DATA_MODELS.md](ARCHITECTURE/DATA_MODELS.md) | 20 Mongoose models with field specs |
-| [ARCHITECTURE/API_REFERENCE.md](ARCHITECTURE/API_REFERENCE.md) | Full REST API contract (~120 endpoints) |
+| [ARCHITECTURE/DATA_MODELS.md](ARCHITECTURE/DATA_MODELS.md) | The PostgreSQL tables, grouped, and what to know before querying them |
+| [ARCHITECTURE/API_REFERENCE.md](ARCHITECTURE/API_REFERENCE.md) | Every endpoint, with the permission it needs |
 
 ---
 
@@ -54,7 +54,7 @@
 
 ### Backend Developer
 1. `ARCHITECTURE/BACKEND_ARCHITECTURE.md` → stack and project structure
-2. `ARCHITECTURE/DATA_MODELS.md` → database schema
+2. `ARCHITECTURE/DATA_MODELS.md` → the tables, then `../docs/SCHEMA.md` for why they are shaped that way
 3. `ARCHITECTURE/API_REFERENCE.md` → endpoint contract
 4. `CONVENTIONS.md` → CSM pattern and naming
 

@@ -31,11 +31,13 @@
 | **JWT** | JSON Web Token — stateless authentication tokens stored in HTTP-only cookies |
 | **RBAC** | Role-Based Access Control — admin permissions system with 5 roles and 14 permission keys |
 | **TTL** | Time To Live — automatic expiration (e.g., guest sessions at 7 days, activity logs at 90 days) |
-| **ODM** | Object Document Mapper — Mongoose maps JavaScript objects to MongoDB documents |
+| **Posting** | Turning a business event — an order confirmed, an expense approved — into a journal entry |
+| **Trial balance** | Every account and its balance; the debits and the credits must come to the same figure |
+| **Minor units** | Money as whole kobo. Every amount is an integer in the database and naira on the wire |
 | **SPA** | Single Page Application — the React frontend runs entirely in the browser |
 | **SSR** | Server-Side Rendering — *not used*; the app is a client-rendered SPA |
 | **Hosted checkout** | Payment flow where the customer is redirected to the gateway's own page (Paystack, Flutterwave, Stripe) |
-| **Aggregation pipeline** | MongoDB's multi-stage data processing framework, used for analytics queries |
+| **Migration** | A numbered `.sql` file in `apps/api/src/db/migrations/`. The only thing that changes the schema |
 | **Embedded document** | A sub-document stored inside a parent document (e.g., cart items inside User, reviews inside Product) |
 | **Fire-and-forget** | An async operation that runs without blocking the main request (e.g., activity logging) |
 

@@ -70,7 +70,7 @@ Cart Page (/cart)
 First Visit (no account)
   │
   ├─ identifyGuest middleware creates anonymousId cookie
-  ├─ Guest session stored in MongoDB (7-day TTL)
+  ├─ Guest session stored in `guest_sessions` (expired by a job, not a TTL index)
   │
   ├─ Cart persisted (server-side via guest session)
   ├─ Wishlist persisted (server-side via guest session)

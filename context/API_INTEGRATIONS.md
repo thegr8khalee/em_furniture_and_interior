@@ -176,7 +176,9 @@
 
 | Variable | Service |
 |----------|---------|
-| `MONGODB_URI` | MongoDB connection |
+| `DATABASE_URL` | PostgreSQL, through Supabase's pooler in transaction mode |
+| `DIRECT_DATABASE_URL` | The same database in session mode — migrations need one |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY` | Optional: enables sign-in with a Supabase token |
 | `JWT_SECRET` | JWT signing |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary |
 | `CLOUDINARY_API_KEY` | Cloudinary |

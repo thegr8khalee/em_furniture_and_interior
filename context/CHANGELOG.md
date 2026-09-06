@@ -168,3 +168,62 @@ Defects found and fixed on the way, in the order they surfaced:
   attribute anything to.
 - Order totals, tax included, were taken from the request body and trusted.
 - Marking an order paid cleared a cart that had not existed since the cart slice.
+
+---
+
+## [September 2026] — The ERP the ledger was built for
+
+The double-entry ledger arrived with the PostgreSQL migration but nothing read
+it and half the business could not reach it. Four pieces closed that.
+
+### The buying side
+
+`0012_purchasing.sql` and `0013_purchase_order_settlement.sql` add vendors,
+expenses and purchase orders. Twelve of the thirty accounts in the chart could
+never receive a posting before, because nothing recorded a purchase: payables
+stayed empty, input VAT was structurally zero, and rent, salaries and marketing
+had no way in. The profit and loss showed revenue less cost of sales and
+stopped, which is a gross margin, not a profit.
+
+An expense is approved once — which makes it a cost and a debt — and paid once,
+which settles it. A purchase order becomes stock and a liability when the goods
+arrive, at the cost that was agreed rather than the product's current cost
+price. Every posting commits in the same transaction as the status change.
+
+### The books, on a screen
+
+`/admin/books` and `/admin/purchasing`. Everything on the first derives from
+`journal_lines`, so the reports and the postings cannot disagree; every account
+code opens that account's ledger with a running balance. The console's only
+finance screen before this summed the orders table.
+
+### Signing in through Supabase
+
+`POST /api/auth/supabase` and `POST /api/admin/supabase` exchange a Supabase
+access token for the session cookie the password path issues. Verification is
+Supabase's job — the token goes to `/auth/v1/user`, the only party that can say
+whether it has been revoked. An operator is linked, never created. Both sign-in
+pages show the button only when the project is configured.
+
+### Defects found by driving it
+
+- **No product had a cost price.** `sellable_items.cost_price` existed and the
+  posting rule read it, but nothing ever wrote one — not the product form, not
+  the seeder — so every sale posted revenue and no cost of sales, and the profit
+  and loss showed a 100% gross margin on everything. Set on the inventory screen
+  now, and deliberately absent from the public product shape: a cost price
+  beside a selling price is the margin.
+- **Nothing could settle what a receipt owed**, so `2100` accumulated every
+  purchase for ever while the payables list showed nothing outstanding.
+- **A blank date field is `""`, not null**, and `''::date` is a syntax error —
+  so a purchase order with no expected date was a 500.
+- **A report with no end date ended its window at the API process's own clock**,
+  so an order the database wrote a moment earlier under a clock a second ahead
+  fell outside "the last 30 days" and vanished from the dashboard. Found only by
+  running the suite against Supabase rather than a local database.
+- **The seeded books were unreadable.** Opening stock arrived as `adjustment`
+  movements, and a positive adjustment credits stock write-offs, so stocking the
+  shop booked tens of millions of negative expense; nothing had put money into
+  the business, so paying for that stock overdrew an account that never had
+  anything in it; and orders were seeded before stock, so things were sold
+  before they were bought.

@@ -79,7 +79,10 @@ Existing Nigerian e-commerce platforms (Jumia, Konga) provide generic marketplac
 
 - **Monolithic modular backend** — Single Express.js server with 25 domain-specific controllers following the Controller-Service-Model (CSM) pattern.
 - **React SPA frontend** — Vite-powered, Zustand state management, Tailwind CSS + DaisyUI component library.
-- **MongoDB** — Document database with Mongoose ODM, embedded sub-documents for cart/wishlist/reviews.
+- **PostgreSQL** — Relational, on Supabase. The rules live in the schema: an
+  order must have a buyer, a cart belongs to exactly one owner, a journal
+  entry must balance. Stock and the books are append-only logs, so a figure
+  can always be explained from its own history.
 
 ### 4.2 Security
 

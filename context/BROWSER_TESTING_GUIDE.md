@@ -24,7 +24,7 @@
 
    Create `backend/.env`:
    ```env
-   MONGODB_URI=mongodb://localhost:27017/em_furniture
+   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/em_dev
    JWT_SECRET=your_jwt_secret
    NODE_ENV=development
    PORT=5000
