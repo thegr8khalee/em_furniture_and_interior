@@ -2,7 +2,12 @@ import dotenv from 'dotenv';
 import { Sequelize } from 'sequelize';
 import { runMigrations } from '../src/db/migrate.js';
 import { dialectOptionsFor } from '../src/db/sequelize.js';
-import { ADMIN_URL, TEMPLATE_DATABASE, urlFor } from './helpers/databaseNames.js';
+import {
+  ADMIN_URL,
+  TEMPLATE_DATABASE,
+  assertThrowaway,
+  urlFor,
+} from './helpers/databaseNames.js';
 
 dotenv.config();
 
@@ -34,6 +39,8 @@ export default async () => {
         'skipping would report a pass for constraints nobody verified.'
     );
   }
+
+  assertThrowaway(TEMPLATE_DATABASE);
 
   // FORCE because a connection pooler keeps server connections warm after the
   // client has gone, so the previous run's session may still be attached.

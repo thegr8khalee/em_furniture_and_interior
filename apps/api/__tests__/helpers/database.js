@@ -1,7 +1,13 @@
 import { Sequelize } from 'sequelize';
 import { runMigrations } from '../../src/db/migrate.js';
 import { dialectOptionsFor } from '../../src/db/sequelize.js';
-import { ADMIN_URL, TEMPLATE_DATABASE, urlFor, workerDatabase } from './databaseNames.js';
+import {
+  ADMIN_URL,
+  TEMPLATE_DATABASE,
+  assertThrowaway,
+  urlFor,
+  workerDatabase,
+} from './databaseNames.js';
 
 /**
  * A real PostgreSQL for every suite that touches the database.
@@ -32,7 +38,7 @@ const connectionOptions = (url) => ({ logging: false, dialectOptions: dialectOpt
 let db = null;
 
 export const setupDatabase = async () => {
-  const name = workerDatabase();
+  const name = assertThrowaway(workerDatabase());
   const adminUrl = ADMIN_URL();
   const admin = new Sequelize(adminUrl, connectionOptions(adminUrl));
 
@@ -59,6 +65,12 @@ export const setupDatabase = async () => {
   db = new Sequelize(url, connectionOptions(url));
 
   if (!copied) await runMigrations({ db, silent: true });
+
+  // Set here rather than in each suite, so a suite cannot forget. One that did
+  // would import app.js against whatever DATABASE_URL happened to be in .env —
+  // which is the application's own database, and how twelve live super_admin
+  // accounts once ended up in it.
+  process.env.DATABASE_URL = url;
 
   return db;
 };

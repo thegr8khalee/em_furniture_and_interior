@@ -39,6 +39,15 @@ const redact = (body) => {
  * `recordAudit` never throws: a logging failure that turned a completed action
  * into a 500 would lose the action as well as the record of it.
  */
+/** The first of these keys that carries a value, or null. */
+const firstOf = (source, keys) => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (value !== undefined && value !== null && value !== '') return String(value);
+  }
+  return null;
+};
+
 export const createAuditLog = (action, resourceType) => {
   return (req, res, next) => {
     const originalJson = res.json;
@@ -64,16 +73,34 @@ export const createAuditLog = (action, resourceType) => {
         actorEmail: req.admin?.email,
         action,
         resourceType,
-        resourceId:
-          req.params.id ||
-          req.params.productId ||
-          req.params.collectionId ||
-          req.params.orderId ||
-          req.params.projectId ||
-          req.params.couponId ||
-          req.params.designerId ||
-          null,
-        resourceName: req.body?.name || req.body?.title || req.body?.orderNumber || null,
+        // Whatever id this route names its subject by. A trail that cannot say
+        // which row was touched is a trail of "somebody changed something".
+        resourceId: firstOf(req.params, [
+          'id',
+          'productId',
+          'collectionId',
+          'orderId',
+          'projectId',
+          'couponId',
+          'designerId',
+          'vendorId',
+          'expenseId',
+          'periodId',
+          'staffId',
+          'entryId',
+        ]),
+        // And whatever it calls it. `username` is here because creating an
+        // operator is the entry that most needs to name its subject, and a
+        // staff body has no `name` — so the trail read "superadmin created a
+        // staff" without saying which.
+        resourceName: firstOf(req.body, [
+          'name',
+          'title',
+          'orderNumber',
+          'username',
+          'description',
+          'email',
+        ]),
         changes: succeeded ? redact(req.body) : undefined,
         metadata: { method: req.method, path: req.path, query: req.query },
         ipAddress: req.ip || req.connection?.remoteAddress,

@@ -27,15 +27,30 @@ Three properties the runner guarantees:
 
 ## Testing
 
-The schema tests run against a real PostgreSQL 16. There is no in-memory
-substitute, deliberately: these tests exist to prove the database *rejects* bad
-data, and a fake enforces none of it, so it would report a pass for constraints
-nobody verified.
+The tests run against a real PostgreSQL — the project's own Supabase, like
+everything else. There is no in-memory substitute, deliberately: these tests
+exist to prove the database *rejects* bad data, and a fake enforces none of it,
+so it would report a pass for constraints nobody verified.
 
 ```bash
-# a local server on 5432, or point TEST_DATABASE_URL wherever
-npm test --workspace=@em/api
+npm test --workspace=@em/api      # TEST_DATABASE_URL from apps/api/.env
 ```
+
+Each worker creates a throwaway `em_test_<n>` database on that server, copied
+from a migrated template — or migrated in place when the copy is refused, which
+is what happens behind Supabase's pooler, because `CREATE DATABASE ... TEMPLATE`
+needs the source to have no sessions and a pooler keeps one warm. Expect around
+twenty minutes for a full run: every statement is a round trip.
+
+**Two guards, both written after a failure.** `TEST_DATABASE_URL` has no
+default — it used to fall back to a local server, so an unset variable pointed
+somewhere nobody meant. And the suite refuses to create, drop or write to any
+database not named `em_test_*`. Twelve live `super_admin` accounts, carrying the
+password hard-coded in the test helpers, once ended up in the application's own
+database this way; on a hosted Supabase project that database is called
+`postgres` and is one connection string away from the admin one the tests use.
+`setupDatabase` also repoints `DATABASE_URL` itself rather than trusting each
+suite to remember.
 
 If no database is reachable the suite **fails**. It must never skip — a suite
 that silently skips is indistinguishable from a suite that passes, which is the
