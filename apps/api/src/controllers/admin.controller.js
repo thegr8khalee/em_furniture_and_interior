@@ -2,6 +2,7 @@
 
 import { generateToken } from '../lib/utils.js'; // Re-use the same token generation utility
 import { logger } from '../lib/logger.js';
+import { signInStaffWithSupabase } from '../services/supabaseAuth.js';
 import {
   IdentityError,
   authenticateStaff,
@@ -72,6 +73,30 @@ export const adminLogin = async (req, res) => {
     res.status(200).json({ ...staff, message: 'Admin logged in successfully.' });
   } catch (error) {
     handleIdentityError(error, res, 'adminLogin');
+  }
+};
+
+/**
+ * Signs an operator in with a Supabase access token.
+ *
+ * The same exchange the shopper side does, with one difference that matters:
+ * this never creates an operator. A console account carries a role and a
+ * permission set, so provisioning one from a successful Supabase sign-in would
+ * make anyone who can sign up to the project a member of staff. An operator is
+ * created by `npm run bootstrap:staff` or by someone holding `staff.manage`;
+ * this only links the identity to the account that already exists.
+ */
+export const adminSupabaseSession = async (req, res) => {
+  try {
+    const accessToken =
+      req.body?.accessToken || (req.headers.authorization || '').replace(/^Bearer /i, '');
+
+    const staff = await signInStaffWithSupabase(accessToken);
+    generateToken(staff.id, res, 'admin');
+
+    res.status(200).json({ ...staff, message: 'Admin logged in successfully.' });
+  } catch (error) {
+    handleIdentityError(error, res, 'adminSupabaseSession');
   }
 };
 

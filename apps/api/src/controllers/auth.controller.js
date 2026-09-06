@@ -15,6 +15,7 @@ import {
   registerCustomer,
   updateCustomerProfile,
 } from '../services/identity.js';
+import { signInCustomerWithSupabase } from '../services/supabaseAuth.js';
 
 /*
  * Shopper authentication. The account itself lives in `customers`, and
@@ -88,6 +89,34 @@ export const login = async (req, res) => {
     res.status(200).json(customer);
   } catch (error) {
     handleError(error, res, 'login');
+  }
+};
+
+/**
+ * Signs a shopper in with a Supabase access token.
+ *
+ * The frontend does the sign-in with Supabase's own SDK — password, magic link,
+ * Google, whatever the project has enabled — and posts the resulting access
+ * token here. We verify it with Supabase, find or create the matching row in
+ * `customers`, and issue the same session cookie the password path issues.
+ *
+ * So the rest of the API is untouched: `protectRoute` reads one cookie and does
+ * not care which door the shopper came through, and an account with a local
+ * password keeps working exactly as before.
+ */
+export const supabaseSession = async (req, res) => {
+  try {
+    const accessToken =
+      req.body?.accessToken || (req.headers.authorization || '').replace(/^Bearer /i, '');
+
+    const { customer, created } = await signInCustomerWithSupabase(accessToken);
+
+    generateToken(customer.id, res);
+    await adoptGuestCart(customer.id, req, res);
+
+    res.status(created ? 201 : 200).json(customer);
+  } catch (error) {
+    handleError(error, res, 'supabaseSession');
   }
 };
 

@@ -6,6 +6,7 @@ import {
   addProduct,
   addProject,
   adminLogin,
+  adminSupabaseSession,
   adminLogout,
   adminSignup,
   delCollection,
@@ -34,6 +35,10 @@ router.post(
   adminSignup
 );
 router.post('/login', authLimiter, adminLogin);
+
+// The same exchange for the console. It links a Supabase identity to an
+// operator that already exists; it never creates one.
+router.post('/supabase', authLimiter, adminSupabaseSession);
 router.post('/logout', adminLogout);
 
 router.post(

@@ -8,6 +8,7 @@ import {
   logout,
   resetPassword,
   signup,
+  supabaseSession,
   updateProfile,
 } from '../controllers/auth.controller.js';
 import { protectRoute } from '../middleware/protectRoute.js';
@@ -18,6 +19,16 @@ const router = express.Router();
 
 router.post('/signup', authLimiter, trackActivity('SIGNUP', 'auth'), signup);
 router.post('/login', authLimiter, trackActivity('LOGIN', 'auth'), login);
+
+// Sign-in with a Supabase access token, which the frontend obtains from
+// Supabase's own SDK. Behind the same limiter as the password path: it is a
+// sign-in attempt, and an unverified token is as cheap to guess at.
+router.post(
+  '/supabase',
+  authLimiter,
+  trackActivity('LOGIN', 'auth'),
+  supabaseSession
+);
 router.post('/logout', logout);
 router.put('/update', protectRoute, updateProfile);
 router.delete('/delete', protectRoute, deleteAccount);

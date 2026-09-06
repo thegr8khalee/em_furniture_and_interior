@@ -766,15 +766,61 @@ order the database had written a moment earlier under a clock a second ahead
 fell outside "the last 30 days" and vanished from the dashboard. The default end
 is the end of today now, which is what a person means by "up to today" anyway.
 
+### Signing in through Supabase Auth
+
+Both account tables have carried a nullable `supabase_user_id` and a
+`*_has_credential` check since 0002 — an account must be reachable by a local
+password or by a Supabase identity — but nothing ever set one, so every sign-in
+was still local bcrypt.
+
+`POST /api/auth/supabase` and `POST /api/admin/supabase` are the bridge. The
+frontend signs in with Supabase's own SDK — password, magic link, Google,
+whatever the project has enabled — and posts the access token; the API verifies
+it, resolves the local row, and issues the same session cookie the password path
+issues. Nothing downstream changes: `protectRoute` reads one cookie and does not
+care which door the caller came through.
+
+**Verification is Supabase's job.** The token goes to `/auth/v1/user`, which is
+the only party that can say whether it has been revoked; verifying the signature
+locally would accept a token from a session signed out ten minutes ago, and
+would mean tracking which signing algorithm a given project uses. That costs one
+round trip at sign-in, after which the session is ours. Supabase being
+unreachable is a 503, not a 401 — a 401 tells the caller their credentials are
+wrong when they are not.
+
+Three rules carry the design:
+
+- **A shopper's account is matched by verified email.** Someone who signs up
+  with Google using the address they already ordered under is the same person,
+  and a second row would split their orders and loyalty points across two
+  accounts they cannot see. If that email is already linked to a *different*
+  Supabase identity the exchange is refused, because silently relinking hands
+  the account to whoever signed up second.
+- **An operator is never created.** A console account carries a role and a
+  permission set, so provisioning one from a successful Supabase sign-in would
+  make anyone who can sign up to the project a member of staff. The route links
+  an identity to an operator that already exists; `npm run bootstrap:staff` or
+  someone holding `staff.manage` creates them.
+- **The bcrypt path keeps working.** Every existing account has its password in
+  `customers`/`staff` and no user in Supabase Auth, so a frontend that switched
+  wholesale would lock all of them out until they reset. Both paths run side by
+  side; the frontends can move sign-ups over first and let existing passwords
+  age out.
+
+Unset `SUPABASE_URL` or `SUPABASE_ANON_KEY` and the two routes answer 503 while
+every other sign-in carries on, so this is inert until it is configured.
+
 ## What is not built yet
 
 **The MongoDB migration is complete.** Every route reads and writes PostgreSQL;
 `mongoose` and `mongodb` are no longer dependencies. What remains is the ERP
 work the ledger was built for.
 
-1. **Supabase Auth.** Accounts are in `customers` and `staff` now, and both
-   tables carry a nullable `supabase_user_id` for it, but sign-in is still the
-   local bcrypt password. The bootstrap step exists: `npm run bootstrap:staff`.
+1. **The frontends still sign in with a password.** The API accepts a Supabase
+   token at `/api/auth/supabase` and `/api/admin/supabase`, but neither
+   `apps/web` nor `apps/erp` calls it yet, and no existing account has a user in
+   Supabase Auth. Moving sign-ups over is a product decision with a migration
+   behind it, not a code change.
 2. **Console screens for the books and for purchasing.** The API is there and
    tested; nothing in `apps/erp` reads `/api/books` or `/api/purchasing` yet, so
    the owner can keep their books over HTTP but not on a screen.
