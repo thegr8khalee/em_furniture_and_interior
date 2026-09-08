@@ -55,6 +55,9 @@ const Customers = () => {
   const [detail, setDetail] = useState(null);
   const [addresses, setAddresses] = useState([]);
   const [loyaltyForm, setLoyaltyForm] = useState(null);
+  // What one customer owes and what it is for. The ageing answers the
+  // owner's question; this answers the customer's.
+  const [statement, setStatement] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -118,6 +121,37 @@ const Customers = () => {
       toast.error(error?.response?.data?.message || 'Could not adjust that balance');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const openStatement = async (customer) => {
+    setStatement({ loading: true, customer });
+
+    try {
+      const { data } = await axiosInstance.get(`/statements/customers/${customer._id}`);
+      setStatement(data.statement);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not build that statement');
+      setStatement(null);
+    }
+  };
+
+  const downloadStatement = async (customerId, name) => {
+    try {
+      const { data } = await axiosInstance.get(`/statements/customers/${customerId}.csv`, {
+        responseType: 'blob',
+      });
+
+      const url = window.URL.createObjectURL(new Blob([data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `statement-${name.replace(/\s+/g, '-')}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error('Could not export that statement');
     }
   };
 
@@ -307,6 +341,9 @@ const Customers = () => {
                   <p className="font-mono text-lg font-semibold">
                     {detail.customer.loyaltyPoints}
                   </p>
+                  <Button variant="ghost" onClick={() => openStatement(detail.customer)}>
+                    Statement
+                  </Button>
                   <Button
                     variant="ghost"
                     onClick={() =>
@@ -496,6 +533,75 @@ const Customers = () => {
           </form>
         )}
       </Modal>
+      {/* What they owe, and what it is for. */}
+      <Modal
+        isOpen={Boolean(statement)}
+        onClose={() => setStatement(null)}
+        title={statement?.customer ? `Statement · ${statement.customer.name}` : 'Statement'}
+        className="max-w-3xl"
+      >
+        {statement?.loading ? (
+          <SkeletonBlock className="h-64 w-full" />
+        ) : statement ? (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <p className="text-sm text-neutral/60">
+                {statement.from} to {statement.to}
+              </p>
+              <Button
+                variant="ghost"
+                onClick={() => downloadStatement(statement.customer._id, statement.customer.name)}
+              >
+                Export
+              </Button>
+            </div>
+
+            <div className="max-h-[50vh] overflow-y-auto">
+              <table className="table table-sm table-pin-rows w-full">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Reference</th>
+                    <th>Type</th>
+                    <th className="text-right">Charged</th>
+                    <th className="text-right">Paid</th>
+                    <th className="text-right">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="text-neutral/60">
+                    <td colSpan={5}>Balance brought forward</td>
+                    <td className="text-right font-mono tabular-nums">
+                      {naira(statement.openingBalance)}
+                    </td>
+                  </tr>
+                  {statement.lines.map((line, index) => (
+                    <tr key={index}>
+                      <td className="whitespace-nowrap">{line.date}</td>
+                      <td className="font-mono text-xs">{line.reference}</td>
+                      <td className="text-sm text-neutral/60">{line.kind}</td>
+                      <td className="text-right font-mono tabular-nums">
+                        {Number(line.charged) ? naira(line.charged) : ''}
+                      </td>
+                      <td className="text-right font-mono tabular-nums">
+                        {Number(line.paid) ? naira(line.paid) : ''}
+                      </td>
+                      <td className="text-right font-mono tabular-nums">{naira(line.balance)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* The only number most people read. */}
+            <div className="flex items-center justify-between border-t-2 border-neutral pt-3">
+              <span className="font-heading text-lg font-bold text-neutral">Amount due</span>
+              <span className="font-mono text-xl font-bold">{naira(statement.amountDue)}</span>
+            </div>
+          </div>
+        ) : null}
+      </Modal>
+
     </AdminPageShell>
   );
 };

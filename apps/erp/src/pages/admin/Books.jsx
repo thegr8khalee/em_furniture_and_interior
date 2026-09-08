@@ -146,6 +146,51 @@ const Books = () => {
   const [accounts, setAccounts] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
 
+  /**
+   * Downloads a report as a file.
+   *
+   * Through axios rather than a plain link, because these routes need the
+   * session cookie and a bare href would arrive unauthenticated.
+   */
+  const download = async (path, filename) => {
+    try {
+      const { data } = await axiosInstance.get(path, { responseType: 'blob' });
+
+      const url = window.URL.createObjectURL(new Blob([data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error('Could not export that');
+    }
+  };
+
+  // Which export belongs to the tab being looked at. An accountant works in a
+  // spreadsheet, and a report that can only be read on screen has to be retyped
+  // to be used — which is where the errors come from.
+  const exportFor = {
+    'trial-balance': {
+      path: `/statements/exports/trial-balance.csv?asOf=${asOf}`,
+      filename: `trial-balance-${asOf}.csv`,
+    },
+    vat: {
+      path: `/statements/exports/vat.csv?from=${from}&to=${to}`,
+      filename: `vat-${from}-to-${to}.csv`,
+    },
+    'cash-flow': {
+      path: `/statements/exports/cash-flow.csv?from=${from}&to=${to}`,
+      filename: `cash-flow-${from}-to-${to}.csv`,
+    },
+    journal: {
+      path: `/statements/exports/journal.csv?from=${from}&to=${to}`,
+      filename: `journal-${from}-to-${to}.csv`,
+    },
+  }[tab];
+
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -313,11 +358,21 @@ const Books = () => {
       title="Books"
       subtitle="Everything here is read from the ledger, so the reports and the postings cannot disagree"
       actions={
-        canManage && tab === 'journal' ? (
-          <Button variant="primary" onClick={openDraft}>
-            Post an entry
-          </Button>
-        ) : null
+        <div className="flex flex-wrap gap-2">
+          {exportFor && (
+            <Button
+              variant="ghost"
+              onClick={() => download(exportFor.path, exportFor.filename)}
+            >
+              Export
+            </Button>
+          )}
+          {canManage && tab === 'journal' && (
+            <Button variant="primary" onClick={openDraft}>
+              Post an entry
+            </Button>
+          )}
+        </div>
       }
     >
       <div className="flex flex-wrap gap-1 border-b border-base-300">
