@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   Wallet,
   Scale,
+  MapPin,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -61,6 +62,7 @@ const navGroups = [
       { to: '/admin/orders', label: 'Orders', icon: ShoppingCart, permission: PERMISSIONS.ORDERS_VIEW },
       { to: '/admin/coupons', label: 'Coupons', icon: Ticket, permission: PERMISSIONS.MARKETING_MANAGE },
       { to: '/admin/inventory', label: 'Inventory', icon: Warehouse, permission: PERMISSIONS.INVENTORY_MANAGE },
+      { to: '/admin/warehouse', label: 'Warehouse', icon: MapPin, permission: PERMISSIONS.INVENTORY_MANAGE },
       { to: '/admin/purchasing', label: 'Purchasing', icon: Truck, permission: PERMISSIONS.FINANCE_VIEW },
       { to: '/admin/documents', label: 'Document Builder', icon: Receipt, permission: PERMISSIONS.FINANCE_VIEW },
     ],

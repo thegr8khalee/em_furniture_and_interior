@@ -21,6 +21,7 @@ const routeLabels = {
   staff: 'Operators',
   payroll: 'Payroll',
   reconciliation: 'Bank reconciliation',
+  warehouse: 'Warehouse',
   purchasing: 'Purchasing',
   analytics: 'Analytics',
   'security-logs': 'Security Logs',
