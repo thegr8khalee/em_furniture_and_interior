@@ -962,6 +962,61 @@ with this suite's committed password, in the real database:
 - Nothing is created, dropped or written unless it is named `em_test_*`, and
   `setupDatabase` now repoints `DATABASE_URL` itself so a suite cannot forget to.
 
+### Giving money back
+
+`order_status` and `payment_status` have both carried `refunded` since 0004,
+`journal_source` has carried `refund` since 0006, and `payment_transactions` has
+carried `refunded_amount` and `refunded_at` all along. The console offered
+Refunded on two dropdowns. **Nothing ever posted one** — so a refund moved a word
+on a screen: revenue stayed recognised, the cash stayed in the bank, VAT stayed
+owed on a reversed sale, and returned goods never came back into stock. It was
+the third hole of that shape, after the cost of sales that never posted and the
+manual payment that never cleared its receivable, and the last one left.
+
+`0014_refunds.sql` makes a refund an event with its own identity rather than a
+flag on the order: an amount, a reason, a date, whoever authorised it, and
+whether the goods came back. Several can happen against one order, and the
+ledger points at each separately — `(source, source_id)` is unique per posting,
+so a flag on the order could only ever have posted once.
+
+    DR  4100 Furniture sales   goods share
+    DR  4300 Delivery income   delivery share
+    DR  2200 VAT payable       tax share
+    CR  bank or cash           the amount refunded
+
+**The shares are allocated, not multiplied.** A third of an order cannot be
+booked as a third of each component without rounding — three thirds of an odd
+number of kobo do not add back up. The refunded amount is split across the
+order's own weights and the remainder goes to the earliest lines, so the entry
+balances to the kobo by construction. The weights are net of the discount, so
+what comes out of revenue is what actually went in; `4900` is not reversed
+separately, which would make a partial refund's arithmetic depend on two
+roundings instead of one.
+
+What it refuses, and why:
+
+- **An order nobody paid for.** The refundable figure comes from the receipts,
+  not the order total, so money can only be returned if it arrived.
+- **More than is left.** Refunds are spent against receipts oldest first, so
+  `refunded_amount` can never exceed what a transaction actually took — the
+  check constraint that has been there since 0004 finally has something
+  maintaining it.
+- **A refund with no reason.** It is the first thing anyone asks about one later.
+- **Restocking on a partial refund.** Choosing which lines came back out of a
+  partial one is a guess, and a guess about stock is how a count stops being
+  explainable.
+
+A full refund marks the order and its receipt refunded; a partial one leaves the
+order standing, because part of it was given back rather than the whole thing
+undone. `order_refunds` is append-only, like the ledger and the stock log it
+drives: a refund that can be edited afterwards is a receipt that cannot be
+trusted, and the money has already gone.
+
+**`refunded` came off both console dropdowns.** Leaving it there would have kept
+the same hole open through a different door — the option only reappears on an
+order that already is refunded, so the state stays readable without being
+settable by a means that does not post.
+
 ## What is not built yet
 
 **The MongoDB migration is complete.** Every route reads and writes PostgreSQL;

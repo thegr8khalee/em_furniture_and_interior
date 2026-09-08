@@ -14,6 +14,30 @@ import { logger } from '../lib/logger.js';
  * with the thing it describes or not at all.
  */
 
+/**
+ * Splits an amount across weights that sum to `total`, exactly.
+ *
+ * `allocate` in lib/money.js divides into equal parts; this divides in
+ * proportion. Each share is floored, and the kobo left over by flooring go to
+ * the earliest non-zero weights — so the shares always add back up to the amount
+ * and an entry built from them cannot fail to balance.
+ */
+const allocateByWeight = (amount, weights, total) => {
+  if (total <= 0) return weights.map(() => 0);
+
+  const shares = weights.map((weight) => Math.floor((amount * weight) / total));
+  let remainder = amount - shares.reduce((sum, share) => sum + share, 0);
+
+  for (let index = 0; index < shares.length && remainder > 0; index += 1) {
+    if (weights[index] > 0) {
+      shares[index] += 1;
+      remainder -= 1;
+    }
+  }
+
+  return shares;
+};
+
 const DUPLICATE = '23505'; // unique_violation
 
 /** Postgres reports a duplicate source as a constraint violation; that is a no-op, not a failure. */
@@ -293,6 +317,85 @@ export const postPurchaseOrderPaid = async (db, orderId, { transaction } = {}) =
         { account: '2100', debit: total, description: 'Payable settled' },
         { account, credit: total, description: `Paid by ${order.payment_method}` },
       ],
+    },
+    { transaction }
+  );
+};
+
+/**
+ * Money given back.
+ *
+ * The mirror of `postOrderConfirmed` and `postPaymentReceived` together: the
+ * sale is unwound and the cash leaves. Nothing posted a refund before, so an
+ * order marked refunded kept its revenue recognised, kept the money in the
+ * bank, and left VAT owed on a sale that had been reversed.
+ *
+ *   DR  4100 Furniture sales    goods share
+ *   DR  4300 Delivery income    delivery share
+ *   DR  2200 VAT payable        tax share
+ *   CR  bank or cash            the amount refunded
+ *
+ * **The shares are allocated, not multiplied.** A partial refund of a third of
+ * an order cannot be booked as a third of each component without rounding: three
+ * thirds of an odd number of kobo do not add back up. `allocate` splits the
+ * refunded amount across the order's own weights and gives the remainder to the
+ * first lines, so the entry balances to the kobo by construction.
+ *
+ * **The discount is not reversed separately.** The weights are net of it —
+ * `subtotal - discount`, shipping, tax — so what comes back out of revenue is
+ * what actually went in. Reversing `4900` proportionally as well would be more
+ * literal and would make a partial refund's arithmetic depend on two roundings
+ * instead of one; the discount was given, and this reverses the net sale.
+ */
+export const postRefund = async (db, refundId, { transaction } = {}) => {
+  const refund = await one(
+    db,
+    `SELECT r.id, r.amount, r.refunded_on AS entry_date,
+            o.order_number, o.subtotal, o.discount, o.shipping_cost, o.tax_amount,
+            o.total_amount, o.payment_method
+       FROM order_refunds r
+       JOIN orders o ON o.id = r.order_id
+      WHERE r.id = :refundId`,
+    { refundId },
+    transaction
+  );
+
+  if (!refund) throw new LedgerError(`No refund ${refundId}`);
+
+  const amount = Number(refund.amount);
+  if (amount === 0) return { posted: false, reason: 'zero_value' };
+
+  const account = SETTLEMENT_ACCOUNT[refund.payment_method];
+  if (!account) {
+    throw new LedgerError(`No settlement account for ${refund.payment_method}`);
+  }
+
+  // Net of the discount, so the weights sum to exactly what the customer paid.
+  const goods = Number(refund.subtotal) - Number(refund.discount);
+  const shipping = Number(refund.shipping_cost);
+  const tax = Number(refund.tax_amount);
+  const total = Number(refund.total_amount);
+
+  const shares = allocateByWeight(amount, [goods, shipping, tax], total);
+  const [goodsShare, shippingShare, taxShare] = shares;
+
+  const lines = [];
+  if (goodsShare > 0) lines.push({ account: '4100', debit: goodsShare, description: 'Goods returned' });
+  if (shippingShare > 0) {
+    lines.push({ account: '4300', debit: shippingShare, description: 'Delivery refunded' });
+  }
+  if (taxShare > 0) lines.push({ account: '2200', debit: taxShare, description: 'VAT reversed' });
+
+  lines.push({ account, credit: amount, description: `Refunded by ${refund.payment_method}` });
+
+  return postOnce(
+    db,
+    {
+      date: refund.entry_date,
+      description: `Refund on ${refund.order_number}`,
+      source: 'refund',
+      sourceId: refund.id,
+      lines,
     },
     { transaction }
   );

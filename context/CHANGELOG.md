@@ -262,3 +262,20 @@ database by omission.
 The worker count is capped against a hosted database for the same reason the
 timeout already was — the ceiling is the pooler's connection limit, not the
 machine's cores.
+
+### Refunds reach the books
+
+The last state an operator could reach that the ledger never heard about. Both
+status enums have carried `refunded` since the first commerce migration and
+nothing behind it did anything, so giving money back left the revenue
+recognised, the cash in the bank, the VAT owed and the goods out of stock.
+
+`0014_refunds.sql` adds `order_refunds` — append-only, with a reason and an
+authoriser — and a posting rule that reverses revenue, delivery and VAT in
+proportion and takes the cash out of the account it was paid into. Shares are
+allocated rather than multiplied, so a partial refund balances to the kobo.
+Refunds are spent against receipts oldest first, which is what finally maintains
+the `refunded_amount <= amount` constraint that has been in the schema all along.
+
+`refunded` was removed from both console dropdowns: leaving it would have kept
+the hole open through another door.

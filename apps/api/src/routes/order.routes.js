@@ -10,7 +10,9 @@ import {
   deleteOrder,
   generateInvoice,
   generateReceipt,
-  generateQuotation
+  generateQuotation,
+  getOrderRefunds,
+  postOrderRefund,
 } from '../controllers/order.controller.js';
 import { protectRoute } from '../middleware/protectRoute.js';
 import { protectAdminRoute } from '../middleware/protectAdminRoute.js';
@@ -56,6 +58,24 @@ router.put(
   requirePermissions([PERMISSIONS.ORDERS_MANAGE]),
   createAuditLog('UPDATE', 'order_payment'),
   updatePaymentStatus
+);
+
+// Giving money back is not a status change, so it is not on the status route.
+// It posts to the ledger, moves the receipt it reverses, and can bring the goods
+// back into stock — all in one transaction, audited.
+router.get(
+  '/admin/:orderId/refunds',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.ORDERS_VIEW]),
+  getOrderRefunds
+);
+
+router.post(
+  '/admin/:orderId/refunds',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.ORDERS_MANAGE]),
+  createAuditLog('UPDATE', 'order_refund'),
+  postOrderRefund
 );
 
 router.delete(

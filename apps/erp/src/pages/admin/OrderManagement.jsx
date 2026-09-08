@@ -6,6 +6,7 @@ import {
   Download, 
   Eye, 
   Edit2, 
+  Undo2,
   Truck, 
   CheckCircle, 
   XCircle, 
@@ -28,6 +29,7 @@ const OrderManagement = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [refundForm, setRefundForm] = useState(null);
 
   // Status update form
   const [statusForm, setStatusForm] = useState({
@@ -92,6 +94,58 @@ const OrderManagement = () => {
       fetchOrders();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update order');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  /**
+   * Giving money back.
+   *
+   * Deliberately not a status change. Setting an order to "refunded" on the
+   * dropdown used to be a word on a screen — the revenue stayed recognised, the
+   * cash stayed in the bank, the VAT stayed owed and the goods never came back.
+   * `refunded` has been taken off both dropdowns for that reason: the only way
+   * to reach it is this, which posts.
+   */
+  const openRefund = async (order) => {
+    setRefundForm({ order, loading: true });
+
+    try {
+      const { data } = await axiosInstance.get(`/orders/admin/${order._id}/refunds`);
+      setRefundForm({
+        order,
+        refundable: data.refundable,
+        refunded: data.refunded,
+        refunds: data.refunds,
+        amount: String(data.refundable),
+        reason: '',
+        restock: false,
+      });
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not load refunds for that order');
+      setRefundForm(null);
+    }
+  };
+
+  const submitRefund = async (event) => {
+    event.preventDefault();
+    setIsUpdating(true);
+
+    try {
+      const { data } = await axiosInstance.post(
+        `/orders/admin/${refundForm.order._id}/refunds`,
+        {
+          amount: Number(refundForm.amount),
+          reason: refundForm.reason,
+          restock: refundForm.restock,
+        }
+      );
+      toast.success(data.message);
+      setRefundForm(null);
+      fetchOrders();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not refund that order');
     } finally {
       setIsUpdating(false);
     }
@@ -330,7 +384,11 @@ const OrderManagement = () => {
                         <option value="pending">Pending</option>
                         <option value="paid">Paid</option>
                         <option value="failed">Failed</option>
-                        <option value="refunded">Refunded</option>
+                        {/* No "refunded" here. It moved the word and nothing
+                            else; the Refund action posts. */}
+                        {order.paymentStatus === 'refunded' && (
+                          <option value="refunded">Refunded</option>
+                        )}
                       </select>
                     </td>
                     <td>
@@ -338,6 +396,11 @@ const OrderManagement = () => {
                         <Button variant="ghost" size="sm" onClick={() => openStatusModal(order)} title="Update Status">
                           <Edit2 size={14} />
                         </Button>
+                        {order.paymentStatus === 'paid' && (
+                          <Button variant="ghost" size="sm" onClick={() => openRefund(order)} title="Refund">
+                            <Undo2 size={14} />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="sm" onClick={() => downloadInvoice(order._id)} title="Download Invoice">
                           <Download size={14} />
                         </Button>
@@ -368,6 +431,93 @@ const OrderManagement = () => {
         </>
       )}
 
+      {/* Refund Modal */}
+      <Modal
+        isOpen={Boolean(refundForm)}
+        onClose={() => setRefundForm(null)}
+        title={`Refund ${refundForm?.order?.orderNumber || ''}`}
+        className="max-w-lg"
+      >
+        {refundForm?.loading ? (
+          <SkeletonBlock className="h-40 w-full" />
+        ) : refundForm ? (
+          <form onSubmit={submitRefund} className="space-y-4">
+            <p className="text-sm text-neutral/60">
+              This takes the revenue and the VAT back out of the books and the cash out of the
+              account it was paid into. ₦{Number(refundForm.refundable).toLocaleString()} is left to
+              refund
+              {refundForm.refunded > 0 &&
+                ` — ₦${Number(refundForm.refunded).toLocaleString()} already given back`}
+              .
+            </p>
+
+            <Input
+              label="Amount (₦)"
+              type="number"
+              min="0"
+              step="0.01"
+              required
+              value={refundForm.amount}
+              onChange={(e) => setRefundForm({ ...refundForm, amount: e.target.value })}
+            />
+
+            <Input
+              label="Reason"
+              required
+              placeholder="Arrived damaged"
+              hint="The first thing anyone asks about a refund later"
+              value={refundForm.reason}
+              onChange={(e) => setRefundForm({ ...refundForm, reason: e.target.value })}
+            />
+
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                className="toggle toggle-sm mt-1"
+                checked={refundForm.restock}
+                disabled={Number(refundForm.amount) !== Number(refundForm.refundable)}
+                onChange={(e) => setRefundForm({ ...refundForm, restock: e.target.checked })}
+              />
+              <span className="text-sm text-neutral">
+                The goods came back
+                <span className="block text-xs text-neutral/50">
+                  Returns them to stock and reverses the cost of sale. Full refunds only — picking
+                  which lines came back out of a partial one would be a guess.
+                </span>
+              </span>
+            </label>
+
+            {refundForm.refunds?.length > 0 && (
+              <div className="border-t border-base-300 pt-3">
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-neutral/65">
+                  Already refunded
+                </span>
+                <ul className="space-y-1 text-sm text-neutral/60">
+                  {refundForm.refunds.map((refund) => (
+                    <li key={refund._id} className="flex justify-between gap-4">
+                      <span>
+                        {refund.refundedOn} · {refund.reason}
+                        {refund.restocked && ' · restocked'}
+                      </span>
+                      <span className="font-mono">₦{Number(refund.amount).toLocaleString()}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="ghost" onClick={() => setRefundForm(null)} disabled={isUpdating}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="danger" isLoading={isUpdating}>
+                Refund
+              </Button>
+            </div>
+          </form>
+        ) : null}
+      </Modal>
+
       {/* Status Update Modal */}
       <Modal isOpen={showStatusModal} onClose={() => setShowStatusModal(false)} title={`Update Order Status - ${selectedOrder?.orderNumber || ''}`}>
         <form onSubmit={handleStatusUpdate} className="space-y-4">
@@ -378,7 +528,10 @@ const OrderManagement = () => {
             <option value="shipped">Shipped</option>
             <option value="delivered">Delivered</option>
             <option value="cancelled">Cancelled</option>
-            <option value="refunded">Refunded</option>
+            {/* Refunding is its own action, because it has to post. */}
+            {selectedOrder?.status === 'refunded' && (
+              <option value="refunded">Refunded</option>
+            )}
           </Select>
 
           <div className="grid grid-cols-2 gap-4">

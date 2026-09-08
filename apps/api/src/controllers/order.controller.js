@@ -4,6 +4,7 @@ import { generateInvoicePDF, generateOrderDocumentPDF } from '../lib/invoiceGene
 import { createNotification } from './notification.controller.js';
 import { sendEmail } from '../services/gmail.service.js';
 import { logger } from '../lib/logger.js';
+import { RefundError, listRefunds, refundOrder } from '../services/refunds.js';
 import {
   OrderError,
   deleteOrder as deleteOrderRow,
@@ -311,5 +312,50 @@ export const generateQuotation = async (req, res) => {
     await generateOrderDocumentPDF(await orderForDocument(req), res, 'quotation');
   } catch (error) {
     fail(error, res, 'generateQuotation');
+  }
+};
+
+/*
+ * Refunds.
+ *
+ * Deliberately not folded into the status dropdown. Marking an order "refunded"
+ * used to be a word on a screen — the money, the VAT, the revenue and the stock
+ * all stayed exactly where they were. Giving money back is its own act with its
+ * own amount and its own reason, so it is its own endpoint.
+ */
+
+const failRefund = (error, res, where) => {
+  if (error instanceof RefundError) {
+    return res.status(error.status).json({ message: error.message });
+  }
+  logger.error({ err: error }, where);
+  return res.status(500).json({ message: 'Server error' });
+};
+
+export const getOrderRefunds = async (req, res) => {
+  try {
+    res.json({ success: true, ...(await listRefunds(req.params.orderId)) });
+  } catch (error) {
+    failRefund(error, res, 'Error listing refunds');
+  }
+};
+
+export const postOrderRefund = async (req, res) => {
+  try {
+    const refund = await refundOrder(req.params.orderId, {
+      amount: req.body?.amount ?? null,
+      reason: req.body?.reason,
+      restock: req.body?.restock === true,
+      refundedOn: req.body?.refundedOn || null,
+      staffId: req.admin?.id ?? null,
+    });
+
+    res.status(201).json({
+      success: true,
+      refund,
+      message: `₦${refund.amount.toLocaleString()} refunded on ${refund.orderNumber}.`,
+    });
+  } catch (error) {
+    failRefund(error, res, 'Error refunding an order');
   }
 };
