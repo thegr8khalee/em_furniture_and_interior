@@ -29,6 +29,7 @@ const Books = lazy(() => import('./pages/admin/Books'));
 const Purchasing = lazy(() => import('./pages/admin/Purchasing'));
 const Customers = lazy(() => import('./pages/admin/Customers'));
 const Staff = lazy(() => import('./pages/admin/Staff'));
+const Payroll = lazy(() => import('./pages/admin/Payroll'));
 const AnalyticsDashboard = lazy(() => import('./pages/admin/AnalyticsDashboard'));
 const SecurityLogs = lazy(() => import('./pages/admin/SecurityLogs'));
 const DocumentBuilder = lazy(() => import('./pages/admin/DocumentBuilder'));
@@ -77,6 +78,7 @@ function App() {
               <Route path="/admin/purchasing" element={<Purchasing />} />
               <Route path="/admin/customers" element={<Customers />} />
               <Route path="/admin/staff" element={<Staff />} />
+              <Route path="/admin/payroll" element={<Payroll />} />
               <Route path="/admin/analytics" element={<AnalyticsDashboard />} />
               <Route path="/admin/security-logs" element={<SecurityLogs />} />
               <Route path="/admin/documents" element={<DocumentBuilder />} />

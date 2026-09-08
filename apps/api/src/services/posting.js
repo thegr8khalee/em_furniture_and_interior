@@ -693,6 +693,138 @@ export const postDepreciation = async (db, chargeId, { transaction } = {}) => {
   );
 };
 
+/**
+ * A month's payroll, approved.
+ *
+ * Three debts at once, which is why payroll is not simply an expense. The wage
+ * is a cost to the business; the tax and the pension deducted from it never
+ * were the business's money and are owed to somebody else until remitted.
+ *
+ *   DR  5500 Salaries and wages   gross + employer pension
+ *   CR  2500 PAYE payable         tax withheld
+ *   CR  2600 Pension payable      employee's + employer's contributions
+ *   CR  2450 Wages payable        what actually reaches the staff
+ *
+ * The employer's pension is a cost on top of the wage rather than out of it, so
+ * it is added to the expense and owed alongside the employee's share.
+ */
+export const postPayRun = async (db, runId, { transaction } = {}) => {
+  const run = await one(
+    db,
+    `SELECT r.id, r.period, r.status,
+            COALESCE(SUM(p.gross), 0) AS gross,
+            COALESCE(SUM(p.paye), 0) AS paye,
+            COALESCE(SUM(p.pension), 0) AS pension,
+            COALESCE(SUM(p.employer_pension), 0) AS employer_pension,
+            COALESCE(SUM(p.other_deductions), 0) AS other_deductions,
+            COALESCE(SUM(p.net), 0) AS net
+       FROM pay_runs r
+       LEFT JOIN payslips p ON p.pay_run_id = r.id
+      WHERE r.id = :runId
+      GROUP BY r.id, r.period, r.status`,
+    { runId },
+    transaction
+  );
+
+  if (!run) throw new LedgerError(`No pay run ${runId}`);
+  if (run.status === 'draft') return { posted: false, reason: 'still_a_draft' };
+
+  const gross = Number(run.gross);
+  const paye = Number(run.paye);
+  const pension = Number(run.pension);
+  const employerPension = Number(run.employer_pension);
+  const other = Number(run.other_deductions);
+  const net = Number(run.net);
+
+  if (gross === 0) return { posted: false, reason: 'zero_value' };
+
+  // Dated the last day of the month it pays for: the work happened then, not on
+  // the day somebody got round to approving it.
+  const period = new Date(run.period);
+  const lastDay = new Date(Date.UTC(period.getUTCFullYear(), period.getUTCMonth() + 1, 0))
+    .toISOString()
+    .slice(0, 10);
+
+  const lines = [
+    { account: '5500', debit: gross + employerPension, description: 'Wages and employer pension' },
+  ];
+
+  if (paye > 0) lines.push({ account: '2500', credit: paye, description: 'PAYE withheld' });
+  if (pension + employerPension > 0) {
+    lines.push({
+      account: '2600',
+      credit: pension + employerPension,
+      description: 'Pension contributions',
+    });
+  }
+  // Anything else withheld — a salary advance being recovered, say — reduces
+  // what reaches the staff and stays owed until it is settled or written off.
+  if (other > 0) {
+    lines.push({ account: '2400', credit: other, description: 'Other deductions withheld' });
+  }
+  lines.push({ account: '2450', credit: net, description: 'Net pay owed to staff' });
+
+  return postOnce(
+    db,
+    {
+      date: lastDay,
+      description: `Payroll for ${String(run.period).slice(0, 7)}`,
+      source: 'payroll',
+      sourceId: run.id,
+      lines,
+    },
+    { transaction }
+  );
+};
+
+/**
+ * Paying the net wages out.
+ *
+ *   DR  2450 Wages payable   net
+ *   CR  bank or cash         net
+ *
+ * Only the net. The tax and the pension stay owed until they are remitted,
+ * which is a different payment to a different party.
+ */
+export const postPayRunPaid = async (db, runId, { transaction } = {}) => {
+  const run = await one(
+    db,
+    `SELECT r.id, r.period, r.status, r.payment_method,
+            COALESCE(r.paid_on, CURRENT_DATE) AS entry_date,
+            COALESCE(SUM(p.net), 0) AS net
+       FROM pay_runs r
+       LEFT JOIN payslips p ON p.pay_run_id = r.id
+      WHERE r.id = :runId
+      GROUP BY r.id, r.period, r.status, r.payment_method, r.paid_on`,
+    { runId },
+    transaction
+  );
+
+  if (!run) throw new LedgerError(`No pay run ${runId}`);
+  if (run.status !== 'paid') return { posted: false, reason: `status_is_${run.status}` };
+
+  const net = Number(run.net);
+  if (net === 0) return { posted: false, reason: 'zero_value' };
+
+  const account = SETTLEMENT_ACCOUNT[run.payment_method];
+  if (!account) throw new LedgerError(`No settlement account for ${run.payment_method}`);
+
+  return postOnce(
+    db,
+    {
+      date: run.entry_date,
+      description: `Wages paid for ${String(run.period).slice(0, 7)}`,
+      source: 'payroll_payment',
+      sourceId: run.id,
+      lines: [
+        { account: '2450', debit: net, description: 'Wages settled' },
+        { account, credit: net, description: `Paid by ${run.payment_method}` },
+      ],
+    },
+    { transaction }
+  );
+};
+
 // What each kind of stock movement does to the books. Inventory (1300) is the
 // other side of every one of them.
 const STOCK_RULES = {

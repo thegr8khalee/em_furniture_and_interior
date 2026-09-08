@@ -26,6 +26,7 @@ import {
   Truck,
   Users,
   ShieldCheck,
+  Wallet,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -90,6 +91,7 @@ const navGroups = [
     label: 'Administration',
     items: [
       { to: '/admin/staff', label: 'Operators', icon: ShieldCheck, permission: PERMISSIONS.STAFF_MANAGE },
+      { to: '/admin/payroll', label: 'Payroll', icon: Wallet, permission: PERMISSIONS.BOOKS_MANAGE },
     ],
   },
 ];
