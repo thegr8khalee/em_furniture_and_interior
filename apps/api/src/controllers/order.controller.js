@@ -5,6 +5,7 @@ import { createNotification } from './notification.controller.js';
 import { sendEmail } from '../services/gmail.service.js';
 import { logger } from '../lib/logger.js';
 import { RefundError, listRefunds, refundOrder } from '../services/refunds.js';
+import { recordPayment } from '../services/orders.js';
 import {
   OrderError,
   deleteOrder as deleteOrderRow,
@@ -357,5 +358,37 @@ export const postOrderRefund = async (req, res) => {
     });
   } catch (error) {
     failRefund(error, res, 'Error refunding an order');
+  }
+};
+
+/**
+ * Money in, recorded by hand.
+ *
+ * Whether it lands as a deposit or as settlement of what is owed is the posting
+ * rule's decision, not the operator's — they are recording that money arrived.
+ */
+export const postOrderPayment = async (req, res) => {
+  try {
+    const result = await recordPayment(req.params.orderId, {
+      amount: req.body?.amount,
+      method: req.body?.method || 'bank_transfer',
+      reference: req.body?.reference || null,
+      staffId: req.admin?.id ?? null,
+    });
+
+    res.status(201).json({
+      success: true,
+      ...result,
+      message: result.heldAsDeposit
+        ? `₦${result.amount.toLocaleString()} held as a deposit on ${result.orderNumber}.`
+        : `₦${result.amount.toLocaleString()} recorded against ${result.orderNumber}.`,
+    });
+  } catch (error) {
+    // OrderError carries its own status; anything else is ours.
+    if (error?.name === 'OrderError') {
+      return res.status(error.status ?? 400).json({ message: error.message });
+    }
+    logger.error({ err: error }, 'Error recording a payment');
+    return res.status(500).json({ message: 'Server error' });
   }
 };

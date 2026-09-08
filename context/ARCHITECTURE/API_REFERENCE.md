@@ -204,6 +204,7 @@ All authenticated requests use JWT stored in HTTP-only cookies. Cookies are sent
 | GET | `/api/orders/admin/all` | admin + perm(ORDERS_VIEW) | getAllOrders | List all orders |
 | PUT | `/api/orders/admin/:orderId/status` | admin + perm(ORDERS_MANAGE) | updateOrderStatus | Update order status |
 | PUT | `/api/orders/admin/:orderId/payment` | admin + perm(ORDERS_MANAGE) | updatePaymentStatus | Update payment status |
+| POST | `/api/orders/admin/:orderId/payments` | admin + perm(ORDERS_MANAGE) + audit | postOrderPayment | Record money in by hand. Held as a deposit if the sale is not yet recognised, otherwise settles the receivable |
 | GET | `/api/orders/admin/:orderId/refunds` | admin + perm(ORDERS_VIEW) | getOrderRefunds | What has been given back and what is left |
 | POST | `/api/orders/admin/:orderId/refunds` | admin + perm(ORDERS_MANAGE) + audit | postOrderRefund | Give money back: posts the reversal, moves the receipt, optionally restocks. `amount` defaults to everything refundable |
 | DELETE | `/api/orders/admin/:orderId` | admin + perm(ORDERS_MANAGE) | deleteOrder | Delete order |

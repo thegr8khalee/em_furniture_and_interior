@@ -1017,6 +1017,56 @@ the same hole open through a different door — the option only reappears on an
 order that already is refunded, so the state stays readable without being
 settable by a means that does not post.
 
+### Money before it is earned, and the gateway's cut
+
+Two things the ledger was quietly wrong about, both found by asking which
+accounts in the chart had never received a posting.
+
+**A deposit is not a receipt.** For bespoke furniture the money usually comes
+first: someone pays before anything is built. Every payment posted as though it
+settled a receivable, so a deposit on an unconfirmed order cleared a debt that
+did not exist yet and drove `1200` negative. `2300 Customer deposits` had sat in
+the chart since it was written with nothing able to reach it.
+
+The rule now looks at whether the sale has been recognised — not at the order's
+status now, but at whether a `sales_order` entry exists, because a deposit does
+not become a receipt retrospectively when the order is confirmed later:
+
+    money in, sale not yet recognised    DR bank · CR 2300 Customer deposits
+    the sale is recognised               DR 2300 · CR 1200 Accounts receivable
+    money in, sale already recognised    DR bank · CR 1200 Accounts receivable
+
+Applying a deposit is its own posting with its own source, `deposit_applied`,
+because `(source, source_id)` is unique and it would otherwise collide with the
+payment that created it. It is idempotent twice over: `deposit_applied_at` stops
+the receipt being selected again, and the unique index stops a second entry if it
+somehow were.
+
+**The gateway keeps a percentage.** Paystack settles the payment less its fee,
+and the ledger recorded the whole amount as arriving — so every cash balance was
+overstated by every fee ever charged, and `5300 Payment processing fees` had
+never been posted to. The fee is read from the verify response, clamped to the
+payment (a fee larger than the payment is a gateway bug, and letting the check
+constraint fire would take the whole transaction down with it), and the entry
+splits:
+
+    DR bank            amount less the fee
+    DR 5300            the fee
+    CR 1200 or 2300    the whole amount — the customer paid in full
+
+`POST /api/orders/admin/:orderId/payments` is the doorway both needed. There was
+no way to record money against an order that had not been confirmed, which is
+precisely when a deposit arrives. The operator records that money came in; which
+of the two it becomes is the posting rule's decision, not theirs.
+
+One consequence worth knowing: **the suite's hosted timeout went to seven
+minutes.** Each worker applies every migration to its own throwaway database
+because the template copy cannot work behind a pooler, so the setup cost grows
+with each migration added — at fifteen it began exceeding three minutes and a
+whole suite failed in `beforeAll`, which reads exactly like a broken schema. If
+it is reached again the answer is not another minute; it is making the template
+copy work.
+
 ## What is not built yet
 
 **The MongoDB migration is complete.** Every route reads and writes PostgreSQL;

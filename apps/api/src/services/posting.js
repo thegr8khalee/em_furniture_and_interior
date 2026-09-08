@@ -133,9 +133,16 @@ const SETTLEMENT_ACCOUNT = {
 export const postPaymentReceived = async (db, transactionId, { transaction } = {}) => {
   const payment = await one(
     db,
-    `SELECT t.id, t.amount, t.payment_method, t.status,
+    `SELECT t.id, t.amount, t.gateway_fee, t.payment_method, t.status,
             COALESCE(t.verified_at::date, t.created_at::date) AS entry_date,
-            o.order_number
+            o.order_number,
+            -- Whether the sale had been recognised when this money arrived.
+            -- Not the order's status now: a deposit does not become a receipt
+            -- retrospectively because the order was confirmed later.
+            EXISTS (
+              SELECT 1 FROM journal_entries e
+               WHERE e.source = 'sales_order' AND e.source_id = o.id
+            ) AS sale_recognised
      FROM payment_transactions t
      JOIN orders o ON o.id = t.order_id
      WHERE t.id = :transactionId`,
@@ -154,21 +161,114 @@ export const postPaymentReceived = async (db, transactionId, { transaction } = {
   if (!account) throw new LedgerError(`No settlement account for ${payment.payment_method}`);
 
   const amount = Number(payment.amount);
+  const fee = Number(payment.gateway_fee ?? 0);
 
-  return postOnce(
+  // Money taken before the sale is recognised is owed back until the goods are
+  // delivered. It is not revenue and it is not a receivable being settled —
+  // crediting 1200 for it cleared a debt that did not exist yet.
+  const isDeposit = !payment.sale_recognised;
+  const owed = isDeposit ? '2300' : '1200';
+
+  // The gateway keeps its cut and settles the rest, so the bank receives less
+  // than the customer paid. Recording the whole amount as arriving overstated
+  // every cash balance by every fee ever charged.
+  const lines = [
+    { account, debit: amount - fee, description: `Received via ${payment.payment_method}` },
+  ];
+
+  if (fee > 0) {
+    lines.push({ account: '5300', debit: fee, description: 'Gateway fee' });
+  }
+
+  lines.push({
+    account: owed,
+    credit: amount,
+    description: isDeposit ? 'Deposit held' : 'Receivable cleared',
+  });
+
+  const posted = await postOnce(
     db,
     {
       date: payment.entry_date,
-      description: `Payment received for ${payment.order_number}`,
+      description: isDeposit
+        ? `Deposit received for ${payment.order_number}`
+        : `Payment received for ${payment.order_number}`,
       source: 'payment',
       sourceId: payment.id,
-      lines: [
-        { account, debit: amount, description: `Received via ${payment.payment_method}` },
-        { account: '1200', credit: amount, description: 'Receivable cleared' },
-      ],
+      lines,
     },
     { transaction }
   );
+
+  // Recorded on the transaction so applying it later does not have to
+  // re-derive what was true when the money arrived.
+  if (posted.posted && isDeposit) {
+    await db.query(
+      'UPDATE payment_transactions SET held_as_deposit = true WHERE id = :id',
+      { replacements: { id: payment.id }, transaction }
+    );
+  }
+
+  return { ...posted, heldAsDeposit: isDeposit };
+};
+
+/**
+ * Turns a deposit into settlement of the sale it was taken for.
+ *
+ * A deposit sits in `2300` as money owed back. Once the sale is recognised the
+ * customer owes for the goods and we owe them the deposit, which is one debt
+ * cancelling part of another:
+ *
+ *   DR  2300 Customer deposits   the deposit
+ *   CR  1200 Accounts receivable the deposit
+ *
+ * Called when an order is confirmed, for every deposit against it that has not
+ * been applied. Idempotent twice over — `deposit_applied_at` stops it being
+ * selected again, and `(source, source_id)` stops the entry being written twice
+ * if it somehow is.
+ */
+export const postDepositsApplied = async (db, orderId, { transaction } = {}) => {
+  const deposits = await db.query(
+    `SELECT t.id, t.amount, o.order_number,
+            COALESCE(t.verified_at::date, t.created_at::date) AS entry_date
+       FROM payment_transactions t
+       JOIN orders o ON o.id = t.order_id
+      WHERE t.order_id = :orderId
+        AND t.held_as_deposit
+        AND t.deposit_applied_at IS NULL
+        AND t.status = 'success'`,
+    { replacements: { orderId }, type: QueryTypes.SELECT, transaction }
+  );
+
+  const applied = [];
+
+  for (const deposit of deposits) {
+    const amount = Number(deposit.amount);
+
+    const posted = await postOnce(
+      db,
+      {
+        date: deposit.entry_date,
+        description: `Deposit applied to ${deposit.order_number}`,
+        source: 'deposit_applied',
+        sourceId: deposit.id,
+        lines: [
+          { account: '2300', debit: amount, description: 'Deposit released' },
+          { account: '1200', credit: amount, description: 'Against what is owed' },
+        ],
+      },
+      { transaction }
+    );
+
+    await db.query(
+      'UPDATE payment_transactions SET deposit_applied_at = now() WHERE id = :id',
+      { replacements: { id: deposit.id }, transaction }
+    );
+
+    applied.push({ transactionId: deposit.id, ...posted });
+  }
+
+  return { applied: applied.length, entries: applied };
 };
 
 /**

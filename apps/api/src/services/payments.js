@@ -291,13 +291,20 @@ export const applyPaystackCharge = async (charge, source, db = getSequelize()) =
       db,
       `UPDATE payment_transactions
           SET status = 'success', verified_at = now(),
-              gateway_response = :response, verification_notes = :notes
+              gateway_response = :response, verification_notes = :notes,
+              gateway_fee = LEAST(:fee, amount)
         WHERE id = :id AND status <> 'success'
         RETURNING id`,
       {
         id: transaction.id,
         response: JSON.stringify(charge),
         notes: `Confirmed via ${source}`,
+        // Paystack reports its cut in kobo on the verify response, in the same
+        // minor units the ledger uses. Recording the gross and ignoring this is
+        // what overstated every cash balance by every fee ever charged.
+        // Clamped, because a fee larger than the payment is a gateway bug and
+        // the check constraint would take the whole transaction down with it.
+        fee: Math.max(0, Math.round(Number(charge?.fees ?? 0))),
       },
       opts
     );

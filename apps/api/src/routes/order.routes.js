@@ -12,6 +12,7 @@ import {
   generateReceipt,
   generateQuotation,
   getOrderRefunds,
+  postOrderPayment,
   postOrderRefund,
 } from '../controllers/order.controller.js';
 import { protectRoute } from '../middleware/protectRoute.js';
@@ -58,6 +59,17 @@ router.put(
   requirePermissions([PERMISSIONS.ORDERS_MANAGE]),
   createAuditLog('UPDATE', 'order_payment'),
   updatePaymentStatus
+);
+
+// Money in, recorded by hand — a transfer, cash in the workshop, a deposit
+// taken before anything is built. The posting rule decides whether it is a
+// deposit or settlement; this just records that it arrived.
+router.post(
+  '/admin/:orderId/payments',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.ORDERS_MANAGE]),
+  createAuditLog('UPDATE', 'order_payment'),
+  postOrderPayment
 );
 
 // Giving money back is not a status change, so it is not on the status route.

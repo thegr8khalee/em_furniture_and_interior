@@ -4,7 +4,12 @@ import { isValidId } from './catalog.js';
 import { toMajor, toMinor, percentOf, sumMinor } from '../lib/money.js';
 import { claim } from './coupons.js';
 import { applyLoyalty } from './engagement.js';
-import { postOrderConfirmed, postPaymentReceived, postStockMovement } from './posting.js';
+import {
+  postDepositsApplied,
+  postOrderConfirmed,
+  postPaymentReceived,
+  postStockMovement,
+} from './posting.js';
 import { logger } from '../lib/logger.js';
 
 /**
@@ -621,6 +626,9 @@ export const setOrderStatus = async (orderId, changes, staffId = null, db = getS
 
     if (status === 'confirmed' && before.status !== 'confirmed') {
       await postOrderConfirmed(db, orderId, opts);
+      // Any money taken before this moment was a deposit — a liability, not a
+      // settled receivable. Recognising the sale is what turns it into one.
+      await postDepositsApplied(db, orderId, opts);
     }
 
     if (status === 'delivered' && row.customer_id && !before.loyalty_points_credited) {
@@ -835,6 +843,7 @@ export const applyPaymentToOrder = async (db, orderId, { note = null, method = n
       );
     }
     await postOrderConfirmed(db, orderId, opts);
+    await postDepositsApplied(db, orderId, opts);
   }
 
   if (before.payment_status !== 'paid') {
@@ -851,4 +860,102 @@ export const deleteOrder = async (orderId, db = getSequelize()) => {
     replacements: { orderId },
   });
   return (result?.rowCount ?? 0) > 0;
+};
+
+/**
+ * Records money arriving against an order, by hand.
+ *
+ * The gateway path writes its own receipt; this is for the rest — a transfer, a
+ * cash deposit in the workshop, a WhatsApp payment. It is the doorway deposits
+ * needed: for bespoke furniture the money usually comes first, and there was no
+ * way to record it before the order was confirmed.
+ *
+ * What it becomes is decided by the posting rule, not here. Money that arrives
+ * before the sale is recognised is a deposit and is owed back; money that
+ * arrives after settles what the customer owes. The operator does not have to
+ * know which — they record that money came in.
+ */
+export const recordPayment = async (
+  orderId,
+  { amount, method = 'bank_transfer', reference = null, staffId = null } = {},
+  db = getSequelize()
+) => {
+  if (!isValidId(String(orderId ?? ''))) throw new OrderError('Order not found.', 404);
+
+  const minor = toMinor(Number(amount));
+  if (!Number.isFinite(minor) || minor <= 0) {
+    throw new OrderError('A payment has to be a positive amount.');
+  }
+
+  const result = await db.transaction(async (transaction) => {
+    const opts = { transaction };
+
+    const order = await selectOne(
+      db,
+      'SELECT id, order_number, total_amount, status FROM orders WHERE id = :orderId FOR UPDATE',
+      { orderId },
+      opts
+    );
+    if (!order) throw new OrderError('Order not found.', 404);
+
+    const taken = await selectOne(
+      db,
+      `SELECT COALESCE(SUM(amount - refunded_amount), 0)::bigint AS received
+         FROM payment_transactions
+        WHERE order_id = :orderId AND status IN ('success', 'refunded')`,
+      { orderId },
+      opts
+    );
+
+    const outstanding = Number(order.total_amount) - Number(taken.received);
+    if (minor > outstanding) {
+      throw new OrderError(
+        `That is more than the order is worth — ${toMajor(Math.max(outstanding, 0))} is outstanding.`
+      );
+    }
+
+    const receipt = await selectOne(
+      db,
+      `INSERT INTO payment_transactions
+         (order_id, amount, payment_method, status, verified_at, verification_notes,
+          transfer_reference)
+       VALUES (:orderId, :amount, :method::payment_method, 'success', now(), :notes, :reference)
+       RETURNING id`,
+      {
+        orderId,
+        amount: minor,
+        method,
+        notes: staffId ? `Recorded by operator ${staffId}` : 'Recorded in the console',
+        reference: reference || null,
+      },
+      opts
+    ).catch((error) => {
+      if (error?.original?.code === '22P02') {
+        throw new OrderError(`"${method}" is not a payment method.`);
+      }
+      throw error;
+    });
+
+    const posted = await postPaymentReceived(db, receipt.id, opts);
+
+    // Paid in full settles the order, whatever route the money took. A part
+    // payment leaves it where it is, with the rest outstanding.
+    const fullyPaid = minor === outstanding;
+    if (fullyPaid) {
+      await db.query(
+        `UPDATE orders SET payment_status = 'paid' WHERE id = :orderId AND payment_status <> 'paid'`,
+        { replacements: { orderId }, ...opts }
+      );
+    }
+
+    return {
+      orderNumber: order.order_number,
+      amount: toMajor(minor),
+      outstanding: toMajor(outstanding - minor),
+      heldAsDeposit: Boolean(posted.heldAsDeposit),
+      fullyPaid,
+    };
+  });
+
+  return result;
 };

@@ -195,7 +195,10 @@ describe('A payment clears the receivable', () => {
     const paymentId = await payFor(orderId, { amount: 15000 });
 
     await postPaymentReceived(getDb(), paymentId);
-    expect(await postPaymentReceived(getDb(), paymentId)).toEqual({
+    // Matched rather than equalled: the rule also reports whether the money was
+    // held as a deposit, which is true here because this order was never
+    // confirmed. What this test is about is that the second call writes nothing.
+    expect(await postPaymentReceived(getDb(), paymentId)).toMatchObject({
       posted: false,
       reason: 'already_posted',
     });

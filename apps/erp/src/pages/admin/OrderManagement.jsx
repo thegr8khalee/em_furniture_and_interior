@@ -7,6 +7,7 @@ import {
   Eye, 
   Edit2, 
   Undo2,
+  Banknote,
   Truck, 
   CheckCircle, 
   XCircle, 
@@ -30,6 +31,7 @@ const OrderManagement = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [refundForm, setRefundForm] = useState(null);
+  const [paymentForm, setPaymentForm] = useState(null);
 
   // Status update form
   const [statusForm, setStatusForm] = useState({
@@ -94,6 +96,38 @@ const OrderManagement = () => {
       fetchOrders();
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to update order');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  /**
+   * Money in, recorded by hand.
+   *
+   * A transfer, cash in the workshop, or a deposit taken before anything is
+   * built — which for bespoke furniture is the usual way round. The operator
+   * records that money arrived; whether it lands as a deposit owed back or as
+   * settlement of what the customer owes is the posting rule's decision, made
+   * from whether the sale has been recognised yet.
+   */
+  const submitPayment = async (event) => {
+    event.preventDefault();
+    setIsUpdating(true);
+
+    try {
+      const { data } = await axiosInstance.post(
+        `/orders/admin/${paymentForm.order._id}/payments`,
+        {
+          amount: Number(paymentForm.amount),
+          method: paymentForm.method,
+          reference: paymentForm.reference || null,
+        }
+      );
+      toast.success(data.message);
+      setPaymentForm(null);
+      fetchOrders();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not record that payment');
     } finally {
       setIsUpdating(false);
     }
@@ -396,6 +430,23 @@ const OrderManagement = () => {
                         <Button variant="ghost" size="sm" onClick={() => openStatusModal(order)} title="Update Status">
                           <Edit2 size={14} />
                         </Button>
+                        {order.paymentStatus !== 'paid' && order.paymentStatus !== 'refunded' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Record a payment"
+                            onClick={() =>
+                              setPaymentForm({
+                                order,
+                                amount: '',
+                                method: 'bank_transfer',
+                                reference: '',
+                              })
+                            }
+                          >
+                            <Banknote size={14} />
+                          </Button>
+                        )}
                         {order.paymentStatus === 'paid' && (
                           <Button variant="ghost" size="sm" onClick={() => openRefund(order)} title="Refund">
                             <Undo2 size={14} />
@@ -430,6 +481,61 @@ const OrderManagement = () => {
           )}
         </>
       )}
+
+      {/* Record a payment */}
+      <Modal
+        isOpen={Boolean(paymentForm)}
+        onClose={() => setPaymentForm(null)}
+        title={`Record a payment — ${paymentForm?.order?.orderNumber || ''}`}
+        className="max-w-lg"
+      >
+        {paymentForm && (
+          <form onSubmit={submitPayment} className="space-y-4">
+            <p className="text-sm text-neutral/60">
+              {paymentForm.order.status === 'pending'
+                ? 'This order has not been confirmed, so the money is held as a deposit — owed back until the goods are delivered.'
+                : 'This settles what the customer owes on the order.'}{' '}
+              The order is worth ₦{Number(paymentForm.order.totalAmount).toLocaleString()}.
+            </p>
+
+            <Input
+              label="Amount (₦)"
+              type="number"
+              min="0"
+              step="0.01"
+              required
+              value={paymentForm.amount}
+              onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+            />
+
+            <Select
+              label="How it arrived"
+              value={paymentForm.method}
+              onChange={(e) => setPaymentForm({ ...paymentForm, method: e.target.value })}
+            >
+              <option value="bank_transfer">Bank transfer</option>
+              <option value="cash_on_delivery">Cash</option>
+              <option value="whatsapp">WhatsApp</option>
+            </Select>
+
+            <Input
+              label="Reference (optional)"
+              placeholder="Teller number, transfer reference"
+              value={paymentForm.reference}
+              onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
+            />
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="ghost" onClick={() => setPaymentForm(null)} disabled={isUpdating}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" isLoading={isUpdating}>
+                Record
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       {/* Refund Modal */}
       <Modal

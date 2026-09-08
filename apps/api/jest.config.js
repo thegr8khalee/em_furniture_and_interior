@@ -9,17 +9,21 @@ dotenv.config();
  *
  * Every integration suite creates a throwaway database and applies every
  * migration to it. Against a local server that is a couple of seconds; against
- * a hosted one it is around thirty, because each statement is a round trip.
- * The suites used to name 30s each, so pointing them at a hosted database
- * failed in `beforeAll` for every test at once — a timeout that reads exactly
- * like a broken schema.
+ * a hosted one it is minutes, because each statement is a round trip and the
+ * template copy that would avoid it cannot work behind a connection pooler.
+ *
+ * The cost therefore grows with every migration added. It was 180s and a suite
+ * began timing out in `beforeAll` at fifteen migrations — a failure that reads
+ * exactly like a broken schema, because every test in the file fails at once
+ * with nothing to say. If this is reached again the answer is not another
+ * minute: it is making the template copy work.
  */
 const testUrl = process.env.TEST_DATABASE_URL || '';
 const isLocalDatabase =
   testUrl === '' || /(@|\/\/)(localhost|127\.0\.0\.1|\[::1\])(:|\/)/.test(testUrl);
 
 export default {
-  testTimeout: isLocalDatabase ? 30000 : 180000,
+  testTimeout: isLocalDatabase ? 30000 : 420000,
 
   /**
    * How many suites may run at once, decided by the same thing.
