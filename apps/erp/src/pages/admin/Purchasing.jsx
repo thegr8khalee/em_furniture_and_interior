@@ -30,6 +30,7 @@ const TABS = [
   { id: 'orders', label: 'Purchase orders' },
   { id: 'vendors', label: 'Vendors' },
   { id: 'payables', label: 'Payables' },
+  { id: 'assets', label: 'What we own' },
 ];
 
 const EXPENSE_STATUS = {
@@ -75,6 +76,9 @@ const Purchasing = () => {
   const [orders, setOrders] = useState(null);
   const [vendors, setVendors] = useState([]);
   const [payables, setPayables] = useState(null);
+  // The register of things the business owns and wears out.
+  const [assets, setAssets] = useState(null);
+  const [assetForm, setAssetForm] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [products, setProducts] = useState([]);
 
@@ -115,6 +119,9 @@ const Purchasing = () => {
       } else if (tab === 'payables') {
         const { data } = await axiosInstance.get('/purchasing/payables');
         setPayables(data.payables);
+      } else if (tab === 'assets') {
+        const { data } = await axiosInstance.get('/assets');
+        setAssets(data);
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Could not load that');
@@ -176,6 +183,26 @@ const Purchasing = () => {
       notes: '',
       items: [{ product: '', quantity: 1, unitCost: '' }],
     });
+  };
+
+  const saveAsset = async () => {
+    const done = await submit(
+      () => axiosInstance.post('/assets', assetForm),
+      'On the register. Its cost will be charged a month at a time.'
+    );
+    if (done) setAssetForm(null);
+  };
+
+  const chargeMonth = async () => {
+    if (!window.confirm("Charge this month's depreciation across everything in use?")) return;
+
+    try {
+      const { data } = await axiosInstance.post('/assets/depreciation', {});
+      toast.success(data.message);
+      load();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not charge that month');
+    }
   };
 
   const submit = async (request, message) => {
@@ -266,6 +293,28 @@ const Purchasing = () => {
           <Button variant="primary" leftIcon={Plus} onClick={openOrderForm}>
             New purchase order
           </Button>
+        ) : tab === 'assets' ? (
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={chargeMonth}>
+              Charge this month
+            </Button>
+            <Button
+              variant="primary"
+              leftIcon={Plus}
+              onClick={() =>
+                setAssetForm({
+                  name: '',
+                  acquiredOn: today(),
+                  cost: '',
+                  residualValue: '',
+                  usefulLifeMonths: '',
+                  paidFrom: '',
+                })
+              }
+            >
+              Register something
+            </Button>
+          </div>
         ) : tab === 'vendors' ? (
           <Button
             variant="primary"
@@ -602,6 +651,103 @@ const Purchasing = () => {
                         </tr>
                       ))}
                     </tbody>
+                  </table>
+                </div>
+              )}
+            </Panel>
+          )}
+
+          {tab === 'assets' && assets && (
+            <Panel
+              title="What the business owns"
+              description="Capitalised when bought, and charged to profit a month at a time across its life"
+            >
+              {assets.assets.length === 0 ? (
+                <EmptyState
+                  icon={Truck}
+                  title="Nothing on the register"
+                  description="Tools, machines, the van — anything the business keeps and uses rather than sells."
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="table table-zebra w-full">
+                    <thead>
+                      <tr>
+                        <th>Asset</th>
+                        <th>Bought</th>
+                        <th className="text-right">Cost</th>
+                        <th className="text-right">Charged so far</th>
+                        <th className="text-right">Worth now</th>
+                        <th className="text-right">Per month</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {assets.assets.map((asset) => (
+                        <tr key={asset._id} className={asset.disposedOn ? 'opacity-50' : 'hover'}>
+                          <td>
+                            <span className="font-medium">{asset.name}</span>
+                            {asset.disposedOn && (
+                              <Badge variant="neutral" className="ml-2">
+                                out of use
+                              </Badge>
+                            )}
+                            {asset.isFullyCharged && !asset.disposedOn && (
+                              <Badge variant="warning" className="ml-2">
+                                fully charged
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="whitespace-nowrap text-sm text-neutral/60">
+                            {asset.acquiredOn}
+                          </td>
+                          <td className="text-right font-mono tabular-nums">
+                            {naira(asset.cost)}
+                          </td>
+                          <td className="text-right font-mono tabular-nums text-neutral/60">
+                            {naira(asset.depreciationToDate)}
+                          </td>
+                          <td className="text-right font-mono tabular-nums font-semibold">
+                            {naira(asset.bookValue)}
+                          </td>
+                          <td className="text-right font-mono tabular-nums text-neutral/60">
+                            {asset.disposedOn ? '—' : naira(asset.monthlyCharge)}
+                          </td>
+                          <td className="text-right">
+                            {!asset.disposedOn && (
+                              <Button
+                                variant="ghost"
+                                onClick={act(
+                                  `/assets/${asset._id}/dispose`,
+                                  'Out of use. What the disposal did to the books is a manual entry.',
+                                  `Take ${asset.name} out of use?`
+                                )}
+                              >
+                                Dispose
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-neutral font-semibold text-neutral">
+                        <td colSpan={2}>In use</td>
+                        <td className="text-right font-mono tabular-nums">
+                          {naira(assets.totals.cost)}
+                        </td>
+                        <td className="text-right font-mono tabular-nums">
+                          {naira(assets.totals.depreciationToDate)}
+                        </td>
+                        <td className="text-right font-mono tabular-nums">
+                          {naira(assets.totals.bookValue)}
+                        </td>
+                        <td className="text-right font-mono tabular-nums">
+                          {naira(assets.totals.monthlyCharge)}
+                        </td>
+                        <td />
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               )}
@@ -1031,6 +1177,108 @@ const Purchasing = () => {
           </form>
         )}
       </Modal>
+      <Modal
+        isOpen={Boolean(assetForm)}
+        onClose={() => setAssetForm(null)}
+        title="Register something the business owns"
+        className="max-w-lg"
+      >
+        {assetForm && (
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              saveAsset();
+            }}
+          >
+            <p className="text-sm text-neutral/60">
+              Something kept and used rather than sold. Its cost does not hit profit now — it is
+              charged a month at a time across the life you give it, which is what stops the month
+              you bought it looking like a disaster and every month after looking better than it was.
+            </p>
+
+            <Input
+              label="What is it"
+              required
+              placeholder="Delivery van"
+              value={assetForm.name}
+              onChange={(event) => setAssetForm({ ...assetForm, name: event.target.value })}
+            />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Bought on"
+                type="date"
+                required
+                value={assetForm.acquiredOn}
+                onChange={(event) =>
+                  setAssetForm({ ...assetForm, acquiredOn: event.target.value })
+                }
+              />
+              <Input
+                label="Cost (₦)"
+                type="number"
+                min="0"
+                step="0.01"
+                required
+                value={assetForm.cost}
+                onChange={(event) => setAssetForm({ ...assetForm, cost: event.target.value })}
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Life (months)"
+                type="number"
+                min="1"
+                step="1"
+                required
+                hint="Four years is 48"
+                value={assetForm.usefulLifeMonths}
+                onChange={(event) =>
+                  setAssetForm({ ...assetForm, usefulLifeMonths: event.target.value })
+                }
+              />
+              <Input
+                label="Worth at the end (₦)"
+                type="number"
+                min="0"
+                step="0.01"
+                hint="Leave empty if it will be worth nothing"
+                value={assetForm.residualValue}
+                onChange={(event) =>
+                  setAssetForm({ ...assetForm, residualValue: event.target.value })
+                }
+              />
+            </div>
+
+            {/* Left empty when the purchase is already in the books — through a
+                purchase order, or an expense recorded before anyone thought to
+                capitalise it. Posting it again would double the asset. */}
+            <Select
+              label="Paid from"
+              hint="Leave empty if the purchase is already recorded"
+              value={assetForm.paidFrom}
+              onChange={(event) => setAssetForm({ ...assetForm, paidFrom: event.target.value })}
+            >
+              <option value="">Already recorded elsewhere</option>
+              <option value="bank_transfer">Bank — current account</option>
+              <option value="cash_on_delivery">Cash</option>
+              <option value="payable">On credit, owed to a supplier</option>
+            </Select>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" type="button" onClick={() => setAssetForm(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" disabled={isSaving}>
+                Register it
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
     </AdminPageShell>
   );
 };

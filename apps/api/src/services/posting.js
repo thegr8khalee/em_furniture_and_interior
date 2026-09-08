@@ -598,6 +598,101 @@ export const postDesignFeePaid = async (db, consultationId, { transaction } = {}
   );
 };
 
+/**
+ * Buying something the business will keep.
+ *
+ * The money leaves the bank but the value does not leave the business, so it
+ * moves rather than disappears. Recording a van as an expense destroys the
+ * month it was bought in and flatters every month after, because the van goes
+ * on earning while nothing charges for its use.
+ *
+ *   DR  1500 Equipment and vehicles   cost
+ *   CR  bank, cash, or payables       cost
+ */
+export const postAssetPurchase = async (db, assetId, paidFrom, { transaction } = {}) => {
+  const asset = await one(
+    db,
+    `SELECT id, name, cost, acquired_on AS entry_date FROM fixed_assets WHERE id = :assetId`,
+    { assetId },
+    transaction
+  );
+
+  if (!asset) throw new LedgerError(`No asset ${assetId}`);
+
+  // `2100` for something bought on credit; a settlement account for something
+  // paid for outright.
+  const account = paidFrom === 'payable' ? '2100' : SETTLEMENT_ACCOUNT[paidFrom];
+  if (!account) throw new LedgerError(`No account for ${paidFrom}`);
+
+  return postOnce(
+    db,
+    {
+      date: asset.entry_date,
+      description: `Bought ${asset.name}`,
+      source: 'asset_purchase',
+      sourceId: asset.id,
+      lines: [
+        { account: '1500', debit: Number(asset.cost), description: asset.name },
+        {
+          account,
+          credit: Number(asset.cost),
+          description: paidFrom === 'payable' ? 'Owed to supplier' : `Paid by ${paidFrom}`,
+        },
+      ],
+    },
+    { transaction }
+  );
+};
+
+/**
+ * A month's wear on one asset.
+ *
+ *   DR  5800 Depreciation               the month's share
+ *   CR  1590 Accumulated depreciation   the month's share
+ *
+ * Credited to a contra-asset rather than to `1500` itself, so the balance sheet
+ * can still say what the thing cost alongside what it is now worth. Writing the
+ * asset account down directly loses the first of those for ever.
+ */
+export const postDepreciation = async (db, chargeId, { transaction } = {}) => {
+  const charge = await one(
+    db,
+    `SELECT c.id, c.amount, c.period, a.name
+       FROM depreciation_charges c
+       JOIN fixed_assets a ON a.id = c.asset_id
+      WHERE c.id = :chargeId`,
+    { chargeId },
+    transaction
+  );
+
+  if (!charge) throw new LedgerError(`No depreciation charge ${chargeId}`);
+
+  const amount = Number(charge.amount);
+  if (amount === 0) return { posted: false, reason: 'zero_value' };
+
+  // Dated the last day of the month it charges, which is when the wear
+  // happened — not the day somebody remembered to run it.
+  const period = new Date(charge.period);
+  const lastDay = new Date(Date.UTC(period.getUTCFullYear(), period.getUTCMonth() + 1, 0))
+    .toISOString()
+    .slice(0, 10);
+
+  return postOnce(
+    db,
+    {
+      date: lastDay,
+      description: `Depreciation: ${charge.name}`,
+      source: 'depreciation',
+      sourceId: charge.id,
+      lines: [
+        { account: '5800', debit: amount, description: "This month's share" },
+        { account: '1590', credit: amount, description: 'Charged so far' },
+      ],
+    },
+    { transaction }
+  );
+};
+
 // What each kind of stock movement does to the books. Inventory (1300) is the
 // other side of every one of them.
 const STOCK_RULES = {
