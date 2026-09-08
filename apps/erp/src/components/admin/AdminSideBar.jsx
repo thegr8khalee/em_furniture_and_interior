@@ -27,6 +27,7 @@ import {
   Users,
   ShieldCheck,
   Wallet,
+  Scale,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -76,6 +77,7 @@ const navGroups = [
     items: [
       { to: '/admin/analytics', label: 'Analytics', icon: BarChart3, permission: PERMISSIONS.ADMIN_DASHBOARD_VIEW },
       { to: '/admin/books', label: 'Books', icon: BookOpen, permission: PERMISSIONS.FINANCE_VIEW },
+      { to: '/admin/reconciliation', label: 'Bank reconciliation', icon: Scale, permission: PERMISSIONS.FINANCE_VIEW },
       { to: '/admin/finance', label: 'Sales revenue', icon: DollarSign, permission: PERMISSIONS.FINANCE_VIEW },
       { to: '/admin/security-logs', label: 'Security Logs', icon: Shield, permission: PERMISSIONS.ADMIN_DASHBOARD_VIEW },
     ],

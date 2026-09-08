@@ -45,6 +45,7 @@ import customerRoutes from './routes/customers.routes.js';
 import staffRoutes from './routes/staff.routes.js';
 import assetRoutes from './routes/assets.routes.js';
 import payrollRoutes from './routes/payroll.routes.js';
+import reconciliationRoutes from './routes/reconciliation.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import logsRoutes from './routes/logs.routes.js';
 import paymentRoutes from './routes/payments.routes.js';
@@ -106,6 +107,8 @@ app.use('/api/admin', largeBodyParser, largeUrlencoded);
 app.use('/api/consultations', largeBodyParser, largeUrlencoded);
 app.use('/api/designers', largeBodyParser, largeUrlencoded);
 app.use('/api/payments', largeBodyParser, largeUrlencoded);
+// A bank statement can carry hundreds of lines in one request.
+app.use('/api/reconciliation', largeBodyParser, largeUrlencoded);
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
@@ -182,6 +185,7 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/admin/staff', staffRoutes);
 app.use('/api/assets', assetRoutes);
 app.use('/api/payroll', payrollRoutes);
+app.use('/api/reconciliation', reconciliationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/payments', paymentRoutes);

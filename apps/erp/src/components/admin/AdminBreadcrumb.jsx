@@ -20,6 +20,7 @@ const routeLabels = {
   customers: 'Customers',
   staff: 'Operators',
   payroll: 'Payroll',
+  reconciliation: 'Bank reconciliation',
   purchasing: 'Purchasing',
   analytics: 'Analytics',
   'security-logs': 'Security Logs',
