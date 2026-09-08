@@ -140,6 +140,11 @@ const Books = () => {
   const [ledgerCode, setLedgerCode] = useState(null);
   const [ledger, setLedger] = useState(null);
   const [entry, setEntry] = useState(null);
+  // Posting by hand: the month-end work no automatic rule covers — a
+  // prepayment, an accrual, depreciation, a correction.
+  const [draft, setDraft] = useState(null);
+  const [accounts, setAccounts] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -205,6 +210,84 @@ const Books = () => {
     }
   };
 
+  const openDraft = async () => {
+    if (accounts.length === 0) {
+      try {
+        const { data } = await axiosInstance.get('/books/accounts');
+        setAccounts(data.accounts.filter((account) => account.isPostable));
+      } catch (error) {
+        toast.error('Could not load the chart of accounts');
+        return;
+      }
+    }
+
+    setDraft({
+      date: today(),
+      description: '',
+      reference: '',
+      lines: [
+        { account: '', debit: '', credit: '' },
+        { account: '', debit: '', credit: '' },
+      ],
+    });
+  };
+
+  const setLine = (index, field, value) =>
+    setDraft((current) => ({
+      ...current,
+      lines: current.lines.map((line, position) =>
+        position === index ? { ...line, [field]: value } : line
+      ),
+    }));
+
+  const submitDraft = async (event) => {
+    event.preventDefault();
+    setIsSaving(true);
+
+    try {
+      const { data } = await axiosInstance.post('/books/journal', {
+        date: draft.date,
+        description: draft.description,
+        reference: draft.reference || null,
+        lines: draft.lines
+          .filter((line) => line.account && (line.debit || line.credit))
+          .map((line) => ({
+            account: line.account,
+            debit: Number(line.debit || 0),
+            credit: Number(line.credit || 0),
+            description: line.description || null,
+          })),
+      });
+
+      toast.success(data.message);
+      setDraft(null);
+      load();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not post that entry');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const reverse = async (entryToUndo) => {
+    const reason = window.prompt(
+      `Reverse ${entryToUndo.entryNumber}? Both it and the reversal stay in the books.\n\nWhy?`
+    );
+    if (reason === null) return;
+
+    try {
+      const { data } = await axiosInstance.post(
+        `/books/journal/${entryToUndo._id}/reverse`,
+        { reason: reason || null }
+      );
+      toast.success(data.message);
+      setEntry(null);
+      load();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not reverse that');
+    }
+  };
+
   const changePeriod = async (period, action) => {
     const verb = action === 'close' ? 'Close' : 'Reopen';
     if (!window.confirm(`${verb} ${period.name}? Closing stops any further posting into it.`)) {
@@ -229,6 +312,13 @@ const Books = () => {
     <AdminPageShell
       title="Books"
       subtitle="Everything here is read from the ledger, so the reports and the postings cannot disagree"
+      actions={
+        canManage && tab === 'journal' ? (
+          <Button variant="primary" onClick={openDraft}>
+            Post an entry
+          </Button>
+        ) : null
+      }
     >
       <div className="flex flex-wrap gap-1 border-b border-base-300">
         {TABS.map((item) => (
@@ -803,10 +893,21 @@ const Books = () => {
       >
         {entry && (
           <>
-            <p className="mb-4 text-sm text-neutral/50">
-              {entry.date} · {String(entry.source).replace(/_/g, ' ')}
-              {entry.createdByName ? ` · posted by ${entry.createdByName}` : ''}
-            </p>
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <p className="text-sm text-neutral/50">
+                {entry.date} · {String(entry.source).replace(/_/g, ' ')}
+                {entry.createdByName ? ` · posted by ${entry.createdByName}` : ''}
+              </p>
+
+              {/* An entry in the books is undone by a reversal, never an edit —
+                  so both the mistake and the correction stay visible. */}
+              {canManage && !entry.reversedById && (
+                <Button variant="ghost" onClick={() => reverse(entry)}>
+                  Reverse
+                </Button>
+              )}
+              {entry.reversedById && <Badge variant="warning">already reversed</Badge>}
+            </div>
             <table className="table table-sm w-full">
               <thead>
                 <tr>
@@ -838,6 +939,144 @@ const Books = () => {
           </>
         )}
       </Modal>
+      {/* Month end, by hand. Everything the automatic rules do not cover. */}
+      <Modal
+        isOpen={Boolean(draft)}
+        onClose={() => setDraft(null)}
+        title="Post an entry"
+        className="max-w-3xl"
+      >
+        {draft && (
+          <form onSubmit={submitDraft} className="space-y-4">
+            <p className="text-sm text-neutral/50">
+              For the things no workflow produces — rent paid in advance, a bill that has not
+              arrived, depreciation, a correction. It must balance, and it cannot be edited
+              afterwards: a mistake is undone with a reversal.
+            </p>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Input
+                label="Date"
+                type="date"
+                required
+                value={draft.date}
+                onChange={(event) => setDraft({ ...draft, date: event.target.value })}
+              />
+              <Input
+                label="Description"
+                required
+                wrapperClassName="sm:col-span-2"
+                placeholder="Six months' rent paid in advance"
+                value={draft.description}
+                onChange={(event) => setDraft({ ...draft, description: event.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <span className="block text-xs font-semibold uppercase tracking-[0.16em] text-neutral/65">
+                Lines
+              </span>
+
+              {draft.lines.map((line, index) => (
+                <div key={index} className="flex flex-wrap items-end gap-2">
+                  <Select
+                    value={line.account}
+                    onChange={(event) => setLine(index, 'account', event.target.value)}
+                    wrapperClassName="flex-1 min-w-[14rem]"
+                  >
+                    <option value="">Choose an account</option>
+                    {accounts.map((account) => (
+                      <option key={account.code} value={account.code}>
+                        {account.code} · {account.name}
+                      </option>
+                    ))}
+                  </Select>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Debit"
+                    value={line.debit}
+                    onChange={(event) => setLine(index, 'debit', event.target.value)}
+                    wrapperClassName="w-32"
+                  />
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Credit"
+                    value={line.credit}
+                    onChange={(event) => setLine(index, 'credit', event.target.value)}
+                    wrapperClassName="w-32"
+                  />
+                  {draft.lines.length > 2 && (
+                    <Button
+                      variant="ghost"
+                      type="button"
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          lines: draft.lines.filter((_, position) => position !== index),
+                        })
+                      }
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              ))}
+
+              <Button
+                variant="ghost"
+                type="button"
+                onClick={() =>
+                  setDraft({
+                    ...draft,
+                    lines: [...draft.lines, { account: '', debit: '', credit: '' }],
+                  })
+                }
+              >
+                Add a line
+              </Button>
+            </div>
+
+            {/* Shown as it is typed, because an entry that does not balance is
+                refused and the difference is the thing worth seeing. */}
+            <div className="flex items-center justify-between border-t border-base-300 pt-3">
+              {(() => {
+                const debits = draft.lines.reduce((t, l) => t + Number(l.debit || 0), 0);
+                const credits = draft.lines.reduce((t, l) => t + Number(l.credit || 0), 0);
+                const difference = debits - credits;
+
+                return (
+                  <>
+                    <span className="text-sm text-neutral/50">
+                      {naira(debits)} of debits against {naira(credits)} of credits
+                    </span>
+                    <span
+                      className={`font-mono text-sm ${
+                        difference === 0 ? 'text-success' : 'text-error'
+                      }`}
+                    >
+                      {difference === 0 ? 'balances' : `out by ${naira(Math.abs(difference))}`}
+                    </span>
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" type="button" onClick={() => setDraft(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit" disabled={isSaving}>
+                Post it
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
     </AdminPageShell>
   );
 };

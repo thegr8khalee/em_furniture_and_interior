@@ -1,8 +1,13 @@
 import { QueryTypes } from 'sequelize';
 import { getSequelize } from '../db/sequelize.js';
 import { isValidId } from './catalog.js';
-import { toMajor } from '../lib/money.js';
-import { trialBalance as ledgerTrialBalance } from './ledger.js';
+import { toMajor, toMinor } from '../lib/money.js';
+import {
+  LedgerError,
+  postEntry,
+  reverseEntry,
+  trialBalance as ledgerTrialBalance,
+} from './ledger.js';
 
 /**
  * Reading the books.
@@ -768,4 +773,127 @@ export const cashFlow = async (range, db = getSequelize()) => {
     netChange: net,
     closingBalance: openingBalance + net,
   };
+};
+
+/**
+ * Posts an entry by hand.
+ *
+ * The escape hatch, and every set of books needs one. The posting rules cover
+ * what the business does routinely — a sale, a receipt, an expense, a receipt
+ * of stock — and leave everything an accountant does at month end with no way
+ * in: rent paid in advance sitting in `1400 Prepayments`, a bill that arrived
+ * late accrued into `2400`, depreciation, a correction. All three accounts have
+ * been in the chart from the start with nothing able to reach them.
+ *
+ * The amounts arrive in naira, like every other figure on the wire, and are
+ * converted here — the ledger works in kobo and a manual entry is the one place
+ * a person types the number.
+ *
+ * Everything the automatic rules are held to still applies: the entry must
+ * balance, every account must exist and be postable, and the period must be
+ * open. What it does not get is a source — this is `manual`, which is exactly
+ * what makes it findable later.
+ */
+export const postManualEntry = async (
+  { date, description, lines, reference = null },
+  staffId = null,
+  db = getSequelize()
+) => {
+  if (!date) throw new BooksError('An entry needs a date.');
+  if (!description || !String(description).trim()) {
+    throw new BooksError('An entry needs a description. "Adjustment" is not one.');
+  }
+  if (!Array.isArray(lines) || lines.length < 2) {
+    throw new BooksError('An entry needs at least two lines — something given and something taken.');
+  }
+
+  const converted = lines.map((line, index) => {
+    const debit = Number(line.debit ?? 0);
+    const credit = Number(line.credit ?? 0);
+
+    if (!Number.isFinite(debit) || !Number.isFinite(credit)) {
+      throw new BooksError(`Line ${index + 1} has an amount that is not a number.`);
+    }
+    if (debit < 0 || credit < 0) {
+      throw new BooksError(
+        `Line ${index + 1} is negative. A negative debit is a credit — write it as one.`
+      );
+    }
+    if ((debit > 0) === (credit > 0)) {
+      throw new BooksError(
+        `Line ${index + 1} must be exactly one of a debit or a credit, not ${
+          debit > 0 ? 'both' : 'neither'
+        }.`
+      );
+    }
+    if (!line.account) throw new BooksError(`Line ${index + 1} has no account.`);
+
+    return {
+      account: String(line.account),
+      debit: toMinor(debit),
+      credit: toMinor(credit),
+      description: line.description || null,
+    };
+  });
+
+  // Checked here as well as in the ledger, so the message names the difference
+  // rather than saying the entry does not balance and leaving the arithmetic to
+  // the person who just did it wrong.
+  const debits = converted.reduce((total, line) => total + line.debit, 0);
+  const credits = converted.reduce((total, line) => total + line.credit, 0);
+
+  if (debits !== credits) {
+    throw new BooksError(
+      `This does not balance: ${money(debits)} of debits against ${money(credits)} of credits, ` +
+        `a difference of ${money(Math.abs(debits - credits))}.`
+    );
+  }
+
+  try {
+    const entry = await postEntry(db, {
+      date,
+      description: reference ? `${description} (${reference})` : description,
+      source: 'manual',
+      lines: converted,
+      createdBy: staffId,
+    });
+
+    return getEntry(entry.id, db);
+  } catch (error) {
+    // The ledger's own refusals — a closed period, an account that is not
+    // postable — are the caller's fault, not a server fault.
+    if (error instanceof LedgerError) throw new BooksError(error.message);
+    throw error;
+  }
+};
+
+/**
+ * Reverses an entry.
+ *
+ * The only way to undo something that is in the books. The original stays
+ * exactly as it was and a mirrored entry is written against it, so both the
+ * mistake and the correction remain visible — which is the whole difference
+ * between a ledger and a spreadsheet.
+ *
+ * Dated today rather than on the original's date, because the original may sit
+ * in a period that has since been closed, and reopening a month to correct it
+ * would move figures that have already been reported.
+ */
+export const reverseJournalEntry = async (entryId, { reason = null } = {}, staffId = null, db = getSequelize()) => {
+  if (!isValidId(String(entryId ?? ''))) throw new BooksError('Entry not found.', 404);
+
+  try {
+    const reversal = await reverseEntry(db, entryId, {
+      description: reason || undefined,
+      createdBy: staffId,
+    });
+
+    return getEntry(reversal.id, db);
+  } catch (error) {
+    if (error instanceof LedgerError) {
+      const missing = /No journal entry/.test(error.message);
+      throw new BooksError(error.message, missing ? 404 : 400);
+    }
+    throw error;
+  }
 };

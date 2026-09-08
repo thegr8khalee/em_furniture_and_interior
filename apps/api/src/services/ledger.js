@@ -159,7 +159,27 @@ export const postEntry = async (
     return { id: entry.id, entryNumber: entry.entry_number, amount: debits };
   };
 
-  return outerTransaction ? run(outerTransaction) : db.transaction(run);
+  /**
+   * The period rule lives in a database trigger, so its refusal arrives as a
+   * raw Postgres exception rather than a LedgerError — and every posting path
+   * turned "that month is closed" into a 500 with a stack trace. It is the
+   * caller's mistake and it has a clear cause, so it is translated once, here,
+   * where everything that posts passes through.
+   */
+  const translate = (error) => {
+    const message =
+      error?.parent?.message || error?.original?.message || error?.message || '';
+
+    if (/accounting period .* is closed/i.test(message) || /no accounting period covers/i.test(message)) {
+      throw new LedgerError(message);
+    }
+
+    throw error;
+  };
+
+  return (
+    outerTransaction ? run(outerTransaction) : db.transaction(run)
+  ).catch(translate);
 };
 
 /**

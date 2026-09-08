@@ -12,6 +12,8 @@ import {
   getTrialBalance,
   getVatReturn,
   postClosePeriod,
+  postJournalEntry,
+  postJournalReversal,
   postReopenPeriod,
 } from '../controllers/books.controller.js';
 import { protectAdminRoute } from '../middleware/protectAdminRoute.js';
@@ -31,6 +33,24 @@ const canRead = requirePermissions([PERMISSIONS.FINANCE_VIEW]);
 router.get('/trial-balance', canRead, getTrialBalance);
 router.get('/journal', canRead, getJournal);
 router.get('/journal/:entryId', canRead, getJournalEntry);
+
+// Posting by hand, and undoing. Both need `books.manage`, which only
+// super_admin holds: an entry nobody's workflow produced is the owner writing
+// directly into their own books, and a reversal changes a figure that has
+// already been reported. Both audited for the same reason.
+router.post(
+  '/journal',
+  requirePermissions([PERMISSIONS.BOOKS_MANAGE]),
+  createAuditLog('CREATE', 'journal_entry'),
+  postJournalEntry
+);
+
+router.post(
+  '/journal/:entryId/reverse',
+  requirePermissions([PERMISSIONS.BOOKS_MANAGE]),
+  createAuditLog('CREATE', 'journal_reversal'),
+  postJournalReversal
+);
 router.get('/accounts', canRead, getAccounts);
 router.get('/accounts/:code/ledger', canRead, getAccountLedger);
 

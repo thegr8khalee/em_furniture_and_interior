@@ -10,8 +10,10 @@ import {
   listEntries,
   listPeriods,
   parseRange,
+  postManualEntry,
   profitAndLoss,
   receivablesAgeing,
+  reverseJournalEntry,
   reopenPeriod,
   trialBalance,
   vatReturn,
@@ -167,3 +169,47 @@ export const getReceivables = async (req, res) => {
  * profit went into stock, and neither of the other two reports can show that.
  */
 export const getCashFlow = withRange((range) => cashFlow(range), 'Error building the cash flow');
+
+/**
+ * An entry posted by hand.
+ *
+ * Month-end lives here: a prepayment, an accrual, depreciation, a correction.
+ * The posting rules cover what the business does routinely and leave all of
+ * that with no way in.
+ */
+export const postJournalEntry = async (req, res) => {
+  try {
+    const entry = await postManualEntry(
+      {
+        date: req.body?.date,
+        description: req.body?.description,
+        reference: req.body?.reference || null,
+        lines: req.body?.lines,
+      },
+      req.admin?.id ?? null
+    );
+
+    res.status(201).json({ success: true, entry, message: `${entry.entryNumber} posted.` });
+  } catch (error) {
+    fail(error, res, 'Error posting a manual entry');
+  }
+};
+
+/** The only way to undo something that is in the books. */
+export const postJournalReversal = async (req, res) => {
+  try {
+    const entry = await reverseJournalEntry(
+      req.params.entryId,
+      { reason: req.body?.reason || null },
+      req.admin?.id ?? null
+    );
+
+    res.status(201).json({
+      success: true,
+      entry,
+      message: `${entry.entryNumber} reverses it. Both stay in the books.`,
+    });
+  } catch (error) {
+    fail(error, res, 'Error reversing an entry');
+  }
+};
