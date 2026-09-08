@@ -551,3 +551,221 @@ export const vatReturn = async (range, db = getSequelize()) => {
     netPayable: money(output - input),
   };
 };
+
+/**
+ * Who owes the business money, and for how long.
+ *
+ * The mirror of the payables ageing, which existed while this did not: `1200`
+ * carried a balance that no report could break down, so "who owes us?" — the
+ * question that decides who gets chased this week — had no answer.
+ *
+ * Built from the orders rather than from `journal_lines`, because a receivable
+ * is owed *by someone* and the ledger deliberately does not carry a customer on
+ * a journal line. The two agree by construction: an order is owed exactly when
+ * its sale has been recognised and the money has not arrived, which is the same
+ * condition that leaves a balance in `1200`.
+ */
+export const receivablesAgeing = async ({ asOf = null } = {}, db = getSequelize()) => {
+  const date = asOf ?? asDate(new Date());
+
+  const rows = await select(
+    db,
+    `WITH owed AS (
+       SELECT o.id,
+              o.order_number,
+              o.created_at::date AS owed_since,
+              o.total_amount
+                - COALESCE((SELECT SUM(t.amount - t.refunded_amount)
+                              FROM payment_transactions t
+                             WHERE t.order_id = o.id
+                               AND t.status IN ('success', 'refunded')), 0)
+                - COALESCE((SELECT SUM(r.amount) FROM order_refunds r
+                             WHERE r.order_id = o.id), 0) AS outstanding,
+              COALESCE(c.id::text, 'guest-' || o.id::text) AS payer_key,
+              COALESCE(c.full_name, o.shipping_address->>'fullName', 'Guest') AS payer_name,
+              c.id AS customer_id,
+              COALESCE(c.email, o.shipping_address->>'email') AS email
+         FROM orders o
+         LEFT JOIN customers c ON c.id = o.customer_id
+        WHERE o.created_at::date <= :asOf::date
+          -- Only what the books have recognised. An unconfirmed order is not
+          -- owed yet, however much it is worth.
+          AND EXISTS (SELECT 1 FROM journal_entries e
+                       WHERE e.source = 'sales_order' AND e.source_id = o.id)
+          AND o.status <> 'cancelled'
+     )
+     SELECT payer_key, payer_name, customer_id, email,
+            SUM(outstanding)::bigint AS total,
+            COALESCE(SUM(outstanding) FILTER (
+              WHERE owed_since > :asOf::date - 30), 0)::bigint AS current,
+            COALESCE(SUM(outstanding) FILTER (
+              WHERE owed_since <= :asOf::date - 30
+                AND owed_since > :asOf::date - 60), 0)::bigint AS thirty,
+            COALESCE(SUM(outstanding) FILTER (
+              WHERE owed_since <= :asOf::date - 60
+                AND owed_since > :asOf::date - 90), 0)::bigint AS sixty,
+            COALESCE(SUM(outstanding) FILTER (
+              WHERE owed_since <= :asOf::date - 90), 0)::bigint AS ninety,
+            json_agg(json_build_object(
+              'orderNumber', order_number, 'owedSince', owed_since,
+              'outstanding', outstanding
+            ) ORDER BY owed_since) AS orders
+       FROM owed
+      WHERE outstanding > 0
+      GROUP BY payer_key, payer_name, customer_id, email
+      ORDER BY total DESC`,
+    { asOf: date }
+  );
+
+  const customers = rows.map((row) => ({
+    customerId: row.customer_id,
+    name: row.payer_name,
+    email: row.email,
+    total: money(row.total),
+    current: money(row.current),
+    thirtyDays: money(row.thirty),
+    sixtyDays: money(row.sixty),
+    ninetyDaysPlus: money(row.ninety),
+    orders: (row.orders ?? []).map((order) => ({
+      orderNumber: order.orderNumber,
+      owedSince: order.owedSince,
+      outstanding: money(order.outstanding),
+    })),
+  }));
+
+  const sum = (key) => customers.reduce((total, row) => total + Number(row[key]), 0);
+
+  return {
+    asOf: date,
+    customers,
+    totals: {
+      total: sum('total'),
+      current: sum('current'),
+      thirtyDays: sum('thirtyDays'),
+      sixtyDays: sum('sixtyDays'),
+      ninetyDaysPlus: sum('ninetyDaysPlus'),
+    },
+  };
+};
+
+/**
+ * Where the cash actually went.
+ *
+ * The third statement, and the one a small business feels first: a profitable
+ * month can still empty the bank if the profit went into stock. The profit and
+ * loss cannot show that and the balance sheet only shows the endpoints.
+ *
+ * Built by the **direct method** — every movement on a cash account, classified
+ * by what the other side of its entry was. The indirect method would start from
+ * profit and adjust, which is harder to check and harder to explain; here every
+ * figure is a sum of real cash lines and the total is provably the change in the
+ * bank.
+ *
+ * The classification is by the counterpart account, which is what makes it
+ * honest: cash paired with revenue or a receivable is operating, cash paired
+ * with equity is financing, cash paired with a fixed asset would be investing.
+ */
+export const cashFlow = async (range, db = getSequelize()) => {
+  const from = asDate(range.start);
+  const to = asDate(range.end);
+
+  const opening = await selectOne(
+    db,
+    `SELECT COALESCE(SUM(l.debit) - SUM(l.credit), 0)::bigint AS balance
+       FROM journal_lines l
+       JOIN journal_entries e ON e.id = l.entry_id
+       JOIN accounts a ON a.id = l.account_id
+      WHERE a.code IN ('1110', '1120', '1130') AND e.entry_date < :from::date`,
+    { from }
+  );
+
+  // Each cash line, with the accounts on the other side of the same entry.
+  const rows = await select(
+    db,
+    `SELECT cash.entry_id,
+            (cash.debit - cash.credit)::bigint AS movement,
+            other.type::text AS counterpart_type,
+            other.code AS counterpart_code,
+            other.name AS counterpart_name,
+            (other.debit + other.credit)::bigint AS counterpart_weight
+       FROM (
+         SELECT l.entry_id, l.debit, l.credit
+           FROM journal_lines l
+           JOIN journal_entries e ON e.id = l.entry_id
+           JOIN accounts a ON a.id = l.account_id
+          WHERE a.code IN ('1110', '1120', '1130')
+            AND e.entry_date >= :from::date AND e.entry_date <= :to::date
+       ) cash
+       JOIN LATERAL (
+         SELECT a2.type, a2.code, a2.name, l2.debit, l2.credit
+           FROM journal_lines l2
+           JOIN accounts a2 ON a2.id = l2.account_id
+          WHERE l2.entry_id = cash.entry_id
+            AND a2.code NOT IN ('1110', '1120', '1130')
+       ) other ON true`,
+    { from, to }
+  );
+
+  // An entry can have several non-cash lines — a sale has revenue and VAT — so
+  // the cash is split across them in proportion to what they carry. Without
+  // this a single line would claim the whole movement and every other
+  // classification would double-count it.
+  const weights = new Map();
+  for (const row of rows) {
+    const key = row.entry_id;
+    weights.set(key, (weights.get(key) ?? 0) + Number(row.counterpart_weight));
+  }
+
+  const buckets = { operating: new Map(), investing: new Map(), financing: new Map() };
+
+  const activityOf = (type, code) => {
+    if (type === 'equity') return 'financing';
+    // Long-term borrowings would be financing too; the chart has none yet.
+    if (code.startsWith('15')) return 'investing';
+    return 'operating';
+  };
+
+  for (const row of rows) {
+    const total = weights.get(row.entry_id) || 1;
+    const share = Math.round((Number(row.movement) * Number(row.counterpart_weight)) / total);
+    if (share === 0) continue;
+
+    const activity = activityOf(row.counterpart_type, row.counterpart_code);
+    const bucket = buckets[activity];
+    const line = bucket.get(row.counterpart_code) ?? {
+      code: row.counterpart_code,
+      name: row.counterpart_name,
+      amount: 0,
+    };
+
+    line.amount += share;
+    bucket.set(row.counterpart_code, line);
+  }
+
+  const asSection = (bucket) => {
+    const lines = [...bucket.values()]
+      .filter((line) => line.amount !== 0)
+      .sort((a, b) => a.code.localeCompare(b.code))
+      .map((line) => ({ ...line, amount: money(line.amount) }));
+
+    return { lines, total: money([...bucket.values()].reduce((t, l) => t + l.amount, 0)) };
+  };
+
+  const operating = asSection(buckets.operating);
+  const investing = asSection(buckets.investing);
+  const financing = asSection(buckets.financing);
+
+  const net = Number(operating.total) + Number(investing.total) + Number(financing.total);
+  const openingBalance = money(opening.balance);
+
+  return {
+    from,
+    to,
+    openingBalance,
+    operating,
+    investing,
+    financing,
+    netChange: net,
+    closingBalance: openingBalance + net,
+  };
+};

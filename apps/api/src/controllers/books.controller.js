@@ -3,6 +3,7 @@ import {
   BooksError,
   accountLedger,
   balanceSheet,
+  cashFlow,
   closePeriod,
   getEntry,
   listAccounts,
@@ -10,6 +11,7 @@ import {
   listPeriods,
   parseRange,
   profitAndLoss,
+  receivablesAgeing,
   reopenPeriod,
   trialBalance,
   vatReturn,
@@ -143,3 +145,25 @@ export const getBalanceSheet = async (req, res) => {
 };
 
 export const getVatReturn = withRange((range) => vatReturn(range), 'Error building the VAT return');
+
+/**
+ * Who owes the business money, and for how long.
+ *
+ * The mirror of the payables ageing on the purchasing side, which existed while
+ * this did not — so `1200` carried a balance nothing could break down.
+ */
+export const getReceivables = async (req, res) => {
+  try {
+    res.json({ success: true, ...(await receivablesAgeing({ asOf: req.query.asOf || null })) });
+  } catch (error) {
+    fail(error, res, 'Error building the receivables ageing');
+  }
+};
+
+/**
+ * Where the cash went.
+ *
+ * The third statement. A profitable month can still empty the bank if the
+ * profit went into stock, and neither of the other two reports can show that.
+ */
+export const getCashFlow = withRange((range) => cashFlow(range), 'Error building the cash flow');

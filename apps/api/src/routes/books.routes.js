@@ -1,12 +1,14 @@
 import express from 'express';
 import {
   getAccountLedger,
+  getCashFlow,
   getAccounts,
   getBalanceSheet,
   getJournal,
   getJournalEntry,
   getPeriods,
   getProfitAndLoss,
+  getReceivables,
   getTrialBalance,
   getVatReturn,
   postClosePeriod,
@@ -36,6 +38,13 @@ router.get('/accounts/:code/ledger', canRead, getAccountLedger);
 router.get('/reports/profit-and-loss', canRead, getProfitAndLoss);
 router.get('/reports/balance-sheet', canRead, getBalanceSheet);
 router.get('/reports/vat', canRead, getVatReturn);
+router.get('/reports/cash-flow', canRead, getCashFlow);
+
+// Who owes us. The payables ageing lives on the purchasing side; this is its
+// mirror, and it is built from orders rather than journal lines because a
+// receivable is owed by someone and a journal line deliberately carries no
+// customer.
+router.get('/receivables', canRead, getReceivables);
 
 // --- periods ---------------------------------------------------------------
 //

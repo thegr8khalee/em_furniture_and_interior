@@ -40,7 +40,9 @@ const TABS = [
   { id: 'trial-balance', label: 'Trial balance' },
   { id: 'profit-and-loss', label: 'Profit & loss' },
   { id: 'balance-sheet', label: 'Balance sheet' },
+  { id: 'cash-flow', label: 'Cash flow' },
   { id: 'vat', label: 'VAT return' },
+  { id: 'receivables', label: 'Who owes us' },
   { id: 'journal', label: 'Journal' },
   { id: 'periods', label: 'Periods' },
 ];
@@ -156,6 +158,12 @@ const Books = () => {
       } else if (tab === 'vat') {
         const { data } = await axiosInstance.get(`/books/reports/vat?${range}`);
         setReport(data);
+      } else if (tab === 'cash-flow') {
+        const { data } = await axiosInstance.get(`/books/reports/cash-flow?${range}`);
+        setReport(data);
+      } else if (tab === 'receivables') {
+        const { data } = await axiosInstance.get(`/books/receivables?asOf=${asOf}`);
+        setReport(data);
       } else if (tab === 'journal') {
         const query = `${range}&page=${page}&limit=50${source ? `&source=${source}` : ''}`;
         const { data } = await axiosInstance.get(`/books/journal?${query}`);
@@ -212,8 +220,10 @@ const Books = () => {
     }
   };
 
-  const usesRange = tab === 'profit-and-loss' || tab === 'vat' || tab === 'journal';
-  const usesAsOf = tab === 'trial-balance' || tab === 'balance-sheet';
+  const usesRange =
+    tab === 'profit-and-loss' || tab === 'vat' || tab === 'journal' || tab === 'cash-flow';
+  const usesAsOf =
+    tab === 'trial-balance' || tab === 'balance-sheet' || tab === 'receivables';
 
   return (
     <AdminPageShell
@@ -462,6 +472,134 @@ const Books = () => {
                 Output VAT is what was charged to customers; input VAT is what approved expenses
                 paid to suppliers. The difference is what is owed.
               </p>
+            </Panel>
+          )}
+
+          {tab === 'cash-flow' && (
+            <Panel
+              title={`Cash flow — ${report.from} to ${report.to}`}
+              description="Every movement on a bank or cash account, grouped by what the other side of the entry was"
+            >
+              <div className="mb-6 flex items-center justify-between border-b border-base-300 pb-3">
+                <span className="text-sm text-neutral/60">Cash at the start</span>
+                <Money value={report.openingBalance} />
+              </div>
+
+              <ReportSection
+                heading="Operating"
+                lines={report.operating.lines}
+                total={report.operating.total}
+                onPickAccount={openLedger}
+              />
+              <ReportSection
+                heading="Investing"
+                lines={report.investing.lines}
+                total={report.investing.total}
+                onPickAccount={openLedger}
+              />
+              <ReportSection
+                heading="Financing"
+                lines={report.financing.lines}
+                total={report.financing.total}
+                onPickAccount={openLedger}
+              />
+
+              <div
+                className={`flex items-center justify-between border-y-2 py-3 ${
+                  Number(report.netChange) < 0 ? 'border-error text-error' : 'border-neutral'
+                }`}
+              >
+                <span className="font-heading text-base font-semibold">
+                  {Number(report.netChange) < 0 ? 'Cash went out' : 'Cash came in'}
+                </span>
+                <Money value={report.netChange} className="text-lg font-semibold" />
+              </div>
+
+              <div className="mt-4 flex items-center justify-between">
+                <span className="font-heading text-lg font-bold text-neutral">Cash at the end</span>
+                <Money value={report.closingBalance} className="text-xl font-bold" />
+              </div>
+            </Panel>
+          )}
+
+          {tab === 'receivables' && (
+            <Panel
+              title={`Who owes us, as at ${report.asOf}`}
+              description="Recognised sales that have not been paid for, oldest first"
+            >
+              {report.customers.length === 0 ? (
+                <EmptyState
+                  icon={BookOpen}
+                  title="Nothing outstanding"
+                  description="Every recognised sale has been paid for."
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="table table-zebra w-full">
+                    <thead>
+                      <tr>
+                        <th>Customer</th>
+                        <th className="text-right">Current</th>
+                        <th className="text-right">30 days</th>
+                        <th className="text-right">60 days</th>
+                        <th className="text-right">90 days +</th>
+                        <th className="text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {report.customers.map((row, index) => (
+                        <tr key={row.customerId ?? `guest-${index}`} className="hover">
+                          <td>
+                            <span className="font-medium">{row.name}</span>
+                            {row.email && (
+                              <span className="block text-xs text-neutral/40">{row.email}</span>
+                            )}
+                            <span className="block text-xs text-neutral/50">
+                              {row.orders.map((order) => order.orderNumber).join(', ')}
+                            </span>
+                          </td>
+                          <td className="text-right">
+                            <Money value={row.current} />
+                          </td>
+                          <td className="text-right">
+                            <Money value={row.thirtyDays} />
+                          </td>
+                          <td className="text-right">
+                            <Money value={row.sixtyDays} />
+                          </td>
+                          {/* The column that decides who gets a phone call. */}
+                          <td className="text-right text-error">
+                            <Money value={row.ninetyDaysPlus} />
+                          </td>
+                          <td className="text-right font-semibold">
+                            <Money value={row.total} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-neutral font-semibold text-neutral">
+                        <td>Total owed</td>
+                        <td className="text-right">
+                          <Money value={report.totals.current} />
+                        </td>
+                        <td className="text-right">
+                          <Money value={report.totals.thirtyDays} />
+                        </td>
+                        <td className="text-right">
+                          <Money value={report.totals.sixtyDays} />
+                        </td>
+                        <td className="text-right">
+                          <Money value={report.totals.ninetyDaysPlus} />
+                        </td>
+                        <td className="text-right">
+                          <Money value={report.totals.total} />
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
             </Panel>
           )}
 
