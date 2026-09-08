@@ -3,6 +3,8 @@ import {
   createConsultationRequest,
   getConsultations,
   updateConsultation,
+  postConsultationBill,
+  postConsultationFeePayment,
 } from '../controllers/consultation.controller.js';
 import { protectAdminRoute } from '../middleware/protectAdminRoute.js';
 import { requirePermissions } from '../middleware/requirePermissions.js';
@@ -38,6 +40,25 @@ router.put(
   requirePermissions([PERMISSIONS.CONSULTATIONS_MANAGE]),
   createAuditLog('UPDATE', 'consultation'),
   updateConsultation
+);
+
+// Billing the design work. Behind finance rather than consultations.manage:
+// deciding what a room costs is the studio's job, deciding that the business is
+// owed money is the owner's.
+router.post(
+  '/admin/:consultationId/bill',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.FINANCE_VIEW]),
+  createAuditLog('UPDATE', 'consultation_fee'),
+  postConsultationBill
+);
+
+router.post(
+  '/admin/:consultationId/fee-payment',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.FINANCE_VIEW]),
+  createAuditLog('UPDATE', 'consultation_fee'),
+  postConsultationFeePayment
 );
 
 export default router;

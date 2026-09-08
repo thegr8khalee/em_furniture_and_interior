@@ -11,6 +11,10 @@ const ConsultationManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
   const [selected, setSelected] = useState(null);
+  // Billing the design work. Separate from the status form, because deciding
+  // that a room costs ₦150,000 and deciding the business is owed it are two
+  // different acts — the second one posts to the ledger.
+  const [billing, setBilling] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [formData, setFormData] = useState({
     status: 'new',
@@ -39,6 +43,40 @@ const ConsultationManagement = () => {
   useEffect(() => {
     fetchData();
   }, [filterStatus]);
+
+  const naira = (value) =>
+    `₦${Number(value ?? 0).toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;
+
+  const submitBill = async (event) => {
+    event.preventDefault();
+
+    try {
+      const { data } = await axiosInstance.post(
+        `/consultations/admin/${billing.id}/bill`,
+        { amount: Number(billing.amount), tax: Number(billing.tax || 0) }
+      );
+      toast.success(data.message);
+      setBilling(null);
+      fetchData();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not bill that consultation');
+    }
+  };
+
+  const settleFee = async (consultation) => {
+    if (!window.confirm(`Record the ${naira(consultation.fee.total)} fee as paid?`)) return;
+
+    try {
+      const { data } = await axiosInstance.post(
+        `/consultations/admin/${consultation._id}/fee-payment`,
+        { paymentMethod: 'bank_transfer' }
+      );
+      toast.success(data.message);
+      fetchData();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not settle that fee');
+    }
+  };
 
   const openEdit = (consultation) => {
     setSelected(consultation);
@@ -120,9 +158,34 @@ const ConsultationManagement = () => {
                     Meeting: {item.preferredMeetingType}
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
-                  Manage
-                </Button>
+                <div className="flex flex-col items-end gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => openEdit(item)}>
+                    Manage
+                  </Button>
+
+                  {/* The design work, as money. Unbilled is the usual state:
+                      an enquiry that went nowhere is not a debt. */}
+                  {!item.fee?.billedAt ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        setBilling({ id: item._id, name: item.fullName, amount: '', tax: '' })
+                      }
+                    >
+                      Bill design work
+                    </Button>
+                  ) : item.fee.paidOn ? (
+                    <Badge variant="success">fee paid · {naira(item.fee.total)}</Badge>
+                  ) : (
+                    <>
+                      <Badge variant="warning">owed · {naira(item.fee.total)}</Badge>
+                      <Button variant="ghost" size="sm" onClick={() => settleFee(item)}>
+                        Mark fee paid
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2 text-xs">
                 {(item.stylePreferences || []).map((style) => (
@@ -135,6 +198,51 @@ const ConsultationManagement = () => {
           ))}
         </div>
       )}
+
+      <Modal
+        isOpen={Boolean(billing)}
+        onClose={() => setBilling(null)}
+        title={billing ? `Bill ${billing.name} for design work` : ''}
+        className="max-w-lg"
+      >
+        {billing && (
+          <form onSubmit={submitBill} className="space-y-4">
+            <p className="text-sm text-neutral/60">
+              This earns the fee and records it as owed. It is the moment the design side of the
+              business appears in the books, and it happens once — a figure already posted is
+              changed with a credit note, not a second bill.
+            </p>
+
+            <Input
+              label="Fee (₦)"
+              type="number"
+              min="0"
+              step="0.01"
+              required
+              value={billing.amount}
+              onChange={(e) => setBilling({ ...billing, amount: e.target.value })}
+            />
+            <Input
+              label="VAT (₦)"
+              type="number"
+              min="0"
+              step="0.01"
+              hint="Leave empty if the fee is not taxed"
+              value={billing.tax}
+              onChange={(e) => setBilling({ ...billing, tax: e.target.value })}
+            />
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setBilling(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary">
+                Bill it
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       <Modal isOpen={!!selected} onClose={() => setSelected(null)} title="Update Consultation">
         <form onSubmit={handleUpdate} className="space-y-4">

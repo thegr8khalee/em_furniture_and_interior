@@ -5,6 +5,8 @@ import {
   listConsultations,
   requestConsultation,
   updateConsultation as updateConsultationRow,
+  billConsultation,
+  payConsultationFee,
 } from '../services/interiors.js';
 
 /*
@@ -107,5 +109,42 @@ export const updateConsultation = async (req, res) => {
     res.status(200).json({ consultation });
   } catch (error) {
     fail(error, res, 'Error updating consultation');
+  }
+};
+
+/**
+ * Bills a consultation for the design work.
+ *
+ * The moment the fee becomes owed, and the moment `4200` first hears about the
+ * design half of the business.
+ */
+export const postConsultationBill = async (req, res) => {
+  try {
+    const consultation = await billConsultation(req.params.consultationId, {
+      amount: req.body?.amount,
+      tax: req.body?.tax ?? 0,
+      staffId: req.admin?.id ?? null,
+    });
+
+    res.json({
+      success: true,
+      consultation,
+      message: `Billed ₦${consultation.fee.total.toLocaleString()} for design work.`,
+    });
+  } catch (error) {
+    fail(error, res, 'Error billing a consultation');
+  }
+};
+
+export const postConsultationFeePayment = async (req, res) => {
+  try {
+    const consultation = await payConsultationFee(req.params.consultationId, {
+      paymentMethod: req.body?.paymentMethod,
+      paidOn: req.body?.paidOn || null,
+    });
+
+    res.json({ success: true, consultation, message: 'Design fee settled.' });
+  } catch (error) {
+    fail(error, res, 'Error settling a design fee');
   }
 };

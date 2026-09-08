@@ -1,5 +1,6 @@
 import { QueryTypes } from 'sequelize';
 import { getSequelize } from '../db/sequelize.js';
+import { postDesignFee, postDesignFeePaid } from './posting.js';
 import { isValidId } from './catalog.js';
 import { toMajor, toMinor } from '../lib/money.js';
 import { cloudinaryStore } from './imageStore.js';
@@ -174,6 +175,7 @@ const CONSULTATION_SELECT = `
          c.style_preferences, c.floor_plan_url, c.floor_plan_public_id,
          c.preferred_designer_id, c.assigned_designer_id, c.preferred_meeting_type,
          c.meeting_link, c.scheduled_at, c.status, c.notes, c.admin_notes,
+         c.fee_amount, c.fee_tax, c.fee_total, c.billed_at, c.fee_paid_on, c.fee_method,
          c.created_at, c.updated_at,
          pd.name AS preferred_designer_name, pd.title AS preferred_designer_title,
          ad.name AS assigned_designer_name, ad.title AS assigned_designer_title,
@@ -218,6 +220,16 @@ const publicConsultation = (row) => ({
   meetingLink: row.meeting_link ?? '',
   scheduledAt: row.scheduled_at,
   status: row.status,
+  // The design work, as money. Zero and unbilled for most: an enquiry that went
+  // nowhere is not a debt.
+  fee: {
+    amount: toMajor(Number(row.fee_amount ?? 0)),
+    tax: toMajor(Number(row.fee_tax ?? 0)),
+    total: toMajor(Number(row.fee_total ?? 0)),
+    billedAt: row.billed_at ?? null,
+    paidOn: row.fee_paid_on ?? null,
+    method: row.fee_method ?? null,
+  },
   notes: row.notes,
   adminNotes: row.admin_notes,
   createdAt: row.created_at,
@@ -450,3 +462,106 @@ export const countConsultations = async (range, db = getSequelize()) =>
       { start: range.start, end: range.end }
     )
   ).total;
+
+/**
+ * Bills a consultation for the design work.
+ *
+ * The fee becomes owed at this moment, and the posting commits with it — a
+ * consultation that says "billed" with nothing behind it in the books is not a
+ * state that can exist. Billed once: a second bill for the same work is a
+ * mistake, and the way to change a figure that is already in the books is a
+ * credit note, not an edit.
+ */
+export const billConsultation = async (id, { amount, tax = 0, staffId = null }, db = getSequelize()) => {
+  if (!isValidId(String(id ?? ''))) throw new InteriorsError('Consultation not found.', 404);
+
+  const fee = toMinor(Number(amount));
+  const vat = toMinor(Number(tax || 0));
+
+  if (!Number.isFinite(fee) || fee <= 0) {
+    throw new InteriorsError('A design fee has to be a positive amount.');
+  }
+  if (!Number.isFinite(vat) || vat < 0) {
+    throw new InteriorsError('VAT cannot be negative.');
+  }
+
+  await db.transaction(async (transaction) => {
+    const opts = { transaction };
+
+    const before = await selectOne(
+      db,
+      'SELECT id, billed_at FROM consultation_requests WHERE id = :id FOR UPDATE',
+      { id },
+      opts
+    );
+    if (!before) throw new InteriorsError('Consultation not found.', 404);
+    if (before.billed_at) {
+      throw new InteriorsError('This consultation has already been billed.');
+    }
+
+    await db.query(
+      `UPDATE consultation_requests
+          SET fee_amount = :fee, fee_tax = :vat, fee_total = :total,
+              billed_at = now(), billed_by = :staffId
+        WHERE id = :id`,
+      {
+        replacements: {
+          id,
+          fee,
+          vat,
+          total: fee + vat,
+          staffId: isValidId(String(staffId ?? '')) ? staffId : null,
+        },
+        ...opts,
+      }
+    );
+
+    await postDesignFee(db, id, opts);
+  });
+
+  return getConsultation(id, db);
+};
+
+/** Records that a billed design fee has been paid. */
+export const payConsultationFee = async (
+  id,
+  { paymentMethod, paidOn = null },
+  db = getSequelize()
+) => {
+  if (!isValidId(String(id ?? ''))) throw new InteriorsError('Consultation not found.', 404);
+  if (!paymentMethod) throw new InteriorsError('How was it paid?');
+
+  await db.transaction(async (transaction) => {
+    const opts = { transaction };
+
+    const before = await selectOne(
+      db,
+      'SELECT id, billed_at, fee_paid_on FROM consultation_requests WHERE id = :id FOR UPDATE',
+      { id },
+      opts
+    );
+    if (!before) throw new InteriorsError('Consultation not found.', 404);
+    if (!before.billed_at) throw new InteriorsError('This consultation has not been billed yet.');
+    if (before.fee_paid_on) throw new InteriorsError('This fee is already paid.');
+
+    await db.query(
+      `UPDATE consultation_requests
+          SET fee_paid_on = COALESCE(:paidOn::date, CURRENT_DATE),
+              fee_method = :method::payment_method
+        WHERE id = :id`,
+      {
+        replacements: { id, paidOn: paidOn || null, method: paymentMethod },
+        ...opts,
+      }
+    ).catch((error) => {
+      if (error?.original?.code === '22P02') {
+        throw new InteriorsError(`"${paymentMethod}" is not a payment method.`);
+      }
+      throw error;
+    });
+
+    await postDesignFeePaid(db, id, opts);
+  });
+
+  return getConsultation(id, db);
+};

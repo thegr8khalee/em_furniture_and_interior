@@ -501,6 +501,103 @@ export const postRefund = async (db, refundId, { transaction } = {}) => {
   );
 };
 
+/**
+ * Billing a consultation.
+ *
+ * The design half of the business earned nothing in the books: consultations
+ * ran from enquiry to completion and stopped, so `4200 Interior design fees`
+ * sat in the chart unreachable and every revenue figure described the furniture
+ * only.
+ *
+ * Billing is the moment the fee becomes owed, which is the same rule the sales
+ * side uses — revenue is recognised when it is earned, not when it is paid.
+ *
+ *   DR  1200 Accounts receivable    total
+ *   CR  4200 Interior design fees   fee
+ *   CR  2200 VAT payable            tax
+ */
+export const postDesignFee = async (db, consultationId, { transaction } = {}) => {
+  const consultation = await one(
+    db,
+    `SELECT id, full_name, fee_amount, fee_tax, fee_total,
+            billed_at::date AS entry_date
+       FROM consultation_requests
+      WHERE id = :consultationId`,
+    { consultationId },
+    transaction
+  );
+
+  if (!consultation) throw new LedgerError(`No consultation ${consultationId}`);
+  if (!consultation.entry_date) return { posted: false, reason: 'not_billed' };
+
+  const fee = Number(consultation.fee_amount);
+  const tax = Number(consultation.fee_tax);
+  const total = Number(consultation.fee_total);
+
+  if (total === 0) return { posted: false, reason: 'zero_value' };
+
+  const lines = [
+    { account: '1200', debit: total, description: 'Owed for design work' },
+    { account: '4200', credit: fee, description: 'Design fee' },
+  ];
+
+  if (tax > 0) lines.push({ account: '2200', credit: tax, description: 'VAT charged' });
+
+  return postOnce(
+    db,
+    {
+      date: consultation.entry_date,
+      description: `Design fee billed to ${consultation.full_name}`,
+      source: 'design_fee',
+      sourceId: consultation.id,
+      lines,
+    },
+    { transaction }
+  );
+};
+
+/**
+ * Settling a design fee.
+ *
+ *   DR  bank or cash              total
+ *   CR  1200 Accounts receivable  total
+ */
+export const postDesignFeePaid = async (db, consultationId, { transaction } = {}) => {
+  const consultation = await one(
+    db,
+    `SELECT id, full_name, fee_total, fee_method, billed_at,
+            COALESCE(fee_paid_on, billed_at::date) AS entry_date
+       FROM consultation_requests
+      WHERE id = :consultationId`,
+    { consultationId },
+    transaction
+  );
+
+  if (!consultation) throw new LedgerError(`No consultation ${consultationId}`);
+  if (!consultation.fee_method) return { posted: false, reason: 'not_paid' };
+
+  const total = Number(consultation.fee_total);
+  if (total === 0) return { posted: false, reason: 'zero_value' };
+
+  const account = SETTLEMENT_ACCOUNT[consultation.fee_method];
+  if (!account) throw new LedgerError(`No settlement account for ${consultation.fee_method}`);
+
+  return postOnce(
+    db,
+    {
+      date: consultation.entry_date,
+      description: `Design fee paid by ${consultation.full_name}`,
+      source: 'design_fee_payment',
+      sourceId: consultation.id,
+      lines: [
+        { account, debit: total, description: `Received via ${consultation.fee_method}` },
+        { account: '1200', credit: total, description: 'Design fee settled' },
+      ],
+    },
+    { transaction }
+  );
+};
+
 // What each kind of stock movement does to the books. Inventory (1300) is the
 // other side of every one of them.
 const STOCK_RULES = {
