@@ -2,6 +2,7 @@
 import { QueryTypes } from 'sequelize';
 import { faker } from '@faker-js/faker';
 import { getSequelize, closeSequelize } from '../db/sequelize.js';
+import { toMinor } from '../lib/money.js';
 import { registerCustomer, registerStaff } from '../services/identity.js';
 import { createCollection, createProduct } from '../services/catalogAdmin.js';
 import { createCoupon } from '../services/coupons.js';
@@ -253,26 +254,7 @@ const seedDB = async () => {
     }
     console.log('Products created and linked.');
 
-    // --- 5a. Opening capital ---
-    //
-    // The business starts with money in the bank, because otherwise buying the
-    // opening stock overdraws an account that never had anything in it and the
-    // balance sheet reads like a disaster. This is the one entry a seeded set of
-    // books legitimately posts by hand: the owner putting money in.
-    console.log('Seeding opening capital...');
     const { postEntry } = await import('../services/ledger.js');
-    await postEntry(getSequelize(), {
-      date: new Date().toISOString().slice(0, 10),
-      description: 'Opening capital introduced',
-      source: 'manual',
-      lines: [
-        // Kobo, like every other amount in the ledger: ₦80,000,000, which has to
-        // cover the opening stock bought below.
-        { account: '1120', debit: 8_000_000_000, description: 'Paid into the current account' },
-        { account: '3100', credit: 8_000_000_000, description: 'Owner capital' },
-      ],
-    });
-    console.log('Opening capital seeded.');
 
     // --- 5b. The buying side ---
     console.log('Seeding vendors, expenses and a purchase order...');
@@ -470,6 +452,24 @@ const seedDB = async () => {
           unitCost: Math.floor(product.price * 0.5),
         })),
       }, owner);
+
+      // The owner puts money in before paying for the stock, and puts in enough:
+      // sized to the order with a quarter again for working capital. A fixed
+      // figure left the current account overdrawn whenever the randomly priced
+      // opening order came in above it — the first number on the first screen,
+      // in red, for no reason anyone could act on.
+      //
+      // This is the one entry a seeded set of books legitimately posts by hand.
+      const capital = Math.ceil(toMinor(openingOrder.total) * 1.25);
+      await postEntry(getSequelize(), {
+        date: new Date().toISOString().slice(0, 10),
+        description: 'Opening capital introduced',
+        source: 'manual',
+        lines: [
+          { account: '1120', debit: capital, description: 'Paid into the current account' },
+          { account: '3100', credit: capital, description: 'Owner capital' },
+        ],
+      });
 
       await receivePurchaseOrder(openingOrder._id, { staffId: owner });
       await payPurchaseOrder(openingOrder._id, { paymentMethod: 'bank_transfer' });

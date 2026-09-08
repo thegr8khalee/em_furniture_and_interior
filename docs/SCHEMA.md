@@ -883,20 +883,103 @@ seeded set of books legitimately posts by hand — the owner introducing capital
 And orders were seeded before stock, so products were sold before they were
 bought and sat on a negative count. Stock is seeded first.
 
+### The people
+
+Two tables had rows from the first migration and no way to read them.
+
+**Customers.** `findCustomerById` could fetch exactly one, by id, for the
+shopper's own profile screen. So the console could not answer "who signed up
+this week", "has this person ordered before", or "what is this address I am
+about to deliver to" — the three questions somebody on the phone is actually
+asking. `/api/customers` joins the account to its orders, loyalty movements,
+reviews and consultations.
+
+It is read-only but for one action. A customer's own details belong to the
+customer, and an operator who could edit a name and an email could quietly
+become somebody. The exception is a **loyalty adjustment**, which is an
+operator's decision — and it writes the movement and lets the balance follow,
+rather than setting the balance and leaving the history unable to explain it.
+That was the Mongo version's mistake, and it is refused here: an adjustment with
+no reason, or one that would take a balance below zero, is a 400.
+
+Two rules worth naming. *Spent* counts only what was paid and not refunded, the
+same test the revenue reports use — counting an abandoned basket would make
+every lifetime-value figure a fiction. And there is no address book: an address
+belongs to the order it was used for, because people move and an order has to
+keep the address it actually went to, so the list of addresses is derived from
+orders with duplicates collapsed.
+
+`customers.view` is a permission of its own rather than the dashboard's, and
+**support holds it** — answering "where is my order" is the job, and it cannot
+be done without looking the person up.
+
+**Operators.** `POST /api/admin/signup` could create staff and nothing could
+list them, so there was no way to see who had access or take it away short of
+writing SQL — while `staff.manage` existed as a permission with nothing behind
+it. `/api/admin/staff` lists operators with their effective permissions, says
+whether each came from the role or was granted by hand, and shows how many
+audited actions each has taken.
+
+The refusals are the substance, and they live in the API rather than in hidden
+buttons:
+
+- **Nobody changes their own role or stands themselves down.** An owner who
+  demotes themselves by mistake cannot undo it, because undoing it needs the
+  permission they just gave away.
+- **The last active super_admin cannot be deactivated or demoted.** That is the
+  state with no way back in.
+- **A permission that is not in `PERMISSIONS` is refused**, rather than stored
+  and silently never matching anything.
+- **Access ends by deactivation, never deletion.** `staff` is referenced by every
+  audit entry, approved expense and order status change; removing the row would
+  take an operator's name off the record of their own work, which is the
+  opposite of what an audit trail is for.
+
+Role changes and deactivations are both audited, because they are exactly the
+events an audit trail exists to answer for.
+
+### Running the suite against a hosted database
+
+Two settings in `jest.config.js` are decided by where `TEST_DATABASE_URL`
+points, and both exist because a hosted database is not a local one:
+
+- **The timeout** is 30s locally and 180s hosted, because each migration
+  statement is a round trip.
+- **The worker count** is capped at 4 hosted. Jest defaults to one worker per
+  core, and each worker holds its own throwaway database and its own pool; a
+  session-mode pooler has a hard connection limit, so the ceiling that matters
+  is the database's rather than the machine's. This is a precaution rather than
+  a fix for something observed: the one mass failure we saw — four hundred tests
+  across eighteen suites, in suites that pass alone and in small groups — turned
+  out to be a DNS drop mid-run (`ENOTFOUND` on the pooler host), not connection
+  exhaustion.
+
+Two guards were added after test runs left twelve live `super_admin` accounts,
+with this suite's committed password, in the real database:
+
+- `TEST_DATABASE_URL` has **no default**. It used to fall back to a local
+  PostgreSQL, so an unset variable pointed somewhere nobody meant.
+- Nothing is created, dropped or written unless it is named `em_test_*`, and
+  `setupDatabase` now repoints `DATABASE_URL` itself so a suite cannot forget to.
+
 ## What is not built yet
 
 **The MongoDB migration is complete.** Every route reads and writes PostgreSQL;
 `mongoose` and `mongodb` are no longer dependencies. What remains is the ERP
 work the ledger was built for.
 
-1. **The frontends still sign in with a password.** The API accepts a Supabase
-   token at `/api/auth/supabase` and `/api/admin/supabase`, but neither
-   `apps/web` nor `apps/erp` calls it yet, and no existing account has a user in
-   Supabase Auth. Moving sign-ups over is a product decision with a migration
-   behind it, not a code change.
-2. **The knowledge base in `context/` still describes the Mongo system.** Each
-   file carries a banner pointing here, but the contents are stale.
-3. **`orders.customer_id` is `ON DELETE SET NULL` and `orders_has_a_buyer` says
+1. **Nobody has a Supabase Auth identity yet.** Both sign-in pages offer the
+   Supabase button and the API accepts the token, but every existing account
+   authenticates with a local password and has no user on the Supabase side.
+   Moving sign-ups over is a product decision with a migration behind it, and
+   until then the button is for new accounts only. The OAuth round trip itself
+   needs a provider and a redirect URL configured in the Supabase project, which
+   no commit here can do or test.
+2. **`orders.customer_id` is `ON DELETE SET NULL` and `orders_has_a_buyer` says
    an order must have one.** A schema test pins the conflict rather than
    resolving it, because it is a product decision: when a customer deletes their
    account, do their past orders keep their name or become anonymous?
+3. **Nothing purges an inactive operator's sessions.** Deactivation is refused
+   on the next request, because `protectAdminRoute` re-reads the row — but a
+   token already issued stays syntactically valid until it expires. That is the
+   right behaviour with the current design and worth knowing.

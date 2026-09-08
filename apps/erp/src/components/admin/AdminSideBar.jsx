@@ -24,6 +24,8 @@ import {
   Receipt,
   BookOpen,
   Truck,
+  Users,
+  ShieldCheck,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -80,7 +82,14 @@ const navGroups = [
   {
     label: 'Customer',
     items: [
+      { to: '/admin/customers', label: 'Customers', icon: Users, permission: PERMISSIONS.CUSTOMERS_VIEW },
       { to: '/admin/consultations', label: 'Consultations', icon: MessageSquare, permission: PERMISSIONS.CONSULTATIONS_MANAGE },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      { to: '/admin/staff', label: 'Operators', icon: ShieldCheck, permission: PERMISSIONS.STAFF_MANAGE },
     ],
   },
 ];

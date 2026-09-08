@@ -17,6 +17,8 @@ const routeLabels = {
   inventory: 'Inventory',
   finance: 'Sales revenue',
   books: 'Books',
+  customers: 'Customers',
+  staff: 'Operators',
   purchasing: 'Purchasing',
   analytics: 'Analytics',
   'security-logs': 'Security Logs',

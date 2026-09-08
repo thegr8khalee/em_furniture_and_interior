@@ -442,6 +442,46 @@ posts to the ledger in the same transaction.
 
 ---
 
+## 28. Customers (`/api/customers`)
+
+The most personal data in the system — names, addresses, phone numbers and what
+everyone has spent. Console only, behind `customers.view`, which **support holds**
+because answering "where is my order" cannot be done without looking the person
+up. Read-only but for the loyalty adjustment.
+
+| Method | Path | Auth | Handler | Description |
+|--------|------|------|---------|-------------|
+| GET | `/api/customers` | admin + perm(CUSTOMERS_VIEW) | getCustomers | Everyone with an account, with orders, spend and last order. `search`, `sort`, `buyersOnly` |
+| GET | `/api/customers/stats` | admin + perm(CUSTOMERS_VIEW) | getCustomerStats | Accounts, new this month, how many have actually bought, revenue |
+| GET | `/api/customers/:customerId` | admin + perm(CUSTOMERS_VIEW) | getOneCustomer | One person with their orders, loyalty, reviews and consultations |
+| GET | `/api/customers/:customerId/addresses` | admin + perm(CUSTOMERS_VIEW) | getCustomerAddresses | Derived from the orders they were used on, duplicates collapsed |
+| POST | `/api/customers/:customerId/loyalty` | admin + perm(CUSTOMERS_VIEW) + audit | postLoyaltyAdjustment | Move a balance, with a reason. Refuses no reason, zero, and going below zero |
+
+---
+
+## 29. Operators (`/api/admin/staff`)
+
+All of it `staff.manage`, which no role list grants — so only super_admin holds
+it. Creating an operator is still `POST /api/admin/signup`.
+
+| Method | Path | Auth | Handler | Description |
+|--------|------|------|---------|-------------|
+| GET | `/api/admin/staff` | admin + perm(STAFF_MANAGE) | getStaffList | Operators with effective permissions, whether each was granted by hand, and how many audited actions they have taken. Also returns the roles and permissions a screen can offer |
+| GET | `/api/admin/staff/:staffId` | admin + perm(STAFF_MANAGE) | getOneStaff | One operator and their last twenty audited actions |
+| PATCH | `/api/admin/staff/:staffId` | admin + perm(STAFF_MANAGE) + audit | patchStaff | Name, role, explicit permissions, active flag |
+| POST | `/api/admin/staff/:staffId/deactivate` | admin + perm(STAFF_MANAGE) + audit | postStaffDeactivation | Ends access. Never deletes — the audit trail points at the row |
+
+**What it refuses**, and why each matters:
+
+- Changing **your own** role or active flag → 403. Undoing it would need the
+  permission you just gave away.
+- Deactivating or demoting the **last active super_admin** → 400. That is the
+  state with no way back into the console.
+- A permission not in `PERMISSIONS` → 400, rather than stored and silently
+  never matching anything.
+
+---
+
 ## Error Responses
 
 All error responses follow this format:

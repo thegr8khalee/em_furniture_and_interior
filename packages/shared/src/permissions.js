@@ -32,6 +32,10 @@ export const PERMISSIONS = {
   // reported figures, and reopening one lets them move again. That is an
   // owner's decision, not a shop manager's.
   BOOKS_MANAGE: 'books.manage',
+  // Seeing who has an account and what they have bought. Held by support as
+  // well as admin: answering "where is my order" is the job, and it cannot be
+  // done without looking the person up.
+  CUSTOMERS_VIEW: 'customers.view',
   // Recording what the business buys: vendors, expenses and purchase orders.
   // Approving an expense creates a liability and receiving an order creates
   // stock, so this is a spending authority, not a data-entry one.
@@ -64,9 +68,10 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.INVENTORY_MANAGE,
     PERMISSIONS.FINANCE_VIEW,
     PERMISSIONS.PURCHASING_MANAGE,
+    PERMISSIONS.CUSTOMERS_VIEW,
   ],
   [ROLES.EDITOR]: [PERMISSIONS.BLOG_MANAGE, PERMISSIONS.FAQ_MANAGE],
-  [ROLES.SUPPORT]: [PERMISSIONS.ADMIN_DASHBOARD_VIEW],
+  [ROLES.SUPPORT]: [PERMISSIONS.ADMIN_DASHBOARD_VIEW, PERMISSIONS.CUSTOMERS_VIEW],
   [ROLES.SOCIAL_MEDIA_MANAGER]: [PERMISSIONS.BLOG_MANAGE],
 };
 

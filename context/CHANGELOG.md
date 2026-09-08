@@ -227,3 +227,38 @@ pages show the button only when the project is configured.
   the business, so paying for that stock overdrew an account that never had
   anything in it; and orders were seeded before stock, so things were sold
   before they were bought.
+
+### The people, and the guards around them
+
+Two tables had rows from the first migration and no way to read them.
+
+`/api/customers` joins an account to its orders, loyalty movements, reviews and
+consultations, so the console can answer the three questions somebody on the
+phone is asking: who signed up, have they bought before, and where do we deliver.
+It is read-only but for a loyalty adjustment, which writes the movement and lets
+the balance follow — a balance nobody can explain is worse than a wrong one.
+*Spent* counts only what was paid and not refunded, and addresses are derived
+from the orders they were used on, because there is no address book: people move,
+and an order keeps the address it actually went to.
+
+`/api/admin/staff` lists operators, says whether each permission came from the
+role or was granted by hand, and ends access by deactivation. It refuses the two
+ways to lose the console — changing your own role or active flag, and standing
+down the last active owner — and refuses a permission that is not in
+`PERMISSIONS` rather than storing one that silently never matches.
+
+`customers.view` is a new permission held by support as well as admin.
+`staff.manage` finally has something behind it.
+
+### Test-run safety, after the leak
+
+Twelve live `super_admin` accounts with this suite's committed password were
+found in the real Supabase database, left by early test runs. Two guards:
+`TEST_DATABASE_URL` no longer defaults to a local server, and nothing is
+created, dropped or written unless it is named `em_test_*`. `setupDatabase` also
+repoints `DATABASE_URL` itself, so a suite cannot forget to and reach the live
+database by omission.
+
+The worker count is capped against a hosted database for the same reason the
+timeout already was — the ceiling is the pooler's connection limit, not the
+machine's cores.

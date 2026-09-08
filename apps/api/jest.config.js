@@ -20,6 +20,18 @@ const isLocalDatabase =
 
 export default {
   testTimeout: isLocalDatabase ? 30000 : 180000,
+
+  /**
+   * How many suites may run at once, decided by the same thing.
+   *
+   * Jest defaults to one worker per core. Each one opens its own throwaway
+   * database and its own pool on top, and a hosted PostgreSQL reached through a
+   * session-mode pooler has a hard connection limit — so twenty-five suites on
+   * eight workers exhausted it and four hundred tests failed at once, in suites
+   * that pass in isolation and in small groups. The limit is the database's, not
+   * the machine's.
+   */
+  maxWorkers: isLocalDatabase ? '50%' : 4,
   testEnvironment: 'node',
   testMatch: ['**/__tests__/**/*.test.js'],
   clearMocks: true,
