@@ -142,7 +142,11 @@ const DesignerManagement = () => {
           {[1, 2, 3].map((i) => <SkeletonBlock key={i} className="h-20 w-full" />)}
         </div>
       ) : designers.length === 0 ? (
-        <EmptyState icon={Users} title="No designers" description="Add your first designer above." />
+        <EmptyState
+          icon={Users}
+          title="No designers yet"
+          description="Designers are the people whose work the website credits, and who consultations get assigned to. The form above adds one."
+        />
       ) : (
         <div className="grid gap-4">
           {designers.map((designer) => (

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, Link2, Upload } from 'lucide-react';
+import { Check, Link2, Scale, Upload } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
@@ -50,13 +50,23 @@ const Reconciliation = () => {
   const [picked, setPicked] = useState({ line: null, entry: null });
   const [importing, setImporting] = useState(null);
   const [signOff, setSignOff] = useState(null);
+  // Every reconciliation that has been signed off. The whole reason they are
+  // stored is so the next one can start where the last finished rather than
+  // re-checking the account from the beginning of time — and nothing showed
+  // them, so nobody could tell when this account was last agreed.
+  const [history, setHistory] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { data } = await axiosInstance.get(`/reconciliation?account=${account}`);
-      setView(data);
+      const [workspace, signed] = await Promise.all([
+        axiosInstance.get(`/reconciliation?account=${account}`),
+        axiosInstance.get(`/reconciliation/history?account=${account}`).catch(() => null),
+      ]);
+
+      setView(workspace.data);
+      setHistory(signed?.data?.reconciliations ?? []);
       setPicked({ line: null, entry: null });
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Could not load the reconciliation');
@@ -483,6 +493,56 @@ const Reconciliation = () => {
           </form>
         )}
       </Modal>
+
+      {/* When this account was last agreed with the bank, and what it came to. */}
+      <section className="border border-base-300 bg-white p-6">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.14em] text-neutral/60">
+          Signed off
+        </h2>
+
+        {history.length === 0 ? (
+          <EmptyState
+            icon={Scale}
+            title="Never reconciled"
+            description="This account has not been agreed with a bank statement yet. Until it is, the cash figure in the books is a number nobody has checked against anything outside them."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table table-sm w-full">
+              <thead>
+                <tr>
+                  <th>Statement date</th>
+                  <th className="text-right">Bank said</th>
+                  <th className="text-right">Books said</th>
+                  <th className="text-right">Not yet on the bank</th>
+                  <th className="text-right">Not yet in the books</th>
+                  <th>Signed off by</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((entry) => (
+                  <tr key={entry._id}>
+                    <td className="whitespace-nowrap font-medium">{entry.statementDate}</td>
+                    <td className="text-right font-mono tabular-nums">
+                      {naira(entry.statementBalance)}
+                    </td>
+                    <td className="text-right font-mono tabular-nums">
+                      {naira(entry.ledgerBalance)}
+                    </td>
+                    <td className="text-right font-mono tabular-nums text-neutral/60">
+                      {naira(entry.unpresented)}
+                    </td>
+                    <td className="text-right font-mono tabular-nums text-neutral/60">
+                      {naira(entry.unrecorded)}
+                    </td>
+                    <td className="text-sm text-neutral/60">{entry.completedBy || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </AdminPageShell>
   );
 };

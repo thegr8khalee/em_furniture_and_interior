@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   Package, 
   Search, 
@@ -8,11 +8,10 @@ import {
   Edit2, 
   Undo2,
   Banknote,
-  Truck, 
-  CheckCircle, 
-  XCircle, 
+  Truck,
+  CheckCircle,
+  XCircle,
   Clock,
-  Loader2
 } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
@@ -20,6 +19,7 @@ import AdminPageShell from '../../components/admin/AdminPageShell';
 import { Badge, Button, EmptyState, Input, Modal, Pagination, Select, SkeletonBlock } from '@em/ui';
 
 const OrderManagement = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -255,6 +255,15 @@ const OrderManagement = () => {
     }
   };
 
+  const hasFilters = Boolean(searchQuery || filterStatus || filterPaymentStatus);
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setFilterStatus('');
+    setFilterPaymentStatus('');
+    setCurrentPage(1);
+  };
+
   const getStatusIcon = (status) => {
     const icons = {
       pending: <Clock size={16} className="text-warning" />,
@@ -351,7 +360,23 @@ const OrderManagement = () => {
           {[1, 2, 3, 4].map((i) => <SkeletonBlock key={i} className="h-14 w-full" />)}
         </div>
       ) : orders.length === 0 ? (
-        <EmptyState icon={Package} title="No orders found" description="Try adjusting your search or filters." />
+        hasFilters ? (
+          <EmptyState
+            icon={Search}
+            title="Nothing matched"
+            description="No order matches that search and those filters. The filters are still on — clearing them brings the rest back."
+            actionLabel="Clear the filters"
+            onAction={clearFilters}
+          />
+        ) : (
+          <EmptyState
+            icon={Package}
+            title="No orders yet"
+            description="Orders placed on the website land here. A sale made in the showroom or over WhatsApp has to be written down — that is what the counter is for."
+            actionLabel="Record a sale"
+            actionTo="/admin/sales/new"
+          />
+        )
       ) : (
         <>
           <div className="overflow-x-auto">
@@ -370,7 +395,11 @@ const OrderManagement = () => {
               </thead>
               <tbody>
                 {orders.map((order) => (
-                  <tr key={order._id}>
+                  <tr
+                    key={order._id}
+                    className="hover cursor-pointer"
+                    onClick={() => navigate(`/admin/orders/${order._id}`)}
+                  >
                     <td>
                       <span className="font-mono text-sm font-semibold">
                         {order.orderNumber}
@@ -409,7 +438,7 @@ const OrderManagement = () => {
                         </span>
                       </div>
                     </td>
-                    <td>
+                    <td onClick={(event) => event.stopPropagation()}>
                       <select
                         className="w-full border border-base-300 bg-white px-2 py-1 text-xs text-neutral transition-colors duration-300 focus:border-secondary focus:outline-none"
                         value={order.paymentStatus}
@@ -425,7 +454,7 @@ const OrderManagement = () => {
                         )}
                       </select>
                     </td>
-                    <td>
+                    <td onClick={(event) => event.stopPropagation()}>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="sm" onClick={() => openStatusModal(order)} title="Update Status">
                           <Edit2 size={14} />
@@ -461,13 +490,14 @@ const OrderManagement = () => {
                         <Button variant="ghost" size="sm" onClick={() => downloadQuotation(order._id)} title="Download Quotation">
                           <Download size={14} />
                         </Button>
-                        <Link
-                          to={`/order-confirmation/${order._id}`}
-                          className="inline-flex items-center justify-center border border-transparent px-3 py-1.5 text-sm text-neutral/70 transition-colors hover:bg-base-200"
-                          title="View Details"
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/admin/orders/${order._id}`)}
+                          title="Open this order"
                         >
                           <Eye size={14} />
-                        </Link>
+                        </Button>
                       </div>
                     </td>
                   </tr>

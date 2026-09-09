@@ -2,9 +2,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProductsStore } from '@em/domain';
-import { Loader2, Package, Search, Plus, LayoutGrid, List } from 'lucide-react';
+import { Package, Search, Plus, LayoutGrid, List } from 'lucide-react';
 import AdminProductListCard from './ProductList';
-import { Button, EmptyState, Pagination } from '@em/ui';
+import {
+  Button,
+  EmptyState,
+  ListItemSkeleton,
+  Pagination,
+  ProductCardSkeleton,
+} from '@em/ui';
 
 const CATEGORIES = ['All', 'Living Room', 'Armchair', 'Bedroom', 'Dining', 'Office', 'Outdoor', 'Kids', 'Storage'];
 
@@ -128,15 +134,32 @@ const ProductManagement = () => {
 
       {/* Loading */}
       {isGettingProducts && products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <Loader2 className="mb-3 animate-spin text-secondary" size={32} />
-          <span className="text-sm text-neutral/50">Loading products...</span>
+        <div
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+              : 'space-y-3'
+          }
+          aria-busy="true"
+          aria-label="Loading products..."
+        >
+          {Array.from({ length: viewMode === 'grid' ? 8 : 5 }).map((_, index) =>
+            viewMode === 'grid' ? (
+              <ProductCardSkeleton key={index} />
+            ) : (
+              <ListItemSkeleton key={index} />
+            )
+          )}
         </div>
       ) : products.length === 0 ? (
         <EmptyState
           icon={Package}
-          title="No products found"
-          description={searchTerm || categoryFilter !== 'All' ? 'Try adjusting your search or filters.' : 'Create your first product to get started.'}
+          title={searchTerm || categoryFilter !== 'All' ? 'Nothing matched' : 'No products yet'}
+          description={
+            searchTerm || categoryFilter !== 'All'
+              ? 'No product matches that search and those filters. Clearing them brings the catalogue back.'
+              : 'The catalogue is empty. A product added here is what the storefront sells and what stock is counted against.'
+          }
           actionLabel="Add Product"
           onAction={() => navigate('/admin/products/new')}
         />
@@ -152,8 +175,21 @@ const ProductManagement = () => {
             ))}
           </div>
           {isGettingProducts && (
-            <div className="flex justify-center py-4">
-              <Loader2 className="animate-spin text-secondary" size={20} />
+            <div
+              className={
+                viewMode === 'grid'
+                  ? 'mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                  : 'mt-3 space-y-3'
+              }
+              aria-busy="true"
+            >
+              {Array.from({ length: viewMode === 'grid' ? 4 : 2 }).map((_, index) =>
+                viewMode === 'grid' ? (
+                  <ProductCardSkeleton key={index} />
+                ) : (
+                  <ListItemSkeleton key={index} />
+                )
+              )}
             </div>
           )}
         </>

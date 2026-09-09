@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { FileText, Plus, Trash2, Download, Loader2 } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { FileText, Plus, Trash2, Download, Loader2, Search, X } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
@@ -31,6 +31,65 @@ const DocumentBuilder = () => {
   const [sections, setSections] = useState([emptySection()]);
 
   const [isGenerating, setIsGenerating] = useState(false);
+
+  /* ── Picking somebody off the customer book ──
+   *
+   * The four client fields were free text and nothing else, so every invoice
+   * for a returning customer was their name typed again — and typed slightly
+   * differently, which is how one person ends up as three on the paperwork.
+   * Choosing them fills the fields in; they stay editable, because a one-off
+   * delivery address should not have to become a change to their record. */
+  const [customerQuery, setCustomerQuery] = useState('');
+  const [customerMatches, setCustomerMatches] = useState([]);
+  const [isSearchingCustomers, setIsSearchingCustomers] = useState(false);
+  const [linkedCustomer, setLinkedCustomer] = useState(null);
+
+  const findCustomers = async () => {
+    const term = customerQuery.trim();
+    if (!term) return;
+
+    setIsSearchingCustomers(true);
+    try {
+      const { data } = await axiosInstance.get(
+        `/customers?limit=8&search=${encodeURIComponent(term)}`
+      );
+      setCustomerMatches(data.customers);
+      if (data.customers.length === 0) toast('Nobody matched that.');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Could not search customers');
+    } finally {
+      setIsSearchingCustomers(false);
+    }
+  };
+
+  const chooseCustomer = async (customer) => {
+    setLinkedCustomer(customer);
+    setCustomerMatches([]);
+    setCustomerQuery('');
+
+    setClientName(customer.username || '');
+    setClientEmail(customer.email || '');
+    setClientPhone(customer.phoneNumber || '');
+
+    // The address they were last delivered to is the one worth defaulting to;
+    // it is derived from their orders, so there is nothing to keep in sync.
+    try {
+      const { data } = await axiosInstance.get(`/customers/${customer._id}/addresses`);
+      const last = data.addresses?.[0];
+      if (last) setClientAddress([last.address, last.city, last.state].filter(Boolean).join(', '));
+    } catch {
+      // An address is a convenience here, not a requirement — the operator can
+      // type one, and failing the whole selection over it would be worse.
+    }
+  };
+
+  const unlinkCustomer = () => {
+    setLinkedCustomer(null);
+    setClientName('');
+    setClientEmail('');
+    setClientPhone('');
+    setClientAddress('');
+  };
 
   /* ── Flat‑item helpers ── */
   const addItem = () => setItems((prev) => [...prev, emptyItem()]);
@@ -215,6 +274,9 @@ const DocumentBuilder = () => {
   };
 
   const handleReset = () => {
+    setLinkedCustomer(null);
+    setCustomerQuery('');
+    setCustomerMatches([]);
     setClientName('');
     setClientEmail('');
     setClientPhone('');
@@ -260,6 +322,71 @@ const DocumentBuilder = () => {
         <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-neutral/60">
           Client Information
         </h2>
+        {/* Somebody on the books, or a name typed by hand. Both are normal:
+            a walk-in wanting a receipt has no record and does not need one. */}
+        {linkedCustomer ? (
+          <div className="flex items-center gap-3 border border-secondary bg-secondary/5 px-4 py-3">
+            <div className="flex-1 text-sm">
+              <p className="font-medium">{linkedCustomer.username}</p>
+              <p className="text-neutral/50">{linkedCustomer.email}</p>
+            </div>
+            <Button variant="ghost" leftIcon={X} onClick={unlinkCustomer}>
+              Use a different name
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-end gap-2">
+              <Input
+                label="Find a customer"
+                icon={Search}
+                placeholder="Name, email or phone"
+                value={customerQuery}
+                onChange={(e) => setCustomerQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    findCustomers();
+                  }
+                }}
+                hint="Optional — fills the fields below in, so a returning customer is not retyped."
+                wrapperClassName="max-w-sm"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={findCustomers}
+                isLoading={isSearchingCustomers}
+                className="mb-7"
+              >
+                Search
+              </Button>
+            </div>
+
+            {customerMatches.length > 0 && (
+              <ul className="divide-y divide-base-300 border border-base-300">
+                {customerMatches.map((match) => (
+                  <li key={match._id}>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between px-4 py-3 text-left text-sm hover:bg-base-200"
+                      onClick={() => chooseCustomer(match)}
+                    >
+                      <span>
+                        <span className="font-medium">{match.username}</span>
+                        <span className="block text-xs text-neutral/50">{match.email}</span>
+                      </span>
+                      <span className="text-xs text-neutral/40">
+                        {match.orderCount} order{match.orderCount === 1 ? '' : 's'}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input label="Client Name" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Full name" />
           <Input label="Email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} placeholder="client@email.com" type="email" />

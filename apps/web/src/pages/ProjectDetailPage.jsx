@@ -1,7 +1,7 @@
 // src/pages/ProjectDetailPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Loader2, MapPin, Tag, DollarSign, ArrowLeft } from 'lucide-react';
+import { Loader2, MapPin, Tag, Banknote, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { luxuryEase } from '@em/ui/styles/animations';
@@ -204,7 +204,7 @@ const ProjectDetailPage = () => {
 
                             {/* Price / Budget */}
                             <div className="flex items-center text-neutral/70 border-t pt-3 mt-3 border-gray-300">
-                                <DollarSign className="h-5 w-5 mr-3 text-secondary flex-shrink-0" />
+                                <Banknote className="h-5 w-5 mr-3 text-secondary flex-shrink-0" />
                                 <span className="font-semibold">Budget:</span>
                                 <span className="ml-2 text-xl font-bold text-secondary">
                                     ₦{Number(project.price).toLocaleString()}

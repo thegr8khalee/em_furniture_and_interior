@@ -249,7 +249,11 @@ const MarketingManagement = () => {
       ) : (
         <div className="grid gap-4">
           {filteredItems.length === 0 ? (
-            <EmptyState icon={Megaphone} title={`No ${activeTab} found`} description="Create one to get started." />
+            <EmptyState
+              icon={Megaphone}
+              title={`Nothing running`}
+              description={`No ${activeTab} has been set up. Until one is, the storefront shows the ordinary catalogue at ordinary prices.`}
+            />
           ) : (
             filteredItems.map((item) => (
               <div key={item._id} className="border border-base-300 bg-white p-5">

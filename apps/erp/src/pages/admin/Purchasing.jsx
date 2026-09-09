@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Building2, Plus, Receipt, Truck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
@@ -69,6 +70,7 @@ const Panel = ({ title, description, actions, children }) => (
 );
 
 const Purchasing = () => {
+  const navigate = useNavigate();
   const [tab, setTab] = useState('expenses');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -144,7 +146,7 @@ const Purchasing = () => {
    * A cost booked to a summary account would never appear beneath it in any
    * report, and the API refuses one — so the form should not offer it.
    */
-  const openExpenseForm = async () => {
+  const openExpenseForm = async (expense = null) => {
     if (accounts.length === 0) {
       try {
         const { data } = await axiosInstance.get('/books/accounts');
@@ -155,18 +157,34 @@ const Purchasing = () => {
       }
     }
 
-    setExpenseForm({
-      vendorId: '',
-      accountCode: '',
-      description: '',
-      date: today(),
-      netAmount: '',
-      taxAmount: '',
-      notes: '',
-    });
+    // Editing is only ever offered on a draft, so an id here means correcting
+    // something that has not been posted yet.
+    setExpenseForm(
+      expense
+        ? {
+            _id: expense._id,
+            number: expense.expenseNumber,
+            vendorId: expense.vendor?._id ?? '',
+            accountCode: expense.account.code,
+            description: expense.description,
+            date: String(expense.date).slice(0, 10),
+            netAmount: String(expense.netAmount),
+            taxAmount: String(expense.taxAmount),
+            notes: expense.notes ?? '',
+          }
+        : {
+            vendorId: '',
+            accountCode: '',
+            description: '',
+            date: today(),
+            netAmount: '',
+            taxAmount: '',
+            notes: '',
+          }
+    );
   };
 
-  const openOrderForm = async () => {
+  const openOrderForm = async (order = null) => {
     if (products.length === 0) {
       try {
         const { data } = await axiosInstance.get('/products?limit=200');
@@ -177,12 +195,27 @@ const Purchasing = () => {
       }
     }
 
-    setOrderForm({
-      vendorId: '',
-      expectedOn: '',
-      notes: '',
-      items: [{ product: '', quantity: 1, unitCost: '' }],
-    });
+    setOrderForm(
+      order
+        ? {
+            _id: order._id,
+            number: order.poNumber,
+            vendorId: order.vendor._id,
+            expectedOn: order.expectedOn ? String(order.expectedOn).slice(0, 10) : '',
+            notes: order.notes ?? '',
+            items: order.items.map((line) => ({
+              product: line.product,
+              quantity: line.quantity,
+              unitCost: String(line.unitCost),
+            })),
+          }
+        : {
+            vendorId: '',
+            expectedOn: '',
+            notes: '',
+            items: [{ product: '', quantity: 1, unitCost: '' }],
+          }
+    );
   };
 
   const saveAsset = async () => {
@@ -222,8 +255,11 @@ const Purchasing = () => {
 
   const saveExpense = async () => {
     const done = await submit(
-      () => axiosInstance.post('/purchasing/expenses', expenseForm),
-      'Expense recorded as a draft'
+      () =>
+        expenseForm._id
+          ? axiosInstance.patch(`/purchasing/expenses/${expenseForm._id}`, expenseForm)
+          : axiosInstance.post('/purchasing/expenses', expenseForm),
+      expenseForm._id ? 'Expense corrected' : 'Expense recorded as a draft'
     );
     if (done) setExpenseForm(null);
   };
@@ -244,8 +280,11 @@ const Purchasing = () => {
 
   const saveOrder = async () => {
     const done = await submit(
-      () => axiosInstance.post('/purchasing/purchase-orders', orderForm),
-      'Purchase order created'
+      () =>
+        orderForm._id
+          ? axiosInstance.patch(`/purchasing/purchase-orders/${orderForm._id}`, orderForm)
+          : axiosInstance.post('/purchasing/purchase-orders', orderForm),
+      orderForm._id ? 'Purchase order updated' : 'Purchase order created'
     );
     if (done) setOrderForm(null);
   };
@@ -434,6 +473,12 @@ const Purchasing = () => {
                                 <>
                                   <Button
                                     variant="ghost"
+                                    onClick={() => openExpenseForm(expense)}
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
                                     onClick={act(
                                       `/purchasing/expenses/${expense._id}/approve`,
                                       'Approved — the cost and the debt are in the books',
@@ -494,7 +539,11 @@ const Purchasing = () => {
               ) : (
                 <div className="space-y-4">
                   {orders.purchaseOrders.map((order) => (
-                    <div key={order._id} className="border border-base-300 p-4">
+                    <div
+                      key={order._id}
+                      className="cursor-pointer border border-base-300 p-4 transition-colors hover:border-secondary"
+                      onClick={() => navigate(`/admin/purchasing/orders/${order._id}`)}
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-3">
@@ -550,6 +599,11 @@ const Purchasing = () => {
                           )}
                           {order.status === 'received' && order.paidOn && (
                             <Badge variant="success">paid</Badge>
+                          )}
+                          {order.status === 'draft' && (
+                            <Button variant="ghost" onClick={() => openOrderForm(order)}>
+                              Edit
+                            </Button>
                           )}
                           {(order.status === 'draft' || order.status === 'sent') && (
                             <>
@@ -631,7 +685,11 @@ const Purchasing = () => {
                     </thead>
                     <tbody>
                       {vendors.map((vendor) => (
-                        <tr key={vendor._id} className="hover">
+                        <tr
+                          key={vendor._id}
+                          className="hover cursor-pointer"
+                          onClick={() => navigate(`/admin/purchasing/vendors/${vendor._id}`)}
+                        >
                           <td className="font-medium">{vendor.name}</td>
                           <td className="text-sm text-neutral/60">{vendor.email ?? '—'}</td>
                           <td className="text-sm text-neutral/60">{vendor.phone ?? '—'}</td>
@@ -643,7 +701,10 @@ const Purchasing = () => {
                               {vendor.isActive ? 'active' : 'retired'}
                             </Badge>
                           </td>
-                          <td className="text-right">
+                          <td
+                            className="text-right"
+                            onClick={(event) => event.stopPropagation()}
+                          >
                             <Button variant="ghost" onClick={() => setVendorForm({ ...vendor })}>
                               Edit
                             </Button>
@@ -817,7 +878,7 @@ const Purchasing = () => {
       <Modal
         isOpen={Boolean(expenseForm)}
         onClose={() => setExpenseForm(null)}
-        title="Record an expense"
+        title={expenseForm?._id ? `Correct ${expenseForm.number}` : 'Record an expense'}
       >
         {expenseForm && (
           <form
@@ -828,7 +889,9 @@ const Purchasing = () => {
             }}
           >
             <p className="text-sm text-neutral/50">
-              This is saved as a draft. Approving it is what books the cost and creates the debt.
+              {expenseForm._id
+                ? 'Still a draft, so nothing has been posted yet. Once it is approved it is in the books and the way to change it is to void it and record it again.'
+                : 'This is saved as a draft. Approving it is what books the cost and creates the debt.'}
             </p>
 
             <Input
@@ -1050,7 +1113,7 @@ const Purchasing = () => {
       <Modal
         isOpen={Boolean(orderForm)}
         onClose={() => setOrderForm(null)}
-        title="New purchase order"
+        title={orderForm?._id ? `Edit ${orderForm.number}` : 'New purchase order'}
         className="max-w-3xl"
       >
         {orderForm && (

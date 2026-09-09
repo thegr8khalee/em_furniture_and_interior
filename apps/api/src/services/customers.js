@@ -41,6 +41,10 @@ const money = (kobo) => toMajor(Number(kobo ?? 0));
  */
 const SPENT = `o.payment_status = 'paid' AND o.status <> 'refunded'`;
 
+/** What `publicCustomer` needs, for the writes that return a row. */
+const COLUMNS = `id, full_name, email, phone_number, loyalty_points, created_at, updated_at,
+                 (password_hash IS NOT NULL) AS has_password`;
+
 const publicCustomer = (row) => ({
   _id: row.id,
   id: row.id,
@@ -299,6 +303,118 @@ export const customerAddresses = async (id, db = getSequelize()) => {
   return rows
     .map((row) => ({ ...row.address, lastUsed: row.last_used }))
     .sort((a, b) => new Date(b.lastUsed) - new Date(a.lastUsed));
+};
+
+/**
+ * Adds a customer from the console.
+ *
+ * The shop was the only door: an account could be created by somebody signing
+ * up on the website and no other way, so a walk-in who wanted an invoice could
+ * not be recorded at all. Most of this business happens in a showroom.
+ *
+ * No password. `customers_has_credential` allows an account with neither a
+ * password nor a Supabase identity to be refused, so one created here gets a
+ * placeholder Supabase id — it can never be signed in to, which is right: the
+ * shop should not be choosing passwords for its customers. If they want a
+ * login they sign up themselves and the email match adopts this record, orders
+ * and all.
+ */
+export const createCustomer = async (input, db = getSequelize()) => {
+  const { fullName, email } = input ?? {};
+
+  if (!fullName || !String(fullName).trim()) throw new CustomerError('A customer needs a name.');
+  if (!email || !String(email).trim()) {
+    throw new CustomerError('A customer needs an email — it is how their record is found again.');
+  }
+
+  const row = await selectOne(
+    db,
+    `INSERT INTO customers (full_name, email, phone_number, supabase_user_id)
+     VALUES (:fullName, :email, :phone, gen_random_uuid())
+     ON CONFLICT (email) DO NOTHING
+     RETURNING ${COLUMNS}`,
+    {
+      fullName: String(fullName).trim(),
+      email: String(email).trim(),
+      phone: input.phoneNumber || null,
+    }
+  );
+
+  if (!row) {
+    throw new CustomerError(
+      `Somebody already has that email. Search for them rather than creating a second record.`
+    );
+  }
+
+  return publicCustomer(row);
+};
+
+/**
+ * Corrects a customer's details.
+ *
+ * A name spelled wrong on an invoice and a phone number that has changed are
+ * the two reasons this exists. The email is editable too, because a typo in the
+ * one field used to find the record again is the worst one to be stuck with.
+ */
+export const updateCustomer = async (id, input, db = getSequelize()) => {
+  if (!isValidId(String(id ?? ''))) throw new CustomerError('Customer not found.', 404);
+
+  const row = await selectOne(
+    db,
+    `UPDATE customers SET
+       full_name = COALESCE(:fullName, full_name),
+       email = COALESCE(:email, email),
+       phone_number = CASE WHEN :phoneGiven THEN :phone ELSE phone_number END
+     WHERE id = :id
+     RETURNING ${COLUMNS}`,
+    {
+      id,
+      fullName: input.fullName ?? null,
+      email: input.email ?? null,
+      phoneGiven: input.phoneNumber !== undefined,
+      phone: input.phoneNumber ?? null,
+    }
+  ).catch((error) => {
+    if (error?.original?.constraint === 'customers_email_key') {
+      throw new CustomerError('Somebody else already has that email.');
+    }
+    throw error;
+  });
+
+  if (!row) throw new CustomerError('Customer not found.', 404);
+  return publicCustomer(row);
+};
+
+/**
+ * Removes a customer.
+ *
+ * Only one who has never ordered. `orders.customer_id` is ON DELETE SET NULL,
+ * so deleting somebody with a history would quietly strip their name off every
+ * order they ever placed — the revenue would stay and the buyer would vanish,
+ * which is worse than keeping a record nobody wants.
+ */
+export const deleteCustomer = async (id, db = getSequelize()) => {
+  if (!isValidId(String(id ?? ''))) throw new CustomerError('Customer not found.', 404);
+
+  const history = await selectOne(
+    db,
+    `SELECT count(*)::int AS orders FROM orders WHERE customer_id = :id`,
+    { id }
+  );
+
+  if (history.orders > 0) {
+    throw new CustomerError(
+      `They have ${history.orders} order${history.orders === 1 ? '' : 's'}. ` +
+        'Deleting them would take their name off every one of them.'
+    );
+  }
+
+  const [, result] = await db.query('DELETE FROM customers WHERE id = :id', {
+    replacements: { id },
+  });
+
+  if ((result?.rowCount ?? 0) === 0) throw new CustomerError('Customer not found.', 404);
+  return { deleted: true };
 };
 
 /**

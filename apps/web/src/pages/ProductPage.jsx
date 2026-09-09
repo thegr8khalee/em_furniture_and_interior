@@ -827,9 +827,9 @@ const ProductPage = () => {
                 </div>
                 <div className="text-sm text-neutral/60">
                   {item.isPromo && item.discountedPrice !== undefined
-                    ? `NGN ${Number(item.discountedPrice).toLocaleString('en-NG')}`
+                    ? `₦${Number(item.discountedPrice).toLocaleString('en-NG')}`
                     : item.price !== undefined
-                    ? `NGN ${Number(item.price).toLocaleString('en-NG')}`
+                    ? `₦${Number(item.price).toLocaleString('en-NG')}`
                     : 'Price on request'}
                 </div>
               </motion.button>

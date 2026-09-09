@@ -2,9 +2,15 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProjectsStore } from '@em/domain';
-import { Loader2, Briefcase, Search, Plus, LayoutGrid, List } from 'lucide-react';
+import { Briefcase, Search, Plus, LayoutGrid, List } from 'lucide-react';
 import AdminProjectListCard from './ProjectList';
-import { Button, EmptyState, Pagination } from '@em/ui';
+import {
+  Button,
+  EmptyState,
+  ListItemSkeleton,
+  Pagination,
+  ProductCardSkeleton,
+} from '@em/ui';
 
 const CATEGORIES = ['All', 'Residential', 'Commercial', 'Hospitality', 'Renovation'];
 
@@ -127,15 +133,32 @@ const ProjectManagement = () => {
 
       {/* Loading */}
       {loading && projects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <Loader2 className="mb-3 animate-spin text-secondary" size={32} />
-          <span className="text-sm text-neutral/50">Loading projects...</span>
+        <div
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+              : 'space-y-3'
+          }
+          aria-busy="true"
+          aria-label="Loading projects..."
+        >
+          {Array.from({ length: viewMode === 'grid' ? 8 : 5 }).map((_, index) =>
+            viewMode === 'grid' ? (
+              <ProductCardSkeleton key={index} />
+            ) : (
+              <ListItemSkeleton key={index} />
+            )
+          )}
         </div>
       ) : filteredProjects.length === 0 ? (
         <EmptyState
           icon={Briefcase}
-          title="No projects found"
-          description={searchTerm || categoryFilter !== 'All' ? 'Try adjusting your search or filters.' : 'Create your first project to showcase your work.'}
+          title={searchTerm || categoryFilter !== 'All' ? 'Nothing matched' : 'No projects yet'}
+          description={
+            searchTerm || categoryFilter !== 'All'
+              ? 'No project matches that search and those filters. Clearing them brings the rest back.'
+              : 'Projects are the finished work the website shows off. Nothing has been published yet.'
+          }
           actionLabel="Add Project"
           onAction={() => navigate('/admin/addproject')}
         />
@@ -151,8 +174,21 @@ const ProjectManagement = () => {
             ))}
           </div>
           {loading && (
-            <div className="flex justify-center py-4">
-              <Loader2 className="animate-spin text-secondary" size={20} />
+            <div
+              className={
+                viewMode === 'grid'
+                  ? 'mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                  : 'mt-3 space-y-3'
+              }
+              aria-busy="true"
+            >
+              {Array.from({ length: viewMode === 'grid' ? 4 : 2 }).map((_, index) =>
+                viewMode === 'grid' ? (
+                  <ProductCardSkeleton key={index} />
+                ) : (
+                  <ListItemSkeleton key={index} />
+                )
+              )}
             </div>
           )}
         </>

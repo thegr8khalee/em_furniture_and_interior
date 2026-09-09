@@ -250,7 +250,11 @@ const SecurityLogs = () => {
                   <SkeletonBlock className="h-64 w-full" />
                 </div>
               ) : auditLogs.length === 0 ? (
-                <EmptyState icon={Shield} title="No audit logs" description="No audit log entries match your filters" />
+                <EmptyState
+                  icon={Shield}
+                  title="Nothing recorded"
+                  description="An audit entry is written whenever an operator changes something. None matches these filters."
+                />
               ) : (
                 <>
                   <div className="overflow-x-auto">
@@ -372,7 +376,11 @@ const SecurityLogs = () => {
                   <SkeletonBlock className="h-64 w-full" />
                 </div>
               ) : activityLogs.length === 0 ? (
-                <EmptyState icon={Activity} title="No activity logs" description="No activity log entries match your filters" />
+                <EmptyState
+                  icon={Activity}
+                  title="Nothing recorded"
+                  description="Activity is what shoppers did — pages, searches, carts. None matches these filters."
+                />
               ) : (
                 <>
                   <div className="overflow-x-auto">

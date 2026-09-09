@@ -263,20 +263,23 @@ const CartPage = () => {
 
     items.forEach((item, index) => {
       const link = getItemLink(item); // Get the specific link for this item
-      message += `${index + 1}. ${item.name} (Qty: ${item.quantity}) - N${
-        item.displayPrice?.toFixed(2) || '0.00'
-      }`;
+      message += `${index + 1}. ${item.name} (Qty: ${item.quantity}) - ₦${Number(
+        item.displayPrice || 0
+      ).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
       if (link) {
         message += `\n   Link: ${link}`; // Add the link on a new line, indented
       }
       message += `\n\n`; // Add an extra newline for better spacing between items
     });
 
-    message += `Subtotal: N${subtotal.toFixed(2)}\n`;
+    const money = (value) =>
+      `₦${Number(value || 0).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
+
+    message += `Subtotal: ${money(subtotal)}\n`;
     if (discount > 0) {
-      message += `Discount (${appliedCoupon?.code}): -N${discount.toFixed(2)}\n`;
+      message += `Discount (${appliedCoupon?.code}): -${money(discount)}\n`;
     }
-    message += `Total Price: N${finalTotal.toFixed(2)}\n`;
+    message += `Total Price: ${money(finalTotal)}\n`;
     message += `\nThank you!`;
 
     return encodeURIComponent(message);

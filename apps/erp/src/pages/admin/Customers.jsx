@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { MapPin, Search, Star, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, UserPlus, Users } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
@@ -13,11 +14,16 @@ import { Badge, Button, EmptyState, Input, Modal, Select, SkeletonBlock } from '
  * before", or "what did they buy last time" — the three questions somebody on
  * the phone is actually asking.
  *
- * Read-only, with one exception. A customer's own details belong to the
- * customer; an operator who could edit a name and an email could quietly become
- * somebody. Loyalty points are the exception, because a goodwill gesture is an
- * operator's decision — and it is recorded as a movement with a reason rather
- * than as a balance that changed for no stated cause.
+ * This is the list. One person is a page of its own at
+ * `/admin/customers/:id` — a modal could not be linked to, opened twice, or
+ * survive a refresh, which are the three things an operator on a call needs.
+ *
+ * Operators can add a record here. That was deliberately withheld at first — a
+ * customer's details belong to the customer — but the shop takes most of its
+ * orders in a showroom and over WhatsApp, and there was no way to write down who
+ * bought the sofa. A record made here has no password and never can be signed in
+ * to; if that person later signs up themselves, the email matches and they adopt
+ * their own history.
  */
 
 const naira = (value) =>
@@ -42,6 +48,8 @@ const Stat = ({ label, value, hint }) => (
 );
 
 const Customers = () => {
+  const navigate = useNavigate();
+
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState(null);
   const [stats, setStats] = useState(null);
@@ -52,12 +60,7 @@ const Customers = () => {
   const [buyersOnly, setBuyersOnly] = useState(false);
   const [page, setPage] = useState(1);
 
-  const [detail, setDetail] = useState(null);
-  const [addresses, setAddresses] = useState([]);
-  const [loyaltyForm, setLoyaltyForm] = useState(null);
-  // What one customer owes and what it is for. The ageing answers the
-  // owner's question; this answers the customer's.
-  const [statement, setStatement] = useState(null);
+  const [customerForm, setCustomerForm] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -87,71 +90,26 @@ const Customers = () => {
       .catch(() => {});
   }, []);
 
-  const open = async (customer) => {
-    setDetail({ loading: true, customer });
-    setAddresses([]);
-
-    try {
-      const [{ data: body }, { data: places }] = await Promise.all([
-        axiosInstance.get(`/customers/${customer._id}`),
-        axiosInstance.get(`/customers/${customer._id}/addresses`),
-      ]);
-      setDetail(body);
-      setAddresses(places.addresses);
-    } catch (error) {
-      toast.error(error?.response?.data?.message || 'Could not load that customer');
-      setDetail(null);
-    }
-  };
-
-  const submitLoyalty = async (event) => {
+  const submitCustomer = async (event) => {
     event.preventDefault();
     setIsSaving(true);
 
     try {
-      const { data: body } = await axiosInstance.post(
-        `/customers/${loyaltyForm.customerId}/loyalty`,
-        { points: Number(loyaltyForm.points), reason: loyaltyForm.reason }
-      );
-      toast.success(body.message);
-      setLoyaltyForm(null);
-      load();
-      if (detail?.customer?._id === loyaltyForm.customerId) open(detail.customer);
-    } catch (error) {
-      toast.error(error?.response?.data?.message || 'Could not adjust that balance');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const openStatement = async (customer) => {
-    setStatement({ loading: true, customer });
-
-    try {
-      const { data } = await axiosInstance.get(`/statements/customers/${customer._id}`);
-      setStatement(data.statement);
-    } catch (error) {
-      toast.error(error?.response?.data?.message || 'Could not build that statement');
-      setStatement(null);
-    }
-  };
-
-  const downloadStatement = async (customerId, name) => {
-    try {
-      const { data } = await axiosInstance.get(`/statements/customers/${customerId}.csv`, {
-        responseType: 'blob',
+      const { data: created } = await axiosInstance.post('/customers', {
+        fullName: customerForm.fullName.trim(),
+        email: customerForm.email.trim(),
+        phoneNumber: customerForm.phoneNumber.trim() || null,
       });
 
-      const url = window.URL.createObjectURL(new Blob([data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `statement-${name.replace(/\s+/g, '-')}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      toast.success(created.message);
+      setCustomerForm(null);
+      // Straight to their page: somebody who has just been added is somebody
+      // an operator is about to do something with.
+      navigate(`/admin/customers/${created.customer._id}`);
     } catch (error) {
-      toast.error('Could not export that statement');
+      toast.error(error?.response?.data?.message || 'Could not save that customer');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -165,6 +123,14 @@ const Customers = () => {
     <AdminPageShell
       title="Customers"
       subtitle="Everyone with an account, what they have bought, and what they are worth"
+      actions={
+        <Button
+          leftIcon={UserPlus}
+          onClick={() => setCustomerForm({ fullName: '', email: '', phoneNumber: '' })}
+        >
+          Add customer
+        </Button>
+      }
     >
       {stats && (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -179,7 +145,10 @@ const Customers = () => {
         </div>
       )}
 
-      <form onSubmit={runSearch} className="flex flex-wrap items-end gap-4 border border-base-300 bg-white p-5">
+      <form
+        onSubmit={runSearch}
+        className="flex flex-wrap items-end gap-4 border border-base-300 bg-white p-5"
+      >
         <Input
           label="Search"
           icon={Search}
@@ -252,7 +221,7 @@ const Customers = () => {
                   <tr
                     key={customer._id}
                     className="hover cursor-pointer"
-                    onClick={() => open(customer)}
+                    onClick={() => navigate(`/admin/customers/${customer._id}`)}
                   >
                     <td>
                       <span className="font-medium">{customer.username}</span>
@@ -308,300 +277,51 @@ const Customers = () => {
         </div>
       )}
 
-      {/* One person, and everything the business knows about them — which is
-          what an operator wants while they still have them on the phone. */}
+      {/* No password field: a record made here can never be signed in to, which
+          is why the shop is not choosing passwords for its customers. */}
       <Modal
-        isOpen={Boolean(detail)}
-        onClose={() => setDetail(null)}
-        title={detail?.customer?.username || 'Loading…'}
-        className="max-w-4xl"
+        isOpen={Boolean(customerForm)}
+        onClose={() => setCustomerForm(null)}
+        title="Add a customer"
       >
-        {detail?.loading ? (
-          <SkeletonBlock className="h-64 w-full" />
-        ) : detail ? (
-          <div className="max-h-[70vh] space-y-6 overflow-y-auto pr-1">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="text-sm text-neutral/60">
-                <p>{detail.customer.email}</p>
-                {detail.customer.phoneNumber && <p>{detail.customer.phoneNumber}</p>}
-                <p className="mt-1 text-xs">
-                  Joined {day(detail.customer.createdAt)} · signs in with{' '}
-                  {detail.customer.signsInWith}
-                </p>
-              </div>
-              <div className="flex gap-6 text-right">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-neutral/40">Spent</p>
-                  <p className="font-mono text-lg font-semibold">
-                    {naira(detail.customer.totalSpent)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-neutral/40">Points</p>
-                  <p className="font-mono text-lg font-semibold">
-                    {detail.customer.loyaltyPoints}
-                  </p>
-                  <Button variant="ghost" onClick={() => openStatement(detail.customer)}>
-                    Statement
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() =>
-                      setLoyaltyForm({
-                        customerId: detail.customer._id,
-                        name: detail.customer.username,
-                        points: '',
-                        reason: '',
-                      })
-                    }
-                  >
-                    Adjust
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <section>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">
-                Orders ({detail.orders.length})
-              </h3>
-              {detail.orders.length === 0 ? (
-                <p className="text-sm text-neutral/40">Nothing bought yet.</p>
-              ) : (
-                <table className="table table-sm w-full">
-                  <tbody>
-                    {detail.orders.map((order) => (
-                      <tr key={order._id}>
-                        <td className="font-mono text-xs">{order.orderNumber}</td>
-                        <td className="whitespace-nowrap text-sm">{day(order.createdAt)}</td>
-                        <td className="text-sm">
-                          {order.items.map((item) => `${item.quantity} × ${item.name}`).join(', ')}
-                        </td>
-                        <td>
-                          <Badge status={order.status} />
-                        </td>
-                        <td>
-                          <Badge status={order.paymentStatus} />
-                        </td>
-                        <td className="text-right font-mono tabular-nums">
-                          {naira(order.totalAmount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </section>
-
-            {addresses.length > 0 && (
-              <section>
-                <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">
-                  <MapPin size={14} /> Delivered to
-                </h3>
-                <ul className="space-y-1 text-sm text-neutral/70">
-                  {addresses.map((address, index) => (
-                    <li key={index}>
-                      {address.address}, {address.city}, {address.state}
-                      <span className="ml-2 text-xs text-neutral/40">
-                        last used {day(address.lastUsed)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {detail.loyalty.length > 0 && (
-              <section>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">
-                  Loyalty
-                </h3>
-                <table className="table table-sm w-full">
-                  <tbody>
-                    {detail.loyalty.map((movement) => (
-                      <tr key={movement._id}>
-                        <td className="whitespace-nowrap text-sm">{day(movement.createdAt)}</td>
-                        <td className="text-sm">
-                          {movement.description || movement.type}
-                          {/* The description usually names the order already —
-                              printing it again read "ORD-2026-00006ORD-2026-00006". */}
-                          {movement.orderNumber &&
-                            !String(movement.description).includes(movement.orderNumber) && (
-                              <span className="ml-2 font-mono text-xs text-neutral/40">
-                                {movement.orderNumber}
-                              </span>
-                            )}
-                        </td>
-                        <td
-                          className={`text-right font-mono ${
-                            movement.points < 0 ? 'text-error' : 'text-success'
-                          }`}
-                        >
-                          {movement.points > 0 ? '+' : ''}
-                          {movement.points}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </section>
-            )}
-
-            {detail.reviews.length > 0 && (
-              <section>
-                <h3 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">
-                  <Star size={14} /> Reviews
-                </h3>
-                <ul className="space-y-2 text-sm">
-                  {detail.reviews.map((review) => (
-                    <li key={review._id} className="border-l-2 border-base-300 pl-3">
-                      <span className="font-medium">{review.item}</span> · {review.rating}/5
-                      {!review.isApproved && (
-                        <Badge variant="warning" className="ml-2">
-                          awaiting approval
-                        </Badge>
-                      )}
-                      {review.comment && (
-                        <p className="text-neutral/60">{review.comment}</p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {detail.consultations.length > 0 && (
-              <section>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-neutral/50">
-                  Consultations
-                </h3>
-                <ul className="space-y-1 text-sm text-neutral/70">
-                  {detail.consultations.map((consultation) => (
-                    <li key={consultation._id}>
-                      {day(consultation.createdAt)} · <Badge status={consultation.status} />
-                      {consultation.budget.max > 0 && (
-                        <span className="ml-2 text-xs text-neutral/40">
-                          budget {naira(consultation.budget.min)}–{naira(consultation.budget.max)}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-          </div>
-        ) : null}
-      </Modal>
-
-      <Modal
-        isOpen={Boolean(loyaltyForm)}
-        onClose={() => setLoyaltyForm(null)}
-        title={loyaltyForm ? `Adjust points: ${loyaltyForm.name}` : ''}
-        className="max-w-lg"
-      >
-        {loyaltyForm && (
-          <form onSubmit={submitLoyalty} className="space-y-4">
-            <p className="text-sm text-neutral/60">
-              Positive adds, negative takes away. This is recorded as a movement with the reason
-              you give — a balance nobody can explain is worse than a wrong one.
-            </p>
-
+        {customerForm && (
+          <form onSubmit={submitCustomer} className="space-y-4">
             <Input
-              label="Points"
-              type="number"
-              step="1"
+              label="Full name"
+              value={customerForm.fullName}
+              onChange={(event) =>
+                setCustomerForm((form) => ({ ...form, fullName: event.target.value }))
+              }
               required
-              value={loyaltyForm.points}
-              onChange={(event) => setLoyaltyForm({ ...loyaltyForm, points: event.target.value })}
             />
             <Input
-              label="Reason"
+              label="Email"
+              type="email"
+              value={customerForm.email}
+              onChange={(event) =>
+                setCustomerForm((form) => ({ ...form, email: event.target.value }))
+              }
+              hint="How their record is found again — and how they claim it if they sign up."
               required
-              placeholder="Goodwill after a late delivery"
-              value={loyaltyForm.reason}
-              onChange={(event) => setLoyaltyForm({ ...loyaltyForm, reason: event.target.value })}
             />
-
+            <Input
+              label="Phone"
+              value={customerForm.phoneNumber}
+              onChange={(event) =>
+                setCustomerForm((form) => ({ ...form, phoneNumber: event.target.value }))
+              }
+            />
             <div className="flex justify-end gap-2">
-              <Button variant="ghost" type="button" onClick={() => setLoyaltyForm(null)}>
+              <Button variant="ghost" type="button" onClick={() => setCustomerForm(null)}>
                 Cancel
               </Button>
-              <Button variant="primary" type="submit" disabled={isSaving}>
-                Save
+              <Button type="submit" isLoading={isSaving}>
+                Add customer
               </Button>
             </div>
           </form>
         )}
       </Modal>
-      {/* What they owe, and what it is for. */}
-      <Modal
-        isOpen={Boolean(statement)}
-        onClose={() => setStatement(null)}
-        title={statement?.customer ? `Statement · ${statement.customer.name}` : 'Statement'}
-        className="max-w-3xl"
-      >
-        {statement?.loading ? (
-          <SkeletonBlock className="h-64 w-full" />
-        ) : statement ? (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <p className="text-sm text-neutral/60">
-                {statement.from} to {statement.to}
-              </p>
-              <Button
-                variant="ghost"
-                onClick={() => downloadStatement(statement.customer._id, statement.customer.name)}
-              >
-                Export
-              </Button>
-            </div>
-
-            <div className="max-h-[50vh] overflow-y-auto">
-              <table className="table table-sm table-pin-rows w-full">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Reference</th>
-                    <th>Type</th>
-                    <th className="text-right">Charged</th>
-                    <th className="text-right">Paid</th>
-                    <th className="text-right">Balance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="text-neutral/60">
-                    <td colSpan={5}>Balance brought forward</td>
-                    <td className="text-right font-mono tabular-nums">
-                      {naira(statement.openingBalance)}
-                    </td>
-                  </tr>
-                  {statement.lines.map((line, index) => (
-                    <tr key={index}>
-                      <td className="whitespace-nowrap">{line.date}</td>
-                      <td className="font-mono text-xs">{line.reference}</td>
-                      <td className="text-sm text-neutral/60">{line.kind}</td>
-                      <td className="text-right font-mono tabular-nums">
-                        {Number(line.charged) ? naira(line.charged) : ''}
-                      </td>
-                      <td className="text-right font-mono tabular-nums">
-                        {Number(line.paid) ? naira(line.paid) : ''}
-                      </td>
-                      <td className="text-right font-mono tabular-nums">{naira(line.balance)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* The only number most people read. */}
-            <div className="flex items-center justify-between border-t-2 border-neutral pt-3">
-              <span className="font-heading text-lg font-bold text-neutral">Amount due</span>
-              <span className="font-mono text-xl font-bold">{naira(statement.amountDue)}</span>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
-
     </AdminPageShell>
   );
 };

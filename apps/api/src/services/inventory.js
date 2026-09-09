@@ -56,6 +56,33 @@ const publicStock = (row) => ({
 });
 
 /**
+ * The stock position of one product.
+ *
+ * The list could be searched but not addressed, so a product's own page had to
+ * either re-run the search and hope one row came back, or go without the
+ * figures that make it worth opening — what is on hand, what is held for
+ * confirmed orders, what it cost.
+ */
+export const stockFor = async (productId, db = getSequelize()) => {
+  if (!isValidId(String(productId ?? ''))) throw new InventoryError('Product not found.', 404);
+
+  const row = await selectOne(
+    db,
+    `SELECT av.product_id, s.name, p.sku, av.on_hand, av.reserved, av.available,
+            av.low_stock_threshold, s.cost_price, p.warehouse_location, s.updated_at,
+            av.is_low
+       FROM product_availability av
+       JOIN products p ON p.id = av.product_id
+       JOIN sellable_items s ON s.id = p.id
+      WHERE av.product_id = :productId`,
+    { productId }
+  );
+
+  if (!row) throw new InventoryError('Product not found.', 404);
+  return publicStock(row);
+};
+
+/**
  * What is in the warehouse, and what is sellable.
  *
  * `stockQuantity` publishes the *available* figure — on hand less what is held

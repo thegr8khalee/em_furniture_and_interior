@@ -5,6 +5,7 @@ import {
   getOrderById,
   getOrderByNumber,
   getAllOrders,
+  getOneOrder,
   updateOrderStatus,
   updatePaymentStatus,
   deleteOrder,
@@ -12,6 +13,7 @@ import {
   generateReceipt,
   generateQuotation,
   getOrderRefunds,
+  postOfflineSale,
   postOrderPayment,
   postOrderRefund,
 } from '../controllers/order.controller.js';
@@ -43,6 +45,28 @@ router.get(
   protectAdminRoute,
   requirePermissions([PERMISSIONS.ORDERS_VIEW]),
   getAllOrders
+);
+
+// A sale that did not come through the website — the showroom, the phone, a
+// WhatsApp thread. It goes through the same service the checkout does, so it is
+// numbered, posted and stocked identically; the one difference is that the
+// operator's agreed price wins over the list price, which is why this needs
+// ORDERS_MANAGE and the checkout does not.
+router.post(
+  '/admin/sales',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.ORDERS_MANAGE]),
+  createAuditLog('CREATE', 'offline_sale'),
+  postOfflineSale
+);
+
+// One order in full, status history included. Registered after /admin/all so
+// the literal path is matched before the parameter can swallow it.
+router.get(
+  '/admin/:orderId',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.ORDERS_VIEW]),
+  getOneOrder
 );
 
 router.put(

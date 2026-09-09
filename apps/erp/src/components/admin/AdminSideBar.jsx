@@ -16,7 +16,7 @@ import {
   Megaphone,
   Star,
   BarChart3,
-  DollarSign,
+  Banknote,
   Shield,
   MessageSquare,
   LogOut,
@@ -29,6 +29,7 @@ import {
   Wallet,
   Scale,
   MapPin,
+  Mail,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -43,16 +44,16 @@ const navGroups = [
   {
     label: 'Catalog',
     items: [
-      { to: '/admin/dashboard', section: 'products', label: 'Products', icon: Package, permission: PERMISSIONS.PRODUCTS_MANAGE },
-      { to: '/admin/dashboard', section: 'collections', label: 'Collections', icon: FolderOpen, permission: PERMISSIONS.COLLECTIONS_MANAGE },
-      { to: '/admin/dashboard', section: 'projects', label: 'Projects', icon: Briefcase, permission: PERMISSIONS.PROJECTS_MANAGE },
+      { to: '/admin/products', label: 'Products', icon: Package, permission: PERMISSIONS.PRODUCTS_MANAGE },
+      { to: '/admin/collections', label: 'Collections', icon: FolderOpen, permission: PERMISSIONS.COLLECTIONS_MANAGE },
+      { to: '/admin/projects', label: 'Projects', icon: Briefcase, permission: PERMISSIONS.PROJECTS_MANAGE },
     ],
   },
   {
     label: 'Content',
     items: [
-      { to: '/admin/dashboard', section: 'blog', label: 'Blog', icon: FileText, permission: PERMISSIONS.BLOG_MANAGE },
-      { to: '/admin/dashboard', section: 'faqs', label: 'FAQs', icon: HelpCircle, permission: PERMISSIONS.FAQ_MANAGE },
+      { to: '/admin/blog', label: 'Blog', icon: FileText, permission: PERMISSIONS.BLOG_MANAGE },
+      { to: '/admin/faqs', label: 'FAQs', icon: HelpCircle, permission: PERMISSIONS.FAQ_MANAGE },
       { to: '/admin/designers', label: 'Designers', icon: Palette, permission: PERMISSIONS.DESIGNERS_MANAGE },
     ],
   },
@@ -60,6 +61,9 @@ const navGroups = [
     label: 'Sales',
     items: [
       { to: '/admin/orders', label: 'Orders', icon: ShoppingCart, permission: PERMISSIONS.ORDERS_VIEW },
+      // Most of this shop's revenue is sold in a showroom, and until this screen
+      // there was no way to write any of it down.
+      { to: '/admin/sales/new', label: 'Record a sale', icon: Receipt, permission: PERMISSIONS.ORDERS_MANAGE },
       { to: '/admin/coupons', label: 'Coupons', icon: Ticket, permission: PERMISSIONS.MARKETING_MANAGE },
       { to: '/admin/inventory', label: 'Inventory', icon: Warehouse, permission: PERMISSIONS.INVENTORY_MANAGE },
       { to: '/admin/warehouse', label: 'Warehouse', icon: MapPin, permission: PERMISSIONS.INVENTORY_MANAGE },
@@ -79,8 +83,10 @@ const navGroups = [
     items: [
       { to: '/admin/analytics', label: 'Analytics', icon: BarChart3, permission: PERMISSIONS.ADMIN_DASHBOARD_VIEW },
       { to: '/admin/books', label: 'Books', icon: BookOpen, permission: PERMISSIONS.FINANCE_VIEW },
+      // Who has to be chased today, which the ageing report does not answer.
+      { to: '/admin/statements', label: 'Statements', icon: Mail, permission: PERMISSIONS.FINANCE_VIEW },
       { to: '/admin/reconciliation', label: 'Bank reconciliation', icon: Scale, permission: PERMISSIONS.FINANCE_VIEW },
-      { to: '/admin/finance', label: 'Sales revenue', icon: DollarSign, permission: PERMISSIONS.FINANCE_VIEW },
+      { to: '/admin/finance', label: 'Sales revenue', icon: Banknote, permission: PERMISSIONS.FINANCE_VIEW },
       { to: '/admin/security-logs', label: 'Security Logs', icon: Shield, permission: PERMISSIONS.ADMIN_DASHBOARD_VIEW },
     ],
   },

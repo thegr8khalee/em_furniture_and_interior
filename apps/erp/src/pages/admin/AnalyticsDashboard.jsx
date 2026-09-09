@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, ShoppingCart, Users, Calendar, DollarSign, Package, Award, Target, BarChart3 } from 'lucide-react';
+import { TrendingUp, ShoppingCart, Users, Calendar, Banknote, Package, Award, Target, BarChart3 } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
@@ -80,12 +80,10 @@ const AnalyticsDashboard = () => {
     }
   };
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value || 0);
-  };
+  // Naira, like the rest of the system. This was formatting every figure on
+  // the page as US currency, so the shop's revenue read as dollars.
+  const formatCurrency = (value) =>
+    `₦${Number(value || 0).toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;
 
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', {
@@ -118,7 +116,7 @@ const AnalyticsDashboard = () => {
         <div className="flex border-b border-base-300 mb-6 overflow-x-auto">
           {[
             { id: 'overview', label: 'Overview', icon: TrendingUp },
-            { id: 'sales', label: 'Sales Analysis', icon: DollarSign },
+            { id: 'sales', label: 'Sales Analysis', icon: Banknote },
             { id: 'products', label: 'Product Performance', icon: Package },
             { id: 'designers', label: 'Designer Performance', icon: Award },
             { id: 'customers', label: 'Customer Analytics', icon: Users },
@@ -160,7 +158,7 @@ const AnalyticsDashboard = () => {
                         </p>
                       </div>
                       <div className="bg-green-100 rounded-full p-3">
-                        <DollarSign className="w-6 h-6 text-green-600" />
+                        <Banknote className="w-6 h-6 text-green-600" />
                       </div>
                     </div>
                   </div>
@@ -225,7 +223,11 @@ const AnalyticsDashboard = () => {
                 <div className="border border-base-300 bg-white p-6">
                   <h3 className="text-lg font-heading font-semibold text-neutral mb-4">Sales by Category</h3>
                   {salesByCategory.length === 0 ? (
-                    <EmptyState icon={BarChart3} title="No category data" description="No sales data available for the selected period" />
+                    <EmptyState
+                      icon={BarChart3}
+                      title="Nothing sold in this window"
+                      description="No order in these dates has anything to break down by category. Try a wider range."
+                    />
                   ) : (
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-base-300">
@@ -256,7 +258,11 @@ const AnalyticsDashboard = () => {
                 <div className="border border-base-300 bg-white p-6">
                   <h3 className="text-lg font-heading font-semibold text-neutral mb-4">Sales by Region (Top 50)</h3>
                   {salesByRegion.length === 0 ? (
-                    <EmptyState icon={BarChart3} title="No region data" description="No regional sales data available for the selected period" />
+                    <EmptyState
+                      icon={BarChart3}
+                      title="Nowhere to plot"
+                      description="Regions come from delivery addresses, and no order in these dates has one. Try a wider range."
+                    />
                   ) : (
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-base-300">
@@ -290,7 +296,11 @@ const AnalyticsDashboard = () => {
               <div className="border border-base-300 bg-white p-6">
                 <h3 className="text-lg font-heading font-semibold text-neutral mb-4">Top 20 Products</h3>
                 {productPerformance.length === 0 ? (
-                  <EmptyState icon={Package} title="No product data" description="No product performance data available for the selected period" />
+                  <EmptyState
+                    icon={Package}
+                    title="Nothing sold in this window"
+                    description="No product moved between these dates, so there is nothing to rank."
+                  />
                 ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-base-300">
@@ -325,7 +335,11 @@ const AnalyticsDashboard = () => {
               <div className="border border-base-300 bg-white p-6">
                 <h3 className="text-lg font-heading font-semibold text-neutral mb-4">Designer Performance</h3>
                 {designerPerformance.length === 0 ? (
-                  <EmptyState icon={Award} title="No designer data" description="No designer performance data available" />
+                  <EmptyState
+                    icon={Award}
+                    title="No designer work yet"
+                    description="This ranks designers by the consultations and projects credited to them. Nothing has been credited so far."
+                  />
                 ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-base-300">
@@ -362,7 +376,13 @@ const AnalyticsDashboard = () => {
               <div className="border border-base-300 bg-white p-6">
                 <h3 className="text-lg font-heading font-semibold text-neutral mb-4">Top 50 Customers by Lifetime Value</h3>
                 {customerLTV.length === 0 ? (
-                  <EmptyState icon={Users} title="No customer data" description="No customer lifetime value data available" />
+                  <EmptyState
+                    icon={Users}
+                    title="Nobody has bought yet"
+                    description="Lifetime value is built from orders against an account. Guest checkouts do not count towards it."
+                    actionLabel="Open the customer book"
+                    actionTo="/admin/customers"
+                  />
                 ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-base-300">

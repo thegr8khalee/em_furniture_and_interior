@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
@@ -31,6 +32,7 @@ const ROLE_COLOURS = {
 const readable = (value) => String(value).replace(/[._]/g, ' ');
 
 const Staff = () => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [staff, setStaff] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -152,7 +154,13 @@ const Staff = () => {
           ))}
         </div>
       ) : staff.length === 0 ? (
-        <EmptyState icon={ShieldCheck} title="No operators" description="That should not happen." />
+        <EmptyState
+          icon={ShieldCheck}
+          title="No operators"
+          description="Somebody is signed in reading this, so there is at least one account — which means this list failed to load rather than being genuinely empty."
+          actionLabel="Try again"
+          onAction={load}
+        />
       ) : (
         <div className="border border-base-300 bg-white">
           <div className="overflow-x-auto">
@@ -174,7 +182,11 @@ const Staff = () => {
                   const isMe = me?._id === operator._id;
 
                   return (
-                    <tr key={operator._id} className={operator.isActive ? 'hover' : 'opacity-60'}>
+                    <tr
+                      key={operator._id}
+                      className={`cursor-pointer ${operator.isActive ? 'hover' : 'opacity-60'}`}
+                      onClick={() => navigate(`/admin/staff/${operator._id}`)}
+                    >
                       <td>
                         <span className="font-medium">{operator.username}</span>
                         {isMe && <span className="ml-2 text-xs text-neutral/40">you</span>}
@@ -200,7 +212,10 @@ const Staff = () => {
                           {operator.isActive ? 'active' : 'no access'}
                         </Badge>
                       </td>
-                      <td className="text-right">
+                      <td
+                        className="text-right"
+                        onClick={(event) => event.stopPropagation()}
+                      >
                         <div className="flex justify-end gap-1">
                           <Button
                             variant="ghost"

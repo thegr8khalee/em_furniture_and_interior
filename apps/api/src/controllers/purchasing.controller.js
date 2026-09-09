@@ -17,6 +17,8 @@ import {
   receivePurchaseOrder,
   removeVendor,
   sendPurchaseOrder,
+  updateExpense,
+  updatePurchaseOrder,
   updateVendor,
   voidExpense,
 } from '../services/purchasing.js';
@@ -128,6 +130,14 @@ export const postExpense = async (req, res) => {
   }
 };
 
+export const patchExpense = async (req, res) => {
+  try {
+    res.json({ success: true, expense: await updateExpense(req.params.expenseId, req.body) });
+  } catch (error) {
+    fail(error, res, 'Error correcting an expense');
+  }
+};
+
 export const postExpenseApproval = async (req, res) => {
   try {
     const expense = await approveExpense(req.params.expenseId, req.admin?.id ?? null);
@@ -202,6 +212,15 @@ export const postPurchaseOrder = async (req, res) => {
     res.status(201).json({ success: true, purchaseOrder });
   } catch (error) {
     fail(error, res, 'Error creating a purchase order');
+  }
+};
+
+export const patchPurchaseOrder = async (req, res) => {
+  try {
+    const purchaseOrder = await updatePurchaseOrder(req.params.orderId, req.body);
+    res.json({ success: true, purchaseOrder });
+  } catch (error) {
+    fail(error, res, 'Error correcting a purchase order');
   }
 };
 

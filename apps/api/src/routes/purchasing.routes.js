@@ -7,6 +7,8 @@ import {
   getPayables,
   getPurchaseOrders,
   getVendors,
+  patchExpense,
+  patchPurchaseOrder,
   patchVendor,
   postExpense,
   postExpenseApproval,
@@ -47,6 +49,11 @@ router.get('/expenses', canRead, getExpenses);
 router.get('/expenses/:expenseId', canRead, getOneExpense);
 router.post('/expenses', canSpend, createAuditLog('CREATE', 'expense'), postExpense);
 
+// Correcting one before it is approved. After approval it has been posted, and
+// the service refuses — a cost that is in the books is changed by voiding it and
+// recording it again, so that the ledger and the document never disagree.
+router.patch('/expenses/:expenseId', canSpend, createAuditLog('UPDATE', 'expense'), patchExpense);
+
 router.post(
   '/expenses/:expenseId/approve',
   canSpend,
@@ -79,6 +86,15 @@ router.post(
   canSpend,
   createAuditLog('CREATE', 'purchase_order'),
   postPurchaseOrder
+);
+
+// Same rule as an expense: draft only. Once it has been sent somebody else is
+// acting on it, and once it has been received it has made stock and a debt.
+router.patch(
+  '/purchase-orders/:orderId',
+  canSpend,
+  createAuditLog('UPDATE', 'purchase_order'),
+  patchPurchaseOrder
 );
 
 router.post(

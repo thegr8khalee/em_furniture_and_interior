@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Search, Tag, Calendar, DollarSign, ShoppingBag, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Tag, Calendar, Banknote, ShoppingBag, Loader2 } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
@@ -208,7 +208,17 @@ const CouponManagement = () => {
       ) : (
         <div className="grid gap-4">
           {filteredCoupons.length === 0 ? (
-            <EmptyState icon={Tag} title="No coupons found" description="Create a new coupon or adjust your filters." />
+            <EmptyState
+              icon={Tag}
+              title={coupons.length === 0 ? 'No coupons yet' : 'Nothing matched'}
+              description={
+                coupons.length === 0
+                  ? 'A coupon is a code a shopper types at checkout for a discount. Nothing is on offer at the moment.'
+                  : 'No coupon matches that search and those filters.'
+              }
+              actionLabel={coupons.length === 0 ? 'Create a coupon' : undefined}
+              onAction={coupons.length === 0 ? openCreateModal : undefined}
+            />
           ) : (
             filteredCoupons.map((coupon) => {
               const status = getCouponStatus(coupon);
@@ -230,7 +240,7 @@ const CouponManagement = () => {
                         
                         <div className="mt-3 flex flex-wrap gap-4 text-sm">
                           <div className="flex items-center gap-2">
-                            <DollarSign size={16} className="text-neutral/60" />
+                            <Banknote size={16} className="text-neutral/60" />
                             <span>
                               {coupon.discountType === 'percentage' 
                                 ? `${coupon.discountValue}% off`

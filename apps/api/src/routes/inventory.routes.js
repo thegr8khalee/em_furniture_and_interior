@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   getInventoryProducts,
+  getOneInventoryProduct,
   adjustInventory,
   getInventoryHistory,
   putCostPrice,
@@ -17,6 +18,14 @@ router.get(
   protectAdminRoute,
   requirePermissions([PERMISSIONS.INVENTORY_MANAGE]),
   getInventoryProducts
+);
+
+// One product's position, so its own page does not have to search for it.
+router.get(
+  '/admin/products/:productId',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.INVENTORY_MANAGE]),
+  getOneInventoryProduct
 );
 
 // Why a count is what it is: the movements the balance is derived from. This

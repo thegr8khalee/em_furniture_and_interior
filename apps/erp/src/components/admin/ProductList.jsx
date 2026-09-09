@@ -15,6 +15,10 @@ const AdminProductListCard = ({ item, viewMode = 'grid' }) => {
 
   const handleEdit = () => navigate(`/admin/products/edit/${item._id}`);
 
+  // The eye used to open a modal summary. The product now has a page of its
+  // own, with the stock movements the modal could never have held.
+  const handleOpen = () => navigate(`/admin/products/${item._id}`);
+
   const handleDelete = () => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       delProduct(item._id).then(() => getProducts(1, 12, {}, false));
@@ -53,7 +57,7 @@ const AdminProductListCard = ({ item, viewMode = 'grid' }) => {
             )}
             {/* Hover overlay */}
             <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/0 opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
-              <button onClick={() => setShowDetail(true)} className="flex h-9 w-9 items-center justify-center bg-white text-primary transition-colors hover:bg-secondary hover:text-white" title="View">
+              <button onClick={handleOpen} className="flex h-9 w-9 items-center justify-center bg-white text-primary transition-colors hover:bg-secondary hover:text-white" title="View">
                 <Eye size={16} />
               </button>
               <button onClick={handleEdit} className="flex h-9 w-9 items-center justify-center bg-white text-primary transition-colors hover:bg-secondary hover:text-white" title="Edit">
@@ -120,7 +124,7 @@ const AdminProductListCard = ({ item, viewMode = 'grid' }) => {
           </span>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => setShowDetail(true)} className="p-2 text-neutral/40 transition-colors hover:text-primary" title="View"><Eye size={16} /></button>
+          <button onClick={handleOpen} className="p-2 text-neutral/40 transition-colors hover:text-primary" title="View"><Eye size={16} /></button>
           <button onClick={handleEdit} className="p-2 text-neutral/40 transition-colors hover:text-secondary" title="Edit"><Pencil size={16} /></button>
           <button onClick={handleDelete} className="p-2 text-neutral/40 transition-colors hover:text-error" title="Delete"><Trash2 size={16} /></button>
         </div>

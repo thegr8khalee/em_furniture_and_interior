@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom'; // NEW: Import useParams
 import { Editor } from '@tinymce/tinymce-react';
 import { Loader2, XCircle, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { SkeletonBlock } from '@em/ui';
 import { useAdminStore, useCollectionStore, useProductsStore } from '@em/domain';
 import AdminPageShell from '../components/admin/AdminPageShell';
 
@@ -240,9 +241,22 @@ const EditCollection = () => {
 
   if (isGettingCollection || isGettingProducts) {
     return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="ml-2 text-lg">Loading collection data...</p>
+      <div className="space-y-6" aria-busy="true" aria-label="Loading collection data...">
+        <SkeletonBlock className="h-8 w-64" />
+        <div className="border border-base-300 bg-white p-6 space-y-4">
+          <SkeletonBlock className="h-11 w-full" />
+          <SkeletonBlock className="h-11 w-full" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SkeletonBlock className="h-11 w-full" />
+            <SkeletonBlock className="h-11 w-full" />
+          </div>
+          <SkeletonBlock className="h-40 w-full" />
+        </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {[1, 2, 3, 4].map((index) => (
+            <SkeletonBlock key={index} className="h-32 w-full" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -412,9 +426,10 @@ const EditCollection = () => {
                   </div>
                 </div>
                 {isGettingProducts ? (
-                  <div className="p-4 text-center">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
-                    <p>Loading products...</p>
+                  <div className="space-y-2 p-4" aria-busy="true" aria-label="Loading products...">
+                    {[1, 2, 3].map((index) => (
+                      <SkeletonBlock key={index} className="h-5 w-full" />
+                    ))}
                   </div>
                 ) : filteredProducts.length > 0 ? (
                   <ul className="menu p-0">

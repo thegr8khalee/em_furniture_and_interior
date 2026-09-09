@@ -4,6 +4,7 @@ import {
   adjustStock,
   listStock,
   movementsFor,
+  stockFor,
   setCostPrice,
 } from '../services/inventory.js';
 
@@ -74,6 +75,14 @@ export const putCostPrice = async (req, res) => {
 };
 
 /** Why the count is what it is. */
+export const getOneInventoryProduct = async (req, res) => {
+  try {
+    res.json({ success: true, product: await stockFor(req.params.productId) });
+  } catch (error) {
+    fail(error, res, 'Error loading a stock position');
+  }
+};
+
 export const getInventoryHistory = async (req, res) => {
   try {
     res.json({ success: true, movements: await movementsFor(req.params.productId) });

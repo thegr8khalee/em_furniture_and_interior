@@ -10,7 +10,7 @@ const formatPrice = (value) => {
   if (value === undefined || value === null || Number.isNaN(Number(value))) {
     return '-';
   }
-  return `NGN ${Number(value).toLocaleString('en-NG', {
+  return `₦${Number(value).toLocaleString('en-NG', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

@@ -6,6 +6,7 @@ import { sendEmail } from '../services/gmail.service.js';
 import { logger } from '../lib/logger.js';
 import { RefundError, listRefunds, refundOrder } from '../services/refunds.js';
 import { recordPayment } from '../services/orders.js';
+import { recordOfflineSale } from '../services/offlineSales.js';
 import {
   OrderError,
   deleteOrder as deleteOrderRow,
@@ -143,6 +144,24 @@ export const getOrderById = async (req, res) => {
     res.json({ success: true, order: await getOrderForOwner(owner, req.params.orderId) });
   } catch (error) {
     fail(error, res, 'getOrderById');
+  }
+};
+
+/**
+ * One order, for the console.
+ *
+ * The only way to read a single order was the shopper's route, which is
+ * ownership-checked — so an operator opening one had to be handed it by the
+ * list, and a bookmarked order could not be loaded at all. This is the same
+ * service the shopper's route uses, without the ownership test and with the
+ * status history attached, which is the part an operator actually wants: who
+ * changed what, when, and what note they left.
+ */
+export const getOneOrder = async (req, res) => {
+  try {
+    res.json({ success: true, order: await getOrder(req.params.orderId) });
+  } catch (error) {
+    fail(error, res, 'getOneOrder');
   }
 };
 
@@ -390,5 +409,30 @@ export const postOrderPayment = async (req, res) => {
     }
     logger.error({ err: error }, 'Error recording a payment');
     return res.status(500).json({ message: 'Server error' });
+  }
+};
+
+/**
+ * A sale made in the showroom, over the phone, or on WhatsApp.
+ *
+ * The only route that could create an order was the storefront checkout, which
+ * needs a cart and prices out of the catalog — so the sales that make up most
+ * of this shop's revenue had nowhere to go. This is the counter: pick the
+ * items, put in the price that was actually agreed, say who bought it, and take
+ * the money if it has been handed over.
+ */
+export const postOfflineSale = async (req, res) => {
+  try {
+    const result = await recordOfflineSale(req.body, req.admin?.id ?? null);
+
+    res.status(201).json({
+      success: true,
+      ...result,
+      message:
+        `${result.order.orderNumber} recorded` +
+        (result.outstanding > 0 ? `, ${naira(result.outstanding)} outstanding.` : ' and paid.'),
+    });
+  } catch (error) {
+    fail(error, res, 'recording a counter sale');
   }
 };

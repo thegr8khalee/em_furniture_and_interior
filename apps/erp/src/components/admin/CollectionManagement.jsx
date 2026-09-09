@@ -2,9 +2,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useCollectionStore } from '@em/domain';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, FolderOpen, Search, Plus, LayoutGrid, List } from 'lucide-react';
+import { FolderOpen, Search, Plus, LayoutGrid, List } from 'lucide-react';
 import AdminCollectionListCard from './CollectionList';
-import { Button, EmptyState, Pagination } from '@em/ui';
+import {
+  Button,
+  EmptyState,
+  ListItemSkeleton,
+  Pagination,
+  ProductCardSkeleton,
+} from '@em/ui';
 
 const STYLES = ['All', 'Modern', 'Contemporary', 'Antique/Royal', 'Bespoke', 'Minimalist', 'Glam'];
 
@@ -129,15 +135,32 @@ const CollectionManagement = () => {
 
       {/* Loading */}
       {isGettingCollections && collections.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <Loader2 className="mb-3 animate-spin text-secondary" size={32} />
-          <span className="text-sm text-neutral/50">Loading collections...</span>
+        <div
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+              : 'space-y-3'
+          }
+          aria-busy="true"
+          aria-label="Loading collections..."
+        >
+          {Array.from({ length: viewMode === 'grid' ? 8 : 5 }).map((_, index) =>
+            viewMode === 'grid' ? (
+              <ProductCardSkeleton key={index} />
+            ) : (
+              <ListItemSkeleton key={index} />
+            )
+          )}
         </div>
       ) : collections.length === 0 ? (
         <EmptyState
           icon={FolderOpen}
-          title="No collections found"
-          description={searchTerm || styleFilter !== 'All' ? 'Try adjusting your search or filters.' : 'Create your first collection to organize products.'}
+          title={searchTerm || styleFilter !== 'All' ? 'Nothing matched' : 'No collections yet'}
+          description={
+            searchTerm || styleFilter !== 'All'
+              ? 'No collection matches that search and those filters. Clearing them brings the rest back.'
+              : 'A collection is a set sold together — a living room, a bedroom — priced as one thing rather than as its parts.'
+          }
           actionLabel="Add Collection"
           onAction={() => navigate('/admin/collections/new')}
         />
@@ -153,8 +176,21 @@ const CollectionManagement = () => {
             ))}
           </div>
           {isGettingCollections && (
-            <div className="flex justify-center py-4">
-              <Loader2 className="animate-spin text-secondary" size={20} />
+            <div
+              className={
+                viewMode === 'grid'
+                  ? 'mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+                  : 'mt-3 space-y-3'
+              }
+              aria-busy="true"
+            >
+              {Array.from({ length: viewMode === 'grid' ? 4 : 2 }).map((_, index) =>
+                viewMode === 'grid' ? (
+                  <ProductCardSkeleton key={index} />
+                ) : (
+                  <ListItemSkeleton key={index} />
+                )
+              )}
             </div>
           )}
         </>

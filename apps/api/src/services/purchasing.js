@@ -374,6 +374,93 @@ export const createExpense = async (input, recordedBy = null, db = getSequelize(
 };
 
 /**
+ * Corrects a draft expense.
+ *
+ * Only a draft. Once an expense is approved it has been posted, and the way to
+ * change something that is in the books is a journal entry that says so, not an
+ * UPDATE that quietly makes the ledger disagree with the document it came from.
+ * A wrong approved expense is voided and recorded again.
+ *
+ * Everything is optional, and an omitted field is left alone — an operator
+ * fixing a typo in a description should not have to resend the amount and risk
+ * changing it.
+ */
+export const updateExpense = async (id, input, db = getSequelize()) => {
+  if (!isValidId(String(id ?? ''))) throw new PurchasingError('Expense not found.', 404);
+  if (input.vendorId && !isValidId(String(input.vendorId))) {
+    throw new PurchasingError('Vendor not found.');
+  }
+
+  await db.transaction(async (transaction) => {
+    const opts = { transaction };
+
+    const before = await selectOne(
+      db,
+      `SELECT id, status, net_amount, tax_amount, account_id
+         FROM expenses WHERE id = :id FOR UPDATE`,
+      { id },
+      opts
+    );
+
+    if (!before) throw new PurchasingError('Expense not found.', 404);
+    if (before.status !== 'draft') {
+      throw new PurchasingError(
+        `This expense is ${before.status}, so it is already in the books. ` +
+          'Void it and record it again rather than editing it.'
+      );
+    }
+
+    const accountId = input.accountCode
+      ? (await accountByCode(db, input.accountCode, opts)).id
+      : before.account_id;
+
+    const net =
+      input.netAmount === undefined ? Number(before.net_amount) : amount(input.netAmount, 'Amount');
+    const tax =
+      input.taxAmount === undefined ? Number(before.tax_amount) : amount(input.taxAmount, 'Tax');
+
+    await db.query(
+      `UPDATE expenses SET
+         account_id   = :accountId,
+         vendor_id    = CASE WHEN :vendorGiven THEN :vendorId ELSE vendor_id END,
+         description  = COALESCE(:description, description),
+         expense_date = COALESCE(:date::date, expense_date),
+         net_amount   = :net,
+         tax_amount   = :tax,
+         total_amount = :total,
+         notes        = CASE WHEN :notesGiven THEN :notes ELSE notes END,
+         receipt_url  = CASE WHEN :receiptGiven THEN :receiptUrl ELSE receipt_url END
+       WHERE id = :id`,
+      {
+        replacements: {
+          id,
+          accountId,
+          vendorGiven: input.vendorId !== undefined,
+          vendorId: input.vendorId || null,
+          description: orNull(input.description),
+          date: orNull(input.date),
+          net,
+          tax,
+          total: net + tax,
+          notesGiven: input.notes !== undefined,
+          notes: orNull(input.notes),
+          receiptGiven: input.receiptUrl !== undefined,
+          receiptUrl: orNull(input.receiptUrl),
+        },
+        ...opts,
+      }
+    ).catch((error) => {
+      if (error?.original?.constraint === 'expenses_vendor_id_fkey') {
+        throw new PurchasingError('Vendor not found.');
+      }
+      throw error;
+    });
+  });
+
+  return getExpense(id, db);
+};
+
+/**
  * Approves an expense, which is the moment it becomes a cost and a debt.
  *
  * The posting happens in the same transaction as the status change, so an
@@ -683,6 +770,115 @@ export const createPurchaseOrder = async (input, createdBy = null, db = getSeque
     }
 
     return row.id;
+  });
+
+  return getPurchaseOrder(id, db);
+};
+
+/**
+ * Changes a purchase order that has not gone out yet.
+ *
+ * Draft only, for the same reason as an expense: a sent order is a promise
+ * somebody else is acting on, and a received one has already made stock and a
+ * debt. Editing either would rewrite the document the ledger was posted from.
+ *
+ * When lines are given they replace the lines that were there. A purchase order
+ * is short and an operator correcting one is looking at the whole thing — line
+ * by line patching would need ids the console has no reason to carry, and
+ * nothing has been posted yet, so there is nothing to preserve.
+ */
+export const updatePurchaseOrder = async (id, input, db = getSequelize()) => {
+  if (!isValidId(String(id ?? ''))) throw new PurchasingError('Purchase order not found.', 404);
+  if (input.vendorId && !isValidId(String(input.vendorId))) {
+    throw new PurchasingError('Vendor not found.');
+  }
+  if (input.items !== undefined && (!Array.isArray(input.items) || input.items.length === 0)) {
+    throw new PurchasingError('A purchase order needs at least one line.');
+  }
+
+  await db.transaction(async (transaction) => {
+    const opts = { transaction };
+
+    const before = await selectOne(
+      db,
+      'SELECT id, status FROM purchase_orders WHERE id = :id FOR UPDATE',
+      { id },
+      opts
+    );
+
+    if (!before) throw new PurchasingError('Purchase order not found.', 404);
+    if (before.status !== 'draft') {
+      throw new PurchasingError(
+        `This order has been ${before.status}, so it can no longer be edited.`
+      );
+    }
+
+    await db.query(
+      `UPDATE purchase_orders SET
+         vendor_id   = COALESCE(:vendorId, vendor_id),
+         expected_on = CASE WHEN :expectedGiven THEN :expectedOn::date ELSE expected_on END,
+         notes       = CASE WHEN :notesGiven THEN :notes ELSE notes END
+       WHERE id = :id`,
+      {
+        replacements: {
+          id,
+          vendorId: input.vendorId || null,
+          expectedGiven: input.expectedOn !== undefined,
+          expectedOn: orNull(input.expectedOn),
+          notesGiven: input.notes !== undefined,
+          notes: orNull(input.notes),
+        },
+        ...opts,
+      }
+    ).catch((error) => {
+      if (error?.original?.constraint === 'purchase_orders_vendor_id_fkey') {
+        throw new PurchasingError('Vendor not found.');
+      }
+      throw error;
+    });
+
+    if (input.items === undefined) return;
+
+    await db.query('DELETE FROM purchase_order_items WHERE purchase_order_id = :id', {
+      replacements: { id },
+      ...opts,
+    });
+
+    for (const line of input.items) {
+      const quantity = Number(line?.quantity);
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        throw new PurchasingError('Each line needs a whole quantity of at least one.');
+      }
+      const unitCost = amount(line?.unitCost, 'Unit cost');
+
+      await db.query(
+        `INSERT INTO purchase_order_items (purchase_order_id, product_id, quantity,
+                                           unit_cost, line_total)
+         VALUES (:orderId, :productId, :quantity, :unitCost, :lineTotal)`,
+        {
+          replacements: {
+            orderId: id,
+            productId: line.product ?? line.productId,
+            quantity,
+            unitCost,
+            lineTotal: unitCost * quantity,
+          },
+          ...opts,
+        }
+      ).catch((error) => {
+        const constraint = error?.original?.constraint;
+        if (
+          constraint === 'purchase_order_items_product_id_fkey' ||
+          error?.original?.code === '22P02'
+        ) {
+          throw new PurchasingError(`No product ${line.product ?? line.productId}.`);
+        }
+        if (constraint === 'purchase_order_items_purchase_order_id_product_id_key') {
+          throw new PurchasingError('The same product appears on this order twice.');
+        }
+        throw error;
+      });
+    }
   });
 
   return getPurchaseOrder(id, db);

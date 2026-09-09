@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Search, AlertTriangle, Edit2, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
 import { Badge, Button, EmptyState, Input, Modal, Pagination, SkeletonBlock } from '@em/ui';
 
 const InventoryManagement = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -147,14 +149,28 @@ const InventoryManagement = () => {
                 {filteredProducts.length === 0 ? (
                   <tr>
                     <td colSpan="6">
-                      <EmptyState icon={Package} title="No products found" description="Try adjusting your search or filters." />
+                      <EmptyState
+                        icon={Package}
+                        title={products.length === 0 ? 'Nothing to count' : 'Nothing matched'}
+                        description={
+                          products.length === 0
+                            ? 'Stock is counted against products in the catalogue, and there are none yet.'
+                            : 'No product matches that search and those filters.'
+                        }
+                        actionLabel={products.length === 0 ? 'Add a product' : undefined}
+                        actionTo={products.length === 0 ? '/admin/products/new' : undefined}
+                      />
                     </td>
                   </tr>
                 ) : (
                   filteredProducts.map((product) => {
                     const isLow = (product.stockQuantity || 0) <= (product.lowStockThreshold || 5);
                     return (
-                      <tr key={product._id}>
+                      <tr
+                        key={product._id}
+                        className="hover cursor-pointer"
+                        onClick={() => navigate(`/admin/products/${product._id}`)}
+                      >
                         <td>
                           <div className="flex items-center gap-2">
                             {isLow && <AlertTriangle size={16} className="text-warning" />}
@@ -182,7 +198,7 @@ const InventoryManagement = () => {
                           )}
                         </td>
                         <td>{product.warehouseLocation || '-'}</td>
-                        <td>
+                        <td onClick={(event) => event.stopPropagation()}>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="sm" leftIcon={Edit2} onClick={() => openAdjustModal(product)}>
                               Adjust

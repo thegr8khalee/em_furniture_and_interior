@@ -202,6 +202,8 @@ All authenticated requests use JWT stored in HTTP-only cookies. Cookies are sent
 | GET | `/api/orders/:orderId/receipt` | guest | generateReceipt | Download receipt PDF |
 | GET | `/api/orders/:orderId/quotation` | guest | generateQuotation | Download quotation PDF |
 | GET | `/api/orders/admin/all` | admin + perm(ORDERS_VIEW) | getAllOrders | List all orders |
+| GET | `/api/orders/admin/:orderId` | admin + perm(ORDERS_VIEW) | getOneOrder | One order in full, with the status history. The only single-order read was the shopper's ownership-checked route, so the console could only ever see an order the list handed it |
+| POST | `/api/orders/admin/sales` | admin + perm(ORDERS_MANAGE) + audit | postOfflineSale | A sale made in person. Same service as the checkout — numbered, posted and stocked identically — but the operator's agreed price wins over the list price, and the stock moves on confirmation rather than on payment, because the goods have already left. Buyer is `customerId`, `customer` (kept if the email is new, adopted if it is not), or neither, which is a walk-in on a guest session |
 | PUT | `/api/orders/admin/:orderId/status` | admin + perm(ORDERS_MANAGE) | updateOrderStatus | Update order status |
 | PUT | `/api/orders/admin/:orderId/payment` | admin + perm(ORDERS_MANAGE) | updatePaymentStatus | Update payment status |
 | POST | `/api/orders/admin/:orderId/payments` | admin + perm(ORDERS_MANAGE) + audit | postOrderPayment | Record money in by hand. Held as a deposit if the sale is not yet recognised, otherwise settles the receivable |
@@ -343,6 +345,7 @@ All authenticated requests use JWT stored in HTTP-only cookies. Cookies are sent
 | Method | Path | Auth | Handler | Description |
 |--------|------|------|---------|-------------|
 | GET | `/api/inventory/admin/products` | admin + perm(INVENTORY_MANAGE) | getInventoryProducts | List products with stock info |
+| GET | `/api/inventory/admin/products/:productId` | admin + perm(INVENTORY_MANAGE) | getOneInventoryProduct | One product's stock position — available, on hand, reserved, cost. The list could be searched but not addressed, so a product's own page had nothing to read |
 | GET | `/api/inventory/admin/products/:productId/history` | admin + perm(INVENTORY_MANAGE) | getInventoryHistory | The movements the balance is derived from |
 | PUT | `/api/inventory/admin/products/:productId/adjust` | admin + perm(INVENTORY_MANAGE) | adjustInventory | Record the movement that explains a new count |
 | PUT | `/api/inventory/admin/products/:productId/cost` | admin + perm(INVENTORY_MANAGE) | putCostPrice | Set what a piece cost to buy — a sale posts a cost of goods sold only if this is set |
@@ -431,6 +434,7 @@ posts to the ledger in the same transaction.
 | GET | `/api/purchasing/expenses` | admin + perm(FINANCE_VIEW) | getExpenses | Filter by status, vendor, date |
 | GET | `/api/purchasing/expenses/:expenseId` | admin + perm(FINANCE_VIEW) | getOneExpense | One expense |
 | POST | `/api/purchasing/expenses` | admin + perm(PURCHASING_MANAGE) + audit | postExpense | Record a cost, as a draft |
+| PATCH | `/api/purchasing/expenses/:expenseId` | admin + perm(PURCHASING_MANAGE) + audit | patchExpense | Correct a draft. Refused once approved — that is in the books, so void it and record it again |
 | POST | `/api/purchasing/expenses/:expenseId/approve` | admin + perm(PURCHASING_MANAGE) + audit | postExpenseApproval | Book the cost and the debt |
 | POST | `/api/purchasing/expenses/:expenseId/pay` | admin + perm(PURCHASING_MANAGE) + audit | postExpensePayment | Settle it; approved only |
 | POST | `/api/purchasing/expenses/:expenseId/void` | admin + perm(PURCHASING_MANAGE) + audit | postExpenseVoid | Drafts only — reverse a posted one instead |
@@ -438,6 +442,7 @@ posts to the ledger in the same transaction.
 | GET | `/api/purchasing/purchase-orders` | admin + perm(FINANCE_VIEW) | getPurchaseOrders | Filter by status and vendor |
 | GET | `/api/purchasing/purchase-orders/:orderId` | admin + perm(FINANCE_VIEW) | getOnePurchaseOrder | One order with its lines |
 | POST | `/api/purchasing/purchase-orders` | admin + perm(PURCHASING_MANAGE) + audit | postPurchaseOrder | Create one |
+| PATCH | `/api/purchasing/purchase-orders/:orderId` | admin + perm(PURCHASING_MANAGE) + audit | patchPurchaseOrder | Correct a draft. Lines given replace the lines that were there. Refused once sent or received |
 | POST | `/api/purchasing/purchase-orders/:orderId/send` | admin + perm(PURCHASING_MANAGE) + audit | postPurchaseOrderSend | Mark it sent |
 | POST | `/api/purchasing/purchase-orders/:orderId/receive` | admin + perm(PURCHASING_MANAGE) + audit | postPurchaseOrderReceipt | Stock in, payable up |
 | POST | `/api/purchasing/purchase-orders/:orderId/pay` | admin + perm(PURCHASING_MANAGE) + audit | postPurchaseOrderPayment | Settle what the receipt owed |
@@ -450,7 +455,13 @@ posts to the ledger in the same transaction.
 The most personal data in the system — names, addresses, phone numbers and what
 everyone has spent. Console only, behind `customers.view`, which **support holds**
 because answering "where is my order" cannot be done without looking the person
-up. Read-only but for the loyalty adjustment.
+up.
+
+Writable, which it was not at first. A customer's details belong to the customer,
+but the shop takes most of its orders in a showroom and over WhatsApp and had no
+way to write down who bought the sofa. A record created here has no password and
+never can be signed in to — if that person later signs up themselves the email
+matches and they adopt their own history.
 
 | Method | Path | Auth | Handler | Description |
 |--------|------|------|---------|-------------|
@@ -458,6 +469,9 @@ up. Read-only but for the loyalty adjustment.
 | GET | `/api/customers/stats` | admin + perm(CUSTOMERS_VIEW) | getCustomerStats | Accounts, new this month, how many have actually bought, revenue |
 | GET | `/api/customers/:customerId` | admin + perm(CUSTOMERS_VIEW) | getOneCustomer | One person with their orders, loyalty, reviews and consultations |
 | GET | `/api/customers/:customerId/addresses` | admin + perm(CUSTOMERS_VIEW) | getCustomerAddresses | Derived from the orders they were used on, duplicates collapsed |
+| POST | `/api/customers` | admin + perm(CUSTOMERS_VIEW) + audit | postCustomer | Add somebody. Needs a name and an email; no password, so the record cannot be signed in to |
+| PATCH | `/api/customers/:customerId` | admin + perm(CUSTOMERS_VIEW) + audit | patchCustomer | Correct a name, email or phone. Omitted fields are left alone |
+| DELETE | `/api/customers/:customerId` | admin + perm(CUSTOMERS_VIEW) + audit | removeCustomer | Only somebody who has never ordered — `orders.customer_id` is ON DELETE SET NULL, so deleting a buyer would strip their name off every order and leave the revenue behind |
 | POST | `/api/customers/:customerId/loyalty` | admin + perm(CUSTOMERS_VIEW) + audit | postLoyaltyAdjustment | Move a balance, with a reason. Refuses no reason, zero, and going below zero |
 
 ---

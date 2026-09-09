@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, DollarSign, TrendingUp, Loader2 } from 'lucide-react';
+import { Download, Banknote, TrendingUp, Loader2 } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
@@ -105,7 +105,7 @@ const FinanceReports = () => {
           <div className="stats shadow w-full">
             <div className="stat">
               <div className="stat-figure text-primary">
-                <DollarSign size={32} />
+                <Banknote size={32} />
               </div>
               <div className="stat-title">Total Revenue</div>
               <div className="stat-value text-primary">₦{(summary.totalAmount || 0).toLocaleString()}</div>
@@ -173,7 +173,13 @@ const FinanceReports = () => {
           </div>
         </>
       ) : (
-        <EmptyState icon={DollarSign} title="No revenue data" description="Try adjusting your filters." />
+        <EmptyState
+          icon={Banknote}
+          title="Nothing sold in that window"
+          description="No confirmed order falls inside these dates. Widening the range is usually the answer; the books have the full picture either way."
+          actionLabel="Open the books"
+          actionTo="/admin/books"
+        />
       )}
     </AdminPageShell>
   );

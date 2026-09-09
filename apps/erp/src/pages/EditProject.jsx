@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Editor } from '@tinymce/tinymce-react';
 import { Loader2, XCircle } from 'lucide-react';
+import { SkeletonBlock } from '@em/ui';
 import { toast } from 'react-hot-toast';
 
 // NOTE: Assuming this store provides getProjectById and updateProject
@@ -194,9 +195,22 @@ const AdminEditProjectPage = () => {
   // Show loading spinner while fetching initial data
   if (isGettingProject) {
     return (
-      <div className="flex justify-center items-center py-20">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="ml-2 text-lg">Loading project data...</p>
+      <div className="space-y-6" aria-busy="true" aria-label="Loading project data...">
+        <SkeletonBlock className="h-8 w-64" />
+        <div className="border border-base-300 bg-white p-6 space-y-4">
+          <SkeletonBlock className="h-11 w-full" />
+          <SkeletonBlock className="h-11 w-full" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SkeletonBlock className="h-11 w-full" />
+            <SkeletonBlock className="h-11 w-full" />
+          </div>
+          <SkeletonBlock className="h-40 w-full" />
+        </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          {[1, 2, 3, 4].map((index) => (
+            <SkeletonBlock key={index} className="h-32 w-full" />
+          ))}
+        </div>
       </div>
     );
   }

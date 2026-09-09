@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Editor } from '@tinymce/tinymce-react';
-import { ChevronDown, ChevronUp, Loader2, Search, XCircle } from 'lucide-react'; // For loading spinner and remove icon
+import { ChevronDown, ChevronUp, Loader2, Search, XCircle } from 'lucide-react';
+import { SkeletonBlock } from '@em/ui';
 import { useAdminStore, useProductsStore } from '@em/domain';
 import AdminPageShell from '../components/admin/AdminPageShell'; // Import useAdminStore for addCollection and getProducts
 
@@ -357,9 +358,10 @@ const AddCollection = () => {
                   </div>
                 </div>
                 {isGettingProducts ? (
-                  <div className="p-4 text-center">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto" />
-                    <p>Loading products...</p>
+                  <div className="space-y-2 p-4" aria-busy="true" aria-label="Loading products...">
+                    {[1, 2, 3].map((index) => (
+                      <SkeletonBlock key={index} className="h-5 w-full" />
+                    ))}
                   </div>
                 ) : filteredProducts.length > 0 ? (
                   <ul className="menu p-2 w-full">

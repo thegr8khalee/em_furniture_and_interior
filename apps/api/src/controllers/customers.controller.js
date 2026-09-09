@@ -2,6 +2,9 @@ import { logger } from '../lib/logger.js';
 import {
   CustomerError,
   adjustLoyalty,
+  createCustomer,
+  deleteCustomer,
+  updateCustomer,
   customerAddresses,
   customerSummary,
   getCustomer,
@@ -82,5 +85,31 @@ export const postLoyaltyAdjustment = async (req, res) => {
     res.json({ success: true, ...result, message: `Balance is now ${result.points} points.` });
   } catch (error) {
     fail(error, res, 'Error adjusting loyalty points');
+  }
+};
+
+export const postCustomer = async (req, res) => {
+  try {
+    const customer = await createCustomer(req.body);
+    res.status(201).json({ success: true, customer, message: `${customer.username} added.` });
+  } catch (error) {
+    fail(error, res, 'Error adding a customer');
+  }
+};
+
+export const patchCustomer = async (req, res) => {
+  try {
+    res.json({ success: true, customer: await updateCustomer(req.params.customerId, req.body) });
+  } catch (error) {
+    fail(error, res, 'Error updating a customer');
+  }
+};
+
+export const removeCustomer = async (req, res) => {
+  try {
+    await deleteCustomer(req.params.customerId);
+    res.json({ success: true, message: 'Customer removed.' });
+  } catch (error) {
+    fail(error, res, 'Error removing a customer');
   }
 };

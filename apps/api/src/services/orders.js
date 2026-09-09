@@ -173,8 +173,15 @@ const withItems = async (db, rows, opts = {}) => {
  * item is charged at its promotional price, and `unit_cost` is captured
  * alongside so margin is answerable later without a join onto a price that has
  * since changed.
+ *
+ * `allowPriceOverride` is off by default and is the whole security of this
+ * function: a price arriving from a browser is a number the buyer chose, and
+ * trusting one would let anybody buy a wardrobe for a naira. The console turns
+ * it on, because an operator standing in the showroom haggling over a sofa is
+ * the person whose price is the real one — and the figure they agreed is what
+ * has to reach the books, not the list price nobody paid.
  */
-const priceLines = async (db, items, opts) => {
+const priceLines = async (db, items, opts, { allowPriceOverride = false } = {}) => {
   if (!Array.isArray(items) || items.length === 0) {
     throw new OrderError('Order must contain at least one item');
   }
@@ -206,9 +213,21 @@ const priceLines = async (db, items, opts) => {
       throw new OrderError(`${ITEM_TYPE[requested?.itemType?.toLowerCase()] ?? 'Item'} ${id} not found`, 404);
     }
 
-    const unitPrice = Number(
+    const listed = Number(
       item.is_promo && item.discounted_price !== null ? item.discounted_price : item.price
     );
+
+    let unitPrice = listed;
+
+    if (allowPriceOverride && requested?.unitPrice !== undefined && requested.unitPrice !== '') {
+      const agreed = Number(requested.unitPrice);
+
+      if (!Number.isFinite(agreed) || agreed < 0) {
+        throw new OrderError(`The price for ${item.name} is not a number.`);
+      }
+
+      unitPrice = toMinor(agreed);
+    }
 
     lines.push({
       sellableItemId: item.id,
@@ -289,6 +308,8 @@ export const placeOrder = async (owner, input, db = getSequelize()) => {
     notes,
     paymentMethod = 'whatsapp',
     idempotencyKey = null,
+    // Set only by the console. See priceLines.
+    allowPriceOverride = false,
   } = input || {};
 
   const shipping = requireAddress(shippingAddress, 'Shipping address');
@@ -318,7 +339,7 @@ export const placeOrder = async (owner, input, db = getSequelize()) => {
   return db.transaction(async (transaction) => {
     const opts = { transaction };
 
-    const lines = await priceLines(db, items, opts);
+    const lines = await priceLines(db, items, opts, { allowPriceOverride });
     const subtotal = sumMinor(lines.map((line) => line.lineTotal));
 
     const { discount, couponId, couponCode: appliedCode } = await claimCoupon(
@@ -771,7 +792,7 @@ const recordManualReceipt = async (db, order, staffId, opts) => {
  * a second call — a retried request, a status flipped back and forth — must not
  * take them out twice.
  */
-const recordSaleMovements = async (db, orderId, staffId, opts) => {
+export const recordSaleMovements = async (db, orderId, staffId, opts = {}) => {
   const already = await selectOne(
     db,
     `SELECT 1 AS found FROM stock_movements WHERE order_id = :orderId AND reason = 'sale' LIMIT 1`,

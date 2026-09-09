@@ -19,8 +19,13 @@ router.use(protectAdminRoute, requirePermissions([PERMISSIONS.FINANCE_VIEW]));
 
 // What one customer owes and what it is for. The ageing answers the owner's
 // question; this answers the customer's.
-router.get('/customers/:customerId', getStatement);
+//
+// The .csv route is registered first on purpose. `:customerId` matches anything
+// that is not a slash, `abc.csv` included, so the plain route would answer the
+// download and hand the service an id with `.csv` stuck on the end — which it
+// rightly refuses as not an id, and the export 404s with nothing to explain it.
 router.get('/customers/:customerId.csv', exportLimiter, getStatementCsv);
+router.get('/customers/:customerId', getStatement);
 
 // Everyone with something outstanding, so statements go out together rather
 // than one at a time — which is how they stop going out at all.

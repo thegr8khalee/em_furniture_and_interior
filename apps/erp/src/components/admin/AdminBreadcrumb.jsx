@@ -18,11 +18,14 @@ const routeLabels = {
   finance: 'Sales revenue',
   books: 'Books',
   customers: 'Customers',
+  statements: 'Statements',
+  sales: 'Sales',
   staff: 'Operators',
   payroll: 'Payroll',
   reconciliation: 'Bank reconciliation',
   warehouse: 'Warehouse',
   purchasing: 'Purchasing',
+  vendors: 'Vendors',
   analytics: 'Analytics',
   'security-logs': 'Security Logs',
   new: 'New',
@@ -30,6 +33,8 @@ const routeLabels = {
   addProject: 'New Project',
   editProject: 'Edit Project',
 };
+
+const IS_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const AdminBreadcrumb = () => {
   const location = useLocation();
@@ -52,7 +57,10 @@ const AdminBreadcrumb = () => {
           seg === 'dashboard' || resolvedSegments[i - 1] === 'dashboard'
             ? `/admin/dashboard${seg !== 'dashboard' ? `?section=${seg}` : ''}`
             : '/admin/' + resolvedSegments.slice(0, i + 1).join('/');
-        const label = routeLabels[seg] || seg;
+        // A record id is not a label. Printing the raw uuid gives a
+        // breadcrumb nobody can read and that wraps onto two lines; the page
+        // title already names the thing being looked at.
+        const label = routeLabels[seg] || (IS_ID.test(seg) ? 'Detail' : seg);
         const isLast = i === resolvedSegments.length - 1;
 
         return (
