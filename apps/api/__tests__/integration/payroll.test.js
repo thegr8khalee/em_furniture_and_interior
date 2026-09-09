@@ -69,9 +69,20 @@ const hire = (overrides = {}) =>
     ...overrides,
   });
 
-/** A month nobody else in this suite has used. */
-let nextMonth = 1;
-const aMonth = () => `2026-${String(nextMonth++).padStart(2, '0')}-01`;
+/**
+ * A month nobody else in this suite has used.
+ *
+ * Rolls into the following years rather than counting past December: one pay run
+ * per month is a unique index, so every test needs its own, and there are more
+ * tests than there are months in a year.
+ */
+let monthsUsed = 0;
+const aMonth = () => {
+  const offset = monthsUsed++;
+  const year = 2026 + Math.floor(offset / 12);
+  const month = (offset % 12) + 1;
+  return `${year}-${String(month).padStart(2, '0')}-01`;
+};
 
 beforeAll(async () => {
   await setupDatabase();
