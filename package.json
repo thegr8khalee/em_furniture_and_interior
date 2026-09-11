@@ -15,7 +15,7 @@
     "deploy:web": "vercel build --prod --cwd apps/web && vercel deploy --prebuilt --prod --cwd apps/web",
     "deploy:erp": "vercel build --prod --cwd apps/erp && vercel deploy --prebuilt --prod --cwd apps/erp",
     "start": "npm run start --workspace=@em/api",
-    "start:prod": "npm run migrate --workspace=@em/api && npm run start --workspace=@em/api",
+    "start:prod": "npm run start --workspace=@em/api",
     "migrate": "npm run migrate --workspace=@em/api",
     "seed": "npm run seed --workspace=@em/api",
     "bootstrap:staff": "npm run bootstrap:staff --workspace=@em/api",

@@ -9,7 +9,7 @@ services:
     plan: starter
     region: frankfurt
     buildCommand: npm ci
-    startCommand: npm run start:prod
+    startCommand: npm start
     healthCheckPath: /healthz
     autoDeploy: true
     envVars:

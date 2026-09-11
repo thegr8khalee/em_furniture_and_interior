@@ -43,5 +43,5 @@ EXPOSE 10000
 # dumb-init handles PID 1 and gracefully forwards SIGTERM/SIGINT signals
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
-# Run migrations on startup and launch server
-CMD ["sh", "-c", "npm run migrate --workspace=@em/api && npm run start --workspace=@em/api"]
+# Launch server
+CMD ["npm", "run", "start"]

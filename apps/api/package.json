@@ -35,7 +35,7 @@
     "dev": "nodemon ./src/index.js",
     "build": "echo API build ready",
     "start": "node src/index.js",
-    "start:prod": "node src/db/migrate.js && node src/index.js",
+    "start:prod": "node src/index.js",
     "seed": "node src/seed/seed.js",
     "migrate": "node src/db/migrate.js",
     "bootstrap:staff": "node src/scripts/bootstrapStaff.js",
