@@ -17,33 +17,25 @@ const LoginPage = () => {
     password: '',
   });
 
-  // Access authUser and isAdmin from the store to handle redirection if already logged in as admin
   const {
     login,
     loginWithSupabase,
     isLoading,
     authUser,
-    isAdmin,
     forgotPassword,
     isRequestingReset,
-  } = useAuthStore(); // Added authUser, isAdmin
-  // const { forgotPassword, isRequestingReset } = usePasswordStore(); // NEW: Destructure from usePasswordStore
+  } = useAuthStore();
 
   // NEW: State for Forgot Password form
   const [showForgotPasswordForm, setShowForgotPasswordForm] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  // Effect to redirect if an admin is already logged in
-  // This handles cases where an admin manually navigates to /admin/login while already authenticated
-  // (Assuming this component is specifically for Admin login, though named LoginPage)
-  // If it's a general login page, this logic might need adjustment based on user role.
+
   useEffect(() => {
-    if (authUser && isAdmin) {
-      navigate('/admin/dashboard'); // Redirect to admin dashboard if already logged in as admin
-    } else if (authUser && !isAdmin) {
-      navigate('/profile'); // Redirect to user profile if logged in as regular user
+    if (authUser) {
+      navigate('/profile');
     }
-  }, [authUser, isAdmin, navigate]);
+  }, [authUser, navigate]);
 
   // Handle form submission for login
   const handleSubmit = async (e) => {

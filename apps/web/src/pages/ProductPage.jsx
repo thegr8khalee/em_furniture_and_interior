@@ -11,15 +11,13 @@ import {
   GitCompare,
   Heart,
   Loader2,
-  Pen,
   Share2,
   ShoppingCart,
-  Trash2,
 } from 'lucide-react';
 import { luxuryEase } from '@em/ui/styles/animations';
 import { FadeIn, PageWrapper, SectionReveal, SlideIn } from '@em/ui/animations';
-import { Badge, Button, Card, EmptyState, Select, Textarea } from '@em/ui';
-import { axiosInstance, useAdminStore, useAuthStore, useProductsStore } from '@em/domain';
+import { Badge, Button, Card, EmptyState, SafeHTML, Select, Textarea } from '@em/ui';
+import { axiosInstance, useAuthStore, useProductsStore } from '@em/domain';
 // import whatsapp from '../images/whatsapp.png';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
@@ -92,9 +90,8 @@ const ProductPage = () => {
     isRemovingFromwishlist,
   } = useWishlistStore();
 
-  const { isAdmin, authUser } = useAuthStore();
+  const { authUser } = useAuthStore();
 
-  const { isDeletingProduct, delProduct } = useAdminStore();
   const { compareIds, toggleCompare, clearCompare } = useCompareStore();
   const { banners, getActiveBanners } = useMarketingStore();
 
@@ -104,25 +101,6 @@ const ProductPage = () => {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-
-  const handleEditProduct = (product) => {
-    // console.log(product);
-    navigate(`/admin/products/edit/${product}`);
-  };
-
-  const handleDeleteProduct = async (productId) => {
-    // NEW: Add a confirmation prompt before deleting
-    if (
-      window.confirm(
-        'Are you sure you want to delete this product? This action cannot be undone.'
-      )
-    ) {
-      delProduct(productId);
-      navigate(-1);
-      // User cancelled the deletion
-      // toast.info('Product deletion cancelled.'); // Optional: inform user
-    }
-  };
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -136,11 +114,8 @@ const ProductPage = () => {
     if (productId) {
       getProductById(productId);
     }
-    if (!isAdmin) {
-      getwishlist();
-    }
+    getwishlist();
     getActiveBanners();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId, getProductById, getwishlist, getActiveBanners]);
 
   // Reset currentImageIndex when product changes (e.g., navigating to a new product page)
@@ -619,77 +594,53 @@ const ProductPage = () => {
             Estimated delivery:{' '}
             {estimatedDelivery || 'Contact us for timing.'}
           </p>
-          {/* <p
-            className="text text-gray-700 font-body"
-            dangerouslySetInnerHTML={{ __html: product.description }}
-          ></p> */}
-          {!isAdmin ? (
+          <Button
+            href={whatsappHref(product)}
+            className="my-4 w-full border-0 bg-green-600 font-heading text-white hover:bg-green-700 hover:text-white"
+          >
+            Order Now
+          </Button>
+          <div className="flex flex-col space-y-4 mb-6">
             <Button
-              href={whatsappHref(product)}
-              className="my-4 w-full border-0 bg-green-600 font-heading text-white hover:bg-green-700 hover:text-white"
+              className="flex-1 border-0 shadow-none"
+              onClick={() => handleAddToCart(product._id, 1, 'Product')}
+              isLoading={isAddingToCart}
+              leftIcon={ShoppingCart}
             >
-              Order Now
+              Add to Cart
             </Button>
-          ) : null}
-          {isAdmin ? (
-            <div className="space-y-2">
-              <Button className="mr-2 w-full" onClick={() => handleEditProduct(productId)} leftIcon={Pen}>
-                Edit Product
-              </Button>
+            <Button
+              className={`flex-1 shadow-none ${
+                isInCompare ? 'bg-neutral text-white hover:bg-neutral/90 hover:text-white' : 'bg-base-300 text-neutral hover:bg-base-300/80'
+              }`}
+              variant="ghost"
+              onClick={() => toggleCompare(product._id)}
+              leftIcon={GitCompare}
+            >
+              Compare
+            </Button>
+            {isInWishlist ? (
               <Button
-                variant="danger"
-                className="w-full"
-                onClick={() => handleDeleteProduct(product._id)}
-                isLoading={isDeletingProduct}
-                leftIcon={Trash2}
+                variant="primary"
+                className="flex-1 shadow-none"
+                onClick={() => handleRemovefromWishlist(productId, 'Product')}
+                isLoading={isRemovingFromwishlist}
+                leftIcon={Heart}
               >
-                Delete Product
+                Saved
               </Button>
-            </div>
-          ) : null}
-          {!isAdmin ? (
-            <div className="flex flex-col space-y-4 mb-6">
+            ) : (
               <Button
-                className="flex-1 border-0 shadow-none"
-                onClick={() => handleAddToCart(product._id, 1, 'Product')}
-                isLoading={isAddingToCart}
-                leftIcon={ShoppingCart}
+                variant="elegant-outline"
+                className="flex-1 shadow-none"
+                onClick={() => handleAddToWishlist(product._id, 'Product')}
+                isLoading={isAddingTowishlist}
+                leftIcon={Heart}
               >
-                Add to Cart
+                Wishlist
               </Button>
-              <Button
-                className={`flex-1 shadow-none ${
-                  isInCompare ? 'bg-neutral text-white hover:bg-neutral/90 hover:text-white' : 'bg-base-300 text-neutral hover:bg-base-300/80'
-                }`}
-                variant="ghost"
-                onClick={() => toggleCompare(product._id)}
-                leftIcon={GitCompare}
-              >
-                Compare
-              </Button>
-              {isInWishlist ? (
-                <Button
-                  variant="primary"
-                  className="flex-1 shadow-none"
-                  onClick={() => handleRemovefromWishlist(productId, 'Product')}
-                  isLoading={isRemovingFromwishlist}
-                  leftIcon={Heart}
-                >
-                  Saved
-                </Button>
-              ) : (
-                <Button
-                  variant="elegant-outline"
-                  className="flex-1 shadow-none"
-                  onClick={() => handleAddToWishlist(product._id, 'Product')}
-                  isLoading={isAddingTowishlist}
-                  leftIcon={Heart}
-                >
-                  Wishlist
-                </Button>
-              )}
-            </div>
-          ) : null}
+            )}
+          </div>
           {compareIds.length > 0 && (
             <div className="flex items-center gap-3 mb-6">
               <Button type="button" variant="primary" size="sm" onClick={() => navigate('/compare')}>
@@ -700,89 +651,88 @@ const ProductPage = () => {
               </Button>
             </div>
           )}
-          <p
+          <SafeHTML
+            as="p"
             className="text text-neutral/60"
-            dangerouslySetInnerHTML={{ __html: product.description }}
-          ></p>
+            html={product.description}
+          />
         </motion.div>
       </div>
 
-      {!isAdmin && (
-        <SectionReveal className="mt-12">
-          <motion.h2
-            className="font-heading text-xl font-semibold text-neutral mb-4"
-            initial={{ opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, ease: luxuryEase }}
-          >
-            Reviews
-          </motion.h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card padding="p-4">
-              <p className="mb-2 text-sm text-neutral/60">
-                Average rating: {product.averageRating || 0} / 5
-              </p>
-              {authUser ? (
-                <form onSubmit={handleSubmitReview} className="space-y-3">
-                  <Select
-                    value={reviewRating}
-                    onChange={(e) => setReviewRating(Number(e.target.value))}
-                    label="Rating"
-                  >
-                    {[5, 4, 3, 2, 1].map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </Select>
-                  <Textarea
-                    rows="3"
-                    label="Comment"
-                    value={reviewComment}
-                    onChange={(e) => setReviewComment(e.target.value)}
-                  />
-                  <Button type="submit" variant="primary" isLoading={isSubmittingReview}>
-                    Submit Review
-                  </Button>
-                </form>
-              ) : (
-                <Button type="button" variant="elegant-outline" onClick={() => navigate('/login')}>
-                  Login to review
+      <SectionReveal className="mt-12">
+        <motion.h2
+          className="font-heading text-xl font-semibold text-neutral mb-4"
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, ease: luxuryEase }}
+        >
+          Reviews
+        </motion.h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card padding="p-4">
+            <p className="mb-2 text-sm text-neutral/60">
+              Average rating: {product.averageRating || 0} / 5
+            </p>
+            {authUser ? (
+              <form onSubmit={handleSubmitReview} className="space-y-3">
+                <Select
+                  value={reviewRating}
+                  onChange={(e) => setReviewRating(Number(e.target.value))}
+                  label="Rating"
+                >
+                  {[5, 4, 3, 2, 1].map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </Select>
+                <Textarea
+                  rows="3"
+                  label="Comment"
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                />
+                <Button type="submit" variant="primary" isLoading={isSubmittingReview}>
+                  Submit Review
                 </Button>
-              )}
-            </Card>
+              </form>
+            ) : (
+              <Button type="button" variant="elegant-outline" onClick={() => navigate('/login')}>
+                Login to review
+              </Button>
+            )}
+          </Card>
 
-            <div className="space-y-3">
-              {reviews.length === 0 ? (
-                <p className="text-sm text-neutral/60">No reviews yet.</p>
-              ) : (
-                reviews.map((review) => (
-                  <Card key={review._id} padding="p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-semibold">
-                        {review.userId?.username || 'Customer'}
-                      </div>
-                      <div className="text-xs text-neutral/60">
-                        {review.rating} / 5
-                      </div>
+          <div className="space-y-3">
+            {reviews.length === 0 ? (
+              <p className="text-sm text-neutral/60">No reviews yet.</p>
+            ) : (
+              reviews.map((review) => (
+                <Card key={review._id} padding="p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-semibold">
+                      {review.userId?.username || 'Customer'}
                     </div>
-                    {review.isVerifiedPurchase && (
-                      <div className="text-xs text-green-600 mt-1">Verified purchase</div>
-                    )}
-                    {!review.isApproved && (
-                      <div className="text-xs text-amber-600 mt-1">Pending approval</div>
-                    )}
-                    {review.comment && (
-                      <p className="text-sm text-neutral/70 mt-2">{review.comment}</p>
-                    )}
-                  </Card>
-                ))
-              )}
-            </div>
+                    <div className="text-xs text-neutral/60">
+                      {review.rating} / 5
+                    </div>
+                  </div>
+                  {review.isVerifiedPurchase && (
+                    <div className="text-xs text-green-600 mt-1">Verified purchase</div>
+                  )}
+                  {!review.isApproved && (
+                    <div className="text-xs text-amber-600 mt-1">Pending approval</div>
+                  )}
+                  {review.comment && (
+                    <p className="text-sm text-neutral/70 mt-2">{review.comment}</p>
+                  )}
+                </Card>
+              ))
+            )}
           </div>
-        </SectionReveal>
-      )}
+        </div>
+      </SectionReveal>
 
       {recentProducts.length > 0 && (
         <SectionReveal className="mt-12">

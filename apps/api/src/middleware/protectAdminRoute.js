@@ -17,7 +17,7 @@ import { logger } from '../lib/logger.js';
  */
 export const protectAdminRoute = async (req, res, next) => {
   try {
-    const token = req.cookies.jwt;
+    const token = req.cookies.admin_jwt || req.cookies.jwt;
 
     if (!token) {
       return res.status(401).json({ message: 'Not authorized, no token provided.' });

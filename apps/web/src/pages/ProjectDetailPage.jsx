@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { luxuryEase } from '@em/ui/styles/animations';
 import { PageWrapper, SectionReveal, SlideIn } from '@em/ui/animations';
+import { SafeHTML } from '@em/ui';
 import { useProjectsStore } from '@em/domain';
 import SEO from '../components/SEO';
 import { breadcrumbJsonLd, truncate, absoluteUrl, SITE_NAME } from '../lib/seo';
@@ -217,10 +218,9 @@ const ProjectDetailPage = () => {
                     {/* Description */}
                     <SlideIn direction="right" className="lg:col-span-2">
                         <h3 className="text-xl font-heading font-semibold mb-4 border-b border-base-300 pb-2 text-neutral">Scope of Work</h3>
-                        <div 
+                        <SafeHTML 
                             className="prose max-w-none"
-                            // Dangerously set inner HTML for the rich text description
-                            dangerouslySetInnerHTML={{ __html: project.description }}
+                            html={project.description}
                         />
                     </SlideIn>
                 </div>

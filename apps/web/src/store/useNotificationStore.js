@@ -27,42 +27,30 @@ export const useNotificationStore = create((set) => ({
   },
 
   markAsRead: async (notificationId) => {
-    try {
-      const res = await axiosInstance.patch(`/notifications/${notificationId}/read`);
-      set((state) => ({
-        notifications: state.notifications.map((item) =>
-          item._id === notificationId ? res.data.notification : item
-        ),
-        unreadCount: Math.max(0, state.unreadCount - 1),
-      }));
-    } catch (error) {
-      throw error;
-    }
+    const res = await axiosInstance.patch(`/notifications/${notificationId}/read`);
+    set((state) => ({
+      notifications: state.notifications.map((item) =>
+        item._id === notificationId ? res.data.notification : item
+      ),
+      unreadCount: Math.max(0, state.unreadCount - 1),
+    }));
   },
 
   markAllRead: async () => {
-    try {
-      await axiosInstance.patch('/notifications/read-all');
-      set((state) => ({
-        notifications: state.notifications.map((item) => ({
-          ...item,
-          isRead: true,
-        })),
-        unreadCount: 0,
-      }));
-    } catch (error) {
-      throw error;
-    }
+    await axiosInstance.patch('/notifications/read-all');
+    set((state) => ({
+      notifications: state.notifications.map((item) => ({
+        ...item,
+        isRead: true,
+      })),
+      unreadCount: 0,
+    }));
   },
 
   deleteNotification: async (notificationId) => {
-    try {
-      await axiosInstance.delete(`/notifications/${notificationId}`);
-      set((state) => ({
-        notifications: state.notifications.filter((item) => item._id !== notificationId),
-      }));
-    } catch (error) {
-      throw error;
-    }
+    await axiosInstance.delete(`/notifications/${notificationId}`);
+    set((state) => ({
+      notifications: state.notifications.filter((item) => item._id !== notificationId),
+    }));
   },
 }));

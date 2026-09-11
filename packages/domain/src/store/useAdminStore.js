@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { axiosInstance } from '../lib/axios.js';
 import toast from 'react-hot-toast';
 import { useAuthStore } from './useAuthStore.js';
+import { useAdminAuthStore } from './useAdminAuthStore.js';
 import { useProductsStore } from './useProductsStore.js';
 import { useCollectionStore } from './useCollectionStore.js';
 
@@ -35,6 +36,12 @@ export const useAdminStore = create((set) => ({
       console.log('Sending login request with data:', data); // Add this
       const res = await axiosInstance.post('/admin/login', data);
       console.log('Login response:', res);
+      useAdminAuthStore.setState({
+        adminUser: res.data,
+        permissions: res.data?.permissions || [],
+        isCheckingAdminAuth: false,
+        isAdminReady: true,
+      });
       useAuthStore.setState({
         authUser: res.data,
         isAdmin: res.data?.role === 'admin',
@@ -62,6 +69,12 @@ export const useAdminStore = create((set) => ({
     set({ isLoading: true });
     try {
       const res = await axiosInstance.post('/admin/supabase', { accessToken });
+      useAdminAuthStore.setState({
+        adminUser: res.data,
+        permissions: res.data?.permissions || [],
+        isCheckingAdminAuth: false,
+        isAdminReady: true,
+      });
       useAuthStore.setState({
         authUser: res.data,
         isAdmin: res.data?.role === 'admin',
@@ -80,6 +93,7 @@ export const useAdminStore = create((set) => ({
   AdminLogout: async () => {
     try {
       await axiosInstance.post('/admin/logout');
+      useAdminAuthStore.setState({ adminUser: null, permissions: [], isCheckingAdminAuth: false, isAdminReady: true });
       useAuthStore.setState({ authUser: null, permissions: [], isAdmin: false });
       toast.success('Logged out successfully');
     } catch (error) {

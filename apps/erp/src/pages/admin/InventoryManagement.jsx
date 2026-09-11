@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Package, Search, AlertTriangle, Edit2, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { axiosInstance } from '@em/domain';
@@ -26,11 +26,7 @@ const InventoryManagement = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchProducts();
-  }, [currentPage, searchQuery, lowStockOnly]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({
@@ -49,7 +45,11 @@ const InventoryManagement = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, searchQuery, lowStockOnly]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const handleCostSubmit = async (event) => {
     event.preventDefault();

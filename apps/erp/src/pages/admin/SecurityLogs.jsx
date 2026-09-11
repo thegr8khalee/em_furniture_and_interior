@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Shield, Download, Trash2, Calendar, User, Activity } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
@@ -35,17 +35,7 @@ const SecurityLogs = () => {
     endDate: '',
   });
 
-  useEffect(() => {
-    if (activeTab === 'audit') {
-      fetchAuditLogs();
-      fetchAuditStats();
-    } else {
-      fetchActivityLogs();
-      fetchActivityStats();
-    }
-  }, [activeTab, auditPagination.page, activityPagination.page, auditFilters, activityFilters]);
-
-  const fetchAuditLogs = async () => {
+  const fetchAuditLogs = useCallback(async () => {
     setLoading(true);
     try {
       const params = {
@@ -63,9 +53,9 @@ const SecurityLogs = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [auditPagination.page, auditPagination.limit, auditFilters]);
 
-  const fetchAuditStats = async () => {
+  const fetchAuditStats = useCallback(async () => {
     try {
       const params = {
         startDate: auditFilters.startDate,
@@ -77,9 +67,9 @@ const SecurityLogs = () => {
     } catch (error) {
       console.error('Error fetching audit stats:', error);
     }
-  };
+  }, [auditFilters.startDate, auditFilters.endDate]);
 
-  const fetchActivityLogs = async () => {
+  const fetchActivityLogs = useCallback(async () => {
     setLoading(true);
     try {
       const params = {
@@ -97,9 +87,9 @@ const SecurityLogs = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activityPagination.page, activityPagination.limit, activityFilters]);
 
-  const fetchActivityStats = async () => {
+  const fetchActivityStats = useCallback(async () => {
     try {
       const params = {
         startDate: activityFilters.startDate,
@@ -111,7 +101,17 @@ const SecurityLogs = () => {
     } catch (error) {
       console.error('Error fetching activity stats:', error);
     }
-  };
+  }, [activityFilters.startDate, activityFilters.endDate]);
+
+  useEffect(() => {
+    if (activeTab === 'audit') {
+      fetchAuditLogs();
+      fetchAuditStats();
+    } else {
+      fetchActivityLogs();
+      fetchActivityStats();
+    }
+  }, [activeTab, fetchAuditLogs, fetchAuditStats, fetchActivityLogs, fetchActivityStats]);
 
   const handleCleanupAuditLogs = async () => {
     if (!window.confirm('Are you sure you want to delete audit logs older than 90 days?')) {

@@ -9,7 +9,7 @@ import {
   UserIcon,
   X,
 } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { luxuryEase } from '@em/ui/styles/animations';
@@ -30,11 +30,11 @@ const getIconButtonClass = (hasItems = false) =>
   }`;
 
 import { useAdminStore, useAuthStore } from '@em/domain';
+import { PRODUCT_STYLES } from '@em/shared';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { useMarketingStore } from '../store/useMarketingStore';
-import { PERMISSIONS } from '@em/shared/permissions';
 
 // The operations console is deployed separately; in development it runs on 5174.
 const ERP_URL = import.meta.env.VITE_ERP_URL || 'http://localhost:5174/admin/dashboard';
@@ -42,8 +42,8 @@ const ERP_URL = import.meta.env.VITE_ERP_URL || 'http://localhost:5174/admin/das
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { authUser, isAdmin, isAuthReady, hasPermission } = useAuthStore();
-  const { toggleSidebar, closeSidebar: closeAdminSidebar } = useAdminStore();
+  const { authUser, isAdmin, isAuthReady } = useAuthStore();
+  const { closeSidebar: closeAdminSidebar } = useAdminStore();
   const { getCart, cart } = useCartStore();
   const { getwishlist, wishlist } = useWishlistStore();
   const { getNotifications, notifications, unreadCount, isLoading } = useNotificationStore();
@@ -80,21 +80,14 @@ const Navbar = () => {
     { id: '5', name: 'Dining Rooms', link: 'Dining%20Room' },
     { id: '6', name: 'Center Tables', link: 'Center%20Table' },
     { id: '7', name: 'Wardrobe', link: 'Wardrobe' },
-    { id: '8', name: 'TV Unit', link: 'TV%20unit' },
+    { id: '8', name: 'TV Unit', link: 'TV%20Unit' },
     { id: '9', name: 'Carpets', link: 'Carpet' },
   ];
 
   const [isDrawerChecked, setIsDrawerChecked] = useState(false);
   const [activeDrawerTab, setActiveDrawerTab] = useState('categories');
 
-  const hardcodedStyles = [
-    'Modern',
-    'Contemporary',
-    'Antique/Royal',
-    'Bespoke',
-    'Minimalist',
-    'Glam',
-  ].sort();
+  const hardcodedStyles = [...PRODUCT_STYLES].sort();
 
   const closeDrawer = () => setIsDrawerChecked(false);
 
@@ -254,23 +247,13 @@ const Navbar = () => {
         />
         <div className={`fixed navbar items-center w-full z-20 drawer-content transition-all duration-300 ${hasPromoBar ? 'top-11' : 'top-0'} ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : 'bg-white/80 backdrop-blur-sm'}`}>
           <div className="navbar-start">
-            {false ? (
-              <button
-                className="pl-4 border-none text-neutral"
-                onClick={toggleSidebar}
-                aria-label="Toggle admin sidebar"
-              >
-                <MenuIcon size={22} strokeWidth={1.5} />
-              </button>
-            ) : (
-              <label
-                htmlFor="my-drawer"
-                className="pl-4 border-none drawer-button cursor-pointer text-neutral"
-                aria-label="Open main menu"
-              >
-                <MenuIcon size={22} strokeWidth={1.5} />
-              </label>
-            )}
+            <label
+              htmlFor="my-drawer"
+              className="pl-4 border-none drawer-button cursor-pointer text-neutral"
+              aria-label="Open main menu"
+            >
+              <MenuIcon size={22} strokeWidth={1.5} />
+            </label>
           </div>
           <div className="navbar-center">
             <Link to="/" onClick={closeDrawer}>
@@ -569,7 +552,7 @@ const Navbar = () => {
               {/* <Link to="/profile" className="px-3 py-2 text-sm font-medium text-neutral/80 hover:text-secondary transition-colors">
                 Login
               </Link> */}
-              <Button to="/signup" size="sm" className="px-5 text-xs">
+              <Button to="/login" size="sm" className="px-5 text-xs">
                 Login
               </Button>
             </>

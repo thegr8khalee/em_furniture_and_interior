@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuthStore } from '@em/domain';
+import { useAdminAuthStore } from '@em/domain';
 
 /**
  * Gate on the console's routes.
@@ -10,13 +10,13 @@ import { useAuthStore } from '@em/domain';
  * forever.
  */
 const AdminProtectedRoute = () => {
-  const { authUser, isCheckingAuth, isAdmin } = useAuthStore();
+  const { adminUser, isCheckingAdminAuth } = useAdminAuthStore();
 
-  if (isCheckingAuth) {
+  if (isCheckingAdminAuth) {
     return <div className="text-center p-4">Loading authentication...</div>;
   }
 
-  if (!authUser || !isAdmin) {
+  if (!adminUser) {
     return <Navigate to="/admin/login" replace />;
   }
 

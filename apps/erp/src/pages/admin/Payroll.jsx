@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Users } from 'lucide-react';
+import { Download, Plus, Users } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
@@ -111,6 +111,65 @@ const Payroll = () => {
     } catch (error) {
       toast.error('Could not load that run');
     }
+  };
+
+  const downloadPayslip = async (slip) => {
+    try {
+      const { data } = await axiosInstance.get(
+        `/payroll/runs/${open._id}/payslips/${slip._id}/pdf`,
+        { responseType: 'blob' }
+      );
+      const url = window.URL.createObjectURL(new Blob([data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const safeName = (slip.employee?.fullName || 'employee')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-');
+      link.download = `payslip-${month(open.period)}-${safeName}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Could not download payslip');
+    }
+  };
+
+  const remitTax = async (run) => {
+    if (
+      !window.confirm(
+        `Remit ${naira(run.totals.paye)} of PAYE tax for ${month(run.period)}? This settles liability 2500 against the bank account.`
+      )
+    ) {
+      return;
+    }
+    await act(
+      () =>
+        axiosInstance.post(`/payroll/runs/${run._id}/remit-tax`, {
+          paymentMethod: 'bank_transfer',
+          paidOn: new Date().toISOString().slice(0, 10),
+        }),
+      'PAYE tax remitted'
+    );
+  };
+
+  const remitPension = async (run) => {
+    const pensionTotal = Number(run.totals.pension || 0) + Number(run.totals.employerPension || 0);
+    if (
+      !window.confirm(
+        `Remit ${naira(pensionTotal)} of pension contributions for ${month(run.period)}? This settles liability 2600 against the bank account.`
+      )
+    ) {
+      return;
+    }
+    await act(
+      () =>
+        axiosInstance.post(`/payroll/runs/${run._id}/remit-pension`, {
+          paymentMethod: 'bank_transfer',
+          paidOn: new Date().toISOString().slice(0, 10),
+        }),
+      'Pension contributions remitted'
+    );
   };
 
   const saveEmployee = async (event) => {
@@ -228,6 +287,7 @@ const Payroll = () => {
                     <th className="text-right">Net paid</th>
                     <th className="text-right">Cost</th>
                     <th>Status</th>
+                    <th>Remittances</th>
                     <th className="text-right" />
                   </tr>
                 </thead>
@@ -253,6 +313,17 @@ const Payroll = () => {
                       </td>
                       <td>
                         <Badge variant={RUN_STATUS[run.status]}>{run.status}</Badge>
+                      </td>
+                      <td>
+                        {run.taxRemittedAt && run.pensionRemittedAt ? (
+                          <Badge variant="success">Remitted</Badge>
+                        ) : run.taxRemittedAt || run.pensionRemittedAt ? (
+                          <Badge variant="warning">Partial</Badge>
+                        ) : run.status === 'draft' ? (
+                          <span className="text-xs text-neutral/40">—</span>
+                        ) : (
+                          <Badge variant="neutral">Pending</Badge>
+                        )}
                       </td>
                       <td className="text-right">
                         <div className="flex justify-end gap-1">
@@ -400,6 +471,7 @@ const Payroll = () => {
                   <th className="text-right">Pension</th>
                   <th className="text-right">Net</th>
                   <th>Paid to</th>
+                  <th className="text-right">Payslip</th>
                 </tr>
               </thead>
               <tbody>
@@ -428,10 +500,79 @@ const Payroll = () => {
                         ? `${slip.employee.bankName ?? ''} ${slip.employee.bankAccount}`
                         : '—'}
                     </td>
+                    <td className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        leftIcon={Download}
+                        onClick={() => downloadPayslip(slip)}
+                      >
+                        PDF
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            <div className="mt-6 border-t border-base-300 pt-5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral/70 mb-3">
+                Statutory Remittances
+              </h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="border border-base-300 bg-base-100 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs uppercase tracking-wide text-neutral/50">2500 PAYE Tax</div>
+                      <div className="text-base font-semibold font-mono">{naira(open.totals.paye)}</div>
+                    </div>
+                    {open.taxRemittedAt ? (
+                      <Badge variant="success">
+                        Remitted {new Date(open.taxRemittedAt).toLocaleDateString('en-NG')}
+                      </Badge>
+                    ) : (
+                      (open.status === 'approved' || open.status === 'paid') && (
+                        <Button size="sm" variant="secondary" onClick={() => remitTax(open)}>
+                          Remit PAYE
+                        </Button>
+                      )
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-neutral/50">
+                    {open.taxRemittedAt
+                      ? 'Tax liability settled with FIRS via bank transfer.'
+                      : 'Deducted from wages. Stays a liability until remitted to FIRS.'}
+                  </p>
+                </div>
+
+                <div className="border border-base-300 bg-base-100 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-xs uppercase tracking-wide text-neutral/50">2600 Pension Fund</div>
+                      <div className="text-base font-semibold font-mono">
+                        {naira(open.totals.pension + open.totals.employerPension)}
+                      </div>
+                    </div>
+                    {open.pensionRemittedAt ? (
+                      <Badge variant="success">
+                        Remitted {new Date(open.pensionRemittedAt).toLocaleDateString('en-NG')}
+                      </Badge>
+                    ) : (
+                      (open.status === 'approved' || open.status === 'paid') && (
+                        <Button size="sm" variant="secondary" onClick={() => remitPension(open)}>
+                          Remit Pension
+                        </Button>
+                      )
+                    )}
+                  </div>
+                  <p className="mt-2 text-xs text-neutral/50">
+                    {open.pensionRemittedAt
+                      ? 'Employee & employer contributions settled with PFA via bank transfer.'
+                      : 'Combined 18% contribution owed to the pension fund administrator.'}
+                  </p>
+                </div>
+              </div>
+            </div>
 
             <p className="mt-4 text-sm text-neutral/50">
               The tax and the pension stay owed after the wages are paid — they are remitted

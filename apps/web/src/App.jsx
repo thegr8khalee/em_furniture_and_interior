@@ -94,13 +94,16 @@ function App() {
             element={<CollectionDetailsPage />}
           />
           <Route
-            path="/profile"
-            element={authUser ? <ProfilePage /> : <LoginPage />}
+            path="/login"
+            element={!authUser ? <LoginPage /> : <Navigate to="/profile" replace />}
           />
-
+          <Route
+            path="/profile"
+            element={authUser ? <ProfilePage /> : <Navigate to="/login" replace />}
+          />
           <Route
             path="/signup"
-            element={!authUser ? <SignupPage /> : <LoginPage />}
+            element={!authUser ? <SignupPage /> : <Navigate to="/profile" replace />}
           />
           <Route path='/projects' element={<Projects />} />
           <Route path='/project/:id' element={<ProjectDetailPage />} />

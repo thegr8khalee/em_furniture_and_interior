@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Building2, PackageCheck, Send, Truck, XCircle } from 'lucide-react';
+import { ArrowLeft, Building2, Download, PackageCheck, Send, Truck, XCircle } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
@@ -98,6 +98,24 @@ const PurchaseOrderDetail = () => {
     }
   };
 
+  const downloadPdf = async () => {
+    try {
+      const { data } = await axiosInstance.get(`/purchasing/purchase-orders/${orderId}/pdf`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `purchase-order-${order.poNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Could not download purchase order PDF');
+    }
+  };
+
   if (isLoading) {
     return (
       <AdminPageShell title="Loading…">
@@ -137,6 +155,9 @@ const PurchaseOrderDetail = () => {
         <>
           <Button variant="ghost" leftIcon={ArrowLeft} to="/admin/purchasing">
             All purchasing
+          </Button>
+          <Button variant="ghost" leftIcon={Download} onClick={downloadPdf}>
+            Download PDF
           </Button>
           {isDraft && (
             <Button

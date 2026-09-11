@@ -2,7 +2,7 @@ import { QueryTypes } from 'sequelize';
 import { getSequelize } from '../db/sequelize.js';
 import { isValidId } from './catalog.js';
 import { toMajor, toMinor, percentOf } from '../lib/money.js';
-import { postPayRun, postPayRunPaid } from './posting.js';
+import { postPayRun, postPayRunPaid, postPayeRemittance, postPensionRemittance } from './posting.js';
 
 /**
  * Paying the people who make the furniture.
@@ -230,6 +230,10 @@ const publicPayRun = (row) => ({
     cost: money(Number(row.gross ?? 0) + Number(row.employer_pension ?? 0)),
   },
   headcount: Number(row.headcount ?? 0),
+  taxRemittedAt: row.tax_remitted_at,
+  taxRemittedBy: row.tax_remitted_by,
+  pensionRemittedAt: row.pension_remitted_at,
+  pensionRemittedBy: row.pension_remitted_by,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -237,6 +241,7 @@ const publicPayRun = (row) => ({
 const RUN_SELECT = `
   SELECT r.id, r.period, r.status, r.approved_by, r.approved_at, r.paid_on,
          r.payment_method, r.notes, r.created_at, r.updated_at,
+         r.tax_remitted_at, r.tax_remitted_by, r.pension_remitted_at, r.pension_remitted_by,
          COALESCE(s.gross, 0)::bigint AS gross,
          COALESCE(s.paye, 0)::bigint AS paye,
          COALESCE(s.pension, 0)::bigint AS pension,
@@ -484,3 +489,123 @@ export const discardPayRun = async (id, db = getSequelize()) => {
 
   return { discarded: true };
 };
+
+/**
+ * Loads a single payslip along with its parent pay run for PDF printing.
+ */
+export const getPayslip = async (runId, slipId, db = getSequelize()) => {
+  if (!isValidId(String(runId ?? '')) || !isValidId(String(slipId ?? ''))) {
+    throw new PayrollError('Payslip not found.', 404);
+  }
+
+  const run = await getPayRun(runId, db);
+  const slip = (run.payslips || []).find((p) => p._id === slipId || p.id === slipId);
+  if (!slip) throw new PayrollError('Payslip not found.', 404);
+
+  return { run, slip };
+};
+
+/**
+ * Remit the PAYE tax withheld from this run to FIRS.
+ *
+ * Settle account 2500 against the bank account. Can be performed on an approved
+ * or paid run, and is recorded once.
+ */
+export const remitPaye = async (
+  id,
+  { paymentMethod = 'bank_transfer', paidOn = null, reference = null } = {},
+  staffId = null,
+  db = getSequelize()
+) => {
+  if (!isValidId(String(id ?? ''))) throw new PayrollError('Pay run not found.', 404);
+
+  await db.transaction(async (transaction) => {
+    const opts = { transaction };
+
+    const before = await selectOne(
+      db,
+      'SELECT id, status, tax_remitted_at FROM pay_runs WHERE id = :id FOR UPDATE',
+      { id },
+      opts
+    );
+    if (!before) throw new PayrollError('Pay run not found.', 404);
+    if (before.tax_remitted_at) {
+      throw new PayrollError('PAYE tax for this run has already been remitted.');
+    }
+    if (before.status !== 'approved' && before.status !== 'paid') {
+      throw new PayrollError('Only an approved or paid run can have taxes remitted.');
+    }
+
+    await postPayeRemittance(db, id, { paymentMethod, paidOn, reference }, opts);
+
+    await db.query(
+      `UPDATE pay_runs
+          SET tax_remitted_at = COALESCE(:paidOn::timestamptz, now()),
+              tax_remitted_by = :staffId
+        WHERE id = :id`,
+      {
+        replacements: {
+          id,
+          paidOn: paidOn || null,
+          staffId: isValidId(String(staffId ?? '')) ? staffId : null,
+        },
+        ...opts,
+      }
+    );
+  });
+
+  return getPayRun(id, db);
+};
+
+/**
+ * Remit the employee and employer pension contributions to the PFA.
+ *
+ * Settle account 2600 against the bank account. Can be performed on an approved
+ * or paid run, and is recorded once.
+ */
+export const remitPension = async (
+  id,
+  { paymentMethod = 'bank_transfer', paidOn = null, reference = null } = {},
+  staffId = null,
+  db = getSequelize()
+) => {
+  if (!isValidId(String(id ?? ''))) throw new PayrollError('Pay run not found.', 404);
+
+  await db.transaction(async (transaction) => {
+    const opts = { transaction };
+
+    const before = await selectOne(
+      db,
+      'SELECT id, status, pension_remitted_at FROM pay_runs WHERE id = :id FOR UPDATE',
+      { id },
+      opts
+    );
+    if (!before) throw new PayrollError('Pay run not found.', 404);
+    if (before.pension_remitted_at) {
+      throw new PayrollError('Pension for this run has already been remitted.');
+    }
+    if (before.status !== 'approved' && before.status !== 'paid') {
+      throw new PayrollError('Only an approved or paid run can have pension remitted.');
+    }
+
+    await postPensionRemittance(db, id, { paymentMethod, paidOn, reference }, opts);
+
+    await db.query(
+      `UPDATE pay_runs
+          SET pension_remitted_at = COALESCE(:paidOn::timestamptz, now()),
+              pension_remitted_by = :staffId
+        WHERE id = :id`,
+      {
+        replacements: {
+          id,
+          paidOn: paidOn || null,
+          staffId: isValidId(String(staffId ?? '')) ? staffId : null,
+        },
+        ...opts,
+      }
+    );
+  });
+
+  return getPayRun(id, db);
+};
+

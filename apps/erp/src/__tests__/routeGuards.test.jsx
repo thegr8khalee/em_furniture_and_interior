@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import { useAuthStore } from '@em/domain';
+import { useAdminAuthStore } from '@em/domain';
 import AdminProtectedRoute from '../components/AdminProtectedRoutes';
 import AdminLoginProtectedRoute from '../components/AdminLoginProtectedRoute';
 
@@ -10,12 +10,11 @@ import AdminLoginProtectedRoute from '../components/AdminLoginProtectedRoute';
 // the destinations that make the console self-contained.
 
 const setAuth = (state) =>
-  useAuthStore.setState({
-    authUser: null,
-    isAdmin: false,
-    isCheckingAuth: false,
+  useAdminAuthStore.setState({
+    adminUser: null,
+    isCheckingAdminAuth: false,
     permissions: [],
-    checkAuth: vi.fn(),
+    checkAdminAuth: vi.fn(),
     ...state,
   });
 
@@ -41,7 +40,7 @@ beforeEach(() => {
 
 describe('AdminProtectedRoute', () => {
   it('renders the console for a signed-in admin', () => {
-    setAuth({ authUser: { _id: 'a1' }, isAdmin: true });
+    setAuth({ adminUser: { _id: 'a1', role: 'admin' } });
 
     renderConsole('/admin/dashboard');
 
@@ -57,17 +56,18 @@ describe('AdminProtectedRoute', () => {
     expect(screen.queryByText('Catch-all')).not.toBeInTheDocument();
   });
 
-  it('sends a signed-in customer to the sign-in screen rather than the console', () => {
-    setAuth({ authUser: { _id: 'u1' }, isAdmin: false });
+  it('sends an unauthenticated visitor to the sign-in screen rather than the console', () => {
+    setAuth({ adminUser: null });
 
     renderConsole('/admin/dashboard');
 
     expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
+    expect(screen.getByText('Sign in')).toBeInTheDocument();
   });
 
   it('waits rather than redirecting while the session is still being checked', () => {
     // Redirecting during the check would throw an admin out on every refresh.
-    setAuth({ isCheckingAuth: true });
+    setAuth({ isCheckingAdminAuth: true });
 
     renderConsole('/admin/dashboard');
 
@@ -84,34 +84,20 @@ describe('AdminLoginProtectedRoute', () => {
   });
 
   it('sends an already-signed-in admin straight to the dashboard', () => {
-    setAuth({ authUser: { _id: 'a1' }, isAdmin: true });
+    setAuth({ adminUser: { _id: 'a1', role: 'admin' } });
 
     renderConsole('/admin/login');
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument();
   });
 
-  it('sends a signed-in customer to the storefront origin', () => {
-    const replace = vi.fn();
-    vi.stubGlobal('location', { ...window.location, replace });
-    setAuth({ authUser: { _id: 'u1' }, isAdmin: false });
-
-    renderConsole('/admin/login');
-
-    // A cross-origin move, not a route change — the storefront is a separate
-    // deployment, so react-router cannot get there.
-    expect(replace).toHaveBeenCalledWith(expect.stringContaining('http'));
-    expect(screen.queryByText('Sign in')).not.toBeInTheDocument();
-
-    vi.unstubAllGlobals();
-  });
-
   it('runs the session check on mount', () => {
-    const checkAuth = vi.fn();
-    setAuth({ checkAuth });
+    const checkAdminAuth = vi.fn();
+    setAuth({ checkAdminAuth });
 
     renderConsole('/admin/login');
 
-    expect(checkAuth).toHaveBeenCalled();
+    expect(checkAdminAuth).toHaveBeenCalled();
   });
 });
+

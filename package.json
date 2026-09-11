@@ -11,8 +11,16 @@
     "build:web": "npm run build --workspace=@em/web",
     "build:erp": "npm run build --workspace=@em/erp",
     "start": "npm run start --workspace=@em/api",
+    "start:prod": "npm run migrate --workspace=@em/api && npm run start --workspace=@em/api",
+    "migrate": "npm run migrate --workspace=@em/api",
+    "seed": "npm run seed --workspace=@em/api",
+    "bootstrap:staff": "npm run bootstrap:staff --workspace=@em/api",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
   },
   "keywords": [],
   "author": "",

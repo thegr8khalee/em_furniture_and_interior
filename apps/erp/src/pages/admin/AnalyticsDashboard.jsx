@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { TrendingUp, ShoppingCart, Users, Calendar, Banknote, Package, Award, Target, BarChart3 } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
@@ -35,11 +35,7 @@ const AnalyticsDashboard = () => {
 
   const [activeTab, setActiveTab] = useState('overview');
 
-  useEffect(() => {
-    fetchAllData();
-  }, [dateRange]);
-
-  const fetchAllData = async () => {
+  const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
       const params = {
@@ -78,7 +74,11 @@ const AnalyticsDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
 
   // Naira, like the rest of the system. This was formatting every figure on
   // the page as US currency, so the shop's revenue read as dollars.

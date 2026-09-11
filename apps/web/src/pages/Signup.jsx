@@ -1,7 +1,6 @@
-// src/pages/AdminSignupPage.jsx
+// src/pages/SignupPage.jsx
 import React, { useState } from 'react';
-// import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@em/domain'; // Import your Zustand auth store
+import { useAuthStore } from '@em/domain';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageWrapper } from '@em/ui/animations';
@@ -16,13 +15,7 @@ const SignupPage = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
 
-  // React Router hook for navigation
-  //   const navigate = useNavigate();
-
-  // Access authUser and isAdmin from the store to handle redirection if already logged in as admin
   const { signup, isLoading } = useAuthStore();
-  // Effect to redirect if an admin is already logged in
-  // This handles cases where an admin manually navigates to /admin/login while already authenticated
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -232,7 +225,7 @@ const SignupPage = () => {
               </button>
               <div className="w-full text-center mt-4">
                 <span className="text-neutral/40 text-sm">Already have an account? </span>
-                <Link to="/profile" className="text-secondary font-medium text-sm hover:underline">
+                <Link to="/login" className="text-secondary font-medium text-sm hover:underline">
                   Sign In
                 </Link>
               </div>

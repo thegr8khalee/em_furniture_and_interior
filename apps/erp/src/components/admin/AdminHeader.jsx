@@ -1,10 +1,11 @@
-import { useAdminStore, useAuthStore } from '@em/domain';
-import { Menu } from 'lucide-react';
-import { Badge } from '@em/ui';
+import { useAdminStore, useAdminAuthStore } from '@em/domain';
+import { Menu, ExternalLink } from 'lucide-react';
 import AdminBreadcrumb from './AdminBreadcrumb';
 
+const STOREFRONT_URL = import.meta.env.VITE_STOREFRONT_URL || 'http://localhost:5173';
+
 const AdminHeader = () => {
-  const { authUser } = useAuthStore();
+  const { adminUser: authUser } = useAdminAuthStore();
   const { toggleSidebar } = useAdminStore();
 
   const initials = (authUser?.username || authUser?.email || 'A')
@@ -30,8 +31,19 @@ const AdminHeader = () => {
         <AdminBreadcrumb />
       </div>
 
-      {/* Right: admin info */}
-      <div className="flex items-center gap-3">
+      {/* Right: storefront link + admin info */}
+      <div className="flex items-center gap-3 sm:gap-4">
+        <a
+          href={STOREFRONT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden sm:inline-flex items-center gap-1.5 border border-base-300 px-3 py-1.5 text-xs font-semibold text-neutral/70 hover:border-secondary hover:text-secondary transition-colors"
+          title="Open live customer storefront"
+        >
+          <span>View Storefront</span>
+          <ExternalLink size={13} />
+        </a>
+
         <div className="hidden sm:flex flex-col items-end">
           <span className="text-sm font-medium text-neutral leading-tight">
             {authUser?.username || authUser?.email}

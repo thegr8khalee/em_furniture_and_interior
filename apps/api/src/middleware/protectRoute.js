@@ -1,12 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { findCustomerById } from '../services/identity.js';
 import { logger } from '../lib/logger.js';
-
-const cookieOptions = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'Lax',
-};
+import { getClearCookieOptions } from '../lib/cookies.js';
 
 /**
  * Requires a signed-in shopper, and puts them on `req.user`.
@@ -39,7 +34,7 @@ export const protectRoute = async (req, res, next) => {
     const user = await findCustomerById(decoded.userId);
 
     if (!user) {
-      res.clearCookie('jwt', cookieOptions);
+      res.clearCookie('jwt', getClearCookieOptions());
       return res.status(401).json({ message: 'Unauthorized - Account not found.' });
     }
 
@@ -47,7 +42,7 @@ export const protectRoute = async (req, res, next) => {
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
-      res.clearCookie('jwt', cookieOptions);
+      res.clearCookie('jwt', getClearCookieOptions());
       return res.status(401).json({ message: 'Unauthorized - Invalid or expired token.' });
     }
 

@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 // src/store/useCartStore.js
 import { create } from 'zustand';
 import { axiosInstance, useAuthStore } from '@em/domain';

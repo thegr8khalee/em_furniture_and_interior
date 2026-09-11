@@ -1,6 +1,5 @@
 // src/pages/Showroom.jsx
 import React from 'react';
-import { motion } from 'framer-motion';
 import { elegantEase, luxuryEase } from '@em/ui/styles/animations';
 import { PageWrapper, SlideIn } from '@em/ui/animations';
 import SEO from '../components/SEO';

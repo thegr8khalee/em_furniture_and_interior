@@ -1,9 +1,8 @@
 // src/pages/AdminLoginPage.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@em/domain'; // Import your Zustand auth store
+import { useAdminAuthStore, getSupabase, isSupabaseConfigured } from '@em/domain';
 import { Loader2 } from 'lucide-react';
-import { useAdminStore, getSupabase, isSupabaseConfigured } from '@em/domain';
 import { SupabaseSignIn } from '@em/ui';
 import { Helmet } from 'react-helmet-async';
 
@@ -16,16 +15,16 @@ const AdminLoginPage = () => {
   // React Router hook for navigation
   const navigate = useNavigate();
 
-  // Access authUser and isAdmin from the store to handle redirection if already logged in as admin
-  const { authUser, isAdmin, isLoading, isCheckingAuth } = useAuthStore();
-  const { adminLogin, adminLoginWithSupabase } = useAdminStore();
+  // Access adminUser from the store to handle redirection if already logged in as admin
+  const { adminUser, isLoading, isCheckingAdminAuth, adminLogin, adminLoginWithSupabase } =
+    useAdminAuthStore();
+
   // Effect to redirect if an admin is already logged in
-  // This handles cases where an admin manually navigates to /admin/login while already authenticated
   React.useEffect(() => {
-    if (!isCheckingAuth && authUser && isAdmin) {
+    if (!isCheckingAdminAuth && adminUser) {
       navigate('/admin/dashboard', { replace: true });
     }
-  }, [authUser, isAdmin, isCheckingAuth, navigate]);
+  }, [adminUser, isCheckingAdminAuth, navigate]);
 
   // Handle form submission
   const handleSubmit = async (e) => {

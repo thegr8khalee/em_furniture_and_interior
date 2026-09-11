@@ -339,6 +339,88 @@ describe('a payslip is a record', () => {
       )
     ).rejects.toThrow(/payslip_net_is_gross_less_deductions/);
   });
+
+  it('generates a printable payslip PDF for an employee', async () => {
+    const employee = (await hire({ fullName: 'Printable Staff' })).body.employee;
+    const run = (await post('/api/payroll/runs', { month: aMonth() })).body.payRun;
+    const fullRun = (await get(`/api/payroll/runs/${run._id}`)).body.payRun;
+    const slip = fullRun.payslips.find((p) => p.employee._id === employee._id);
+
+    const res = await get(`/api/payroll/runs/${run._id}/payslips/${slip._id}/pdf`);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('pdf');
+  });
+});
+
+describe('statutory remittances', () => {
+  const approvedRun = async () => {
+    const month = aMonth();
+    await hire();
+    const run = (await post('/api/payroll/runs', { month })).body.payRun;
+    await post(`/api/payroll/runs/${run._id}/approve`);
+    return (await get(`/api/payroll/runs/${run._id}`)).body.payRun;
+  };
+
+  it('remits PAYE tax and clears liability 2500 against bank', async () => {
+    const run = await approvedRun();
+
+    const taxBefore = await balanceOf('2500');
+    expect(taxBefore).toBeGreaterThan(0);
+    const bankBefore = await balanceOf('1120');
+
+    const res = await post(`/api/payroll/runs/${run._id}/remit-tax`, {
+      paymentMethod: 'bank_transfer',
+      paidOn: '2026-02-10',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.payRun.taxRemittedAt).toBeTruthy();
+    expect(await balanceOf('2500')).toBe(taxBefore - Number(run.totals.paye));
+    expect(await balanceOf('1120')).toBe(bankBefore - Number(run.totals.paye));
+
+    // Settle again should fail (idempotency guard)
+    const second = await post(`/api/payroll/runs/${run._id}/remit-tax`, {
+      paymentMethod: 'bank_transfer',
+    });
+    expect(second.status).toBe(400);
+    expect(second.body.message).toMatch(/already been remitted/i);
+  });
+
+  it('remits pension contributions and clears liability 2600 against bank', async () => {
+    const run = await approvedRun();
+
+    const pensionBefore = await balanceOf('2600');
+    expect(pensionBefore).toBeGreaterThan(0);
+    const bankBefore = await balanceOf('1120');
+    const totalPension = Number(run.totals.pension) + Number(run.totals.employerPension);
+
+    const res = await post(`/api/payroll/runs/${run._id}/remit-pension`, {
+      paymentMethod: 'bank_transfer',
+      paidOn: '2026-02-10',
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.payRun.pensionRemittedAt).toBeTruthy();
+    expect(await balanceOf('2600')).toBe(pensionBefore - totalPension);
+    expect(await balanceOf('1120')).toBe(bankBefore - totalPension);
+
+    // Settle again should fail (idempotency guard)
+    const second = await post(`/api/payroll/runs/${run._id}/remit-pension`, {
+      paymentMethod: 'bank_transfer',
+    });
+    expect(second.status).toBe(400);
+    expect(second.body.message).toMatch(/already been remitted/i);
+  });
+
+  it('refuses to remit tax or pension on a draft run', async () => {
+    const draft = (await post('/api/payroll/runs', { month: aMonth() })).body.payRun;
+
+    const taxRes = await post(`/api/payroll/runs/${draft._id}/remit-tax`);
+    expect(taxRes.status).toBe(400);
+
+    const pensionRes = await post(`/api/payroll/runs/${draft._id}/remit-pension`);
+    expect(pensionRes.status).toBe(400);
+  });
 });
 
 describe('who may run payroll', () => {

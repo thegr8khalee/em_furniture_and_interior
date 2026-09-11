@@ -1,19 +1,15 @@
 // src/components/BottomNavbar.jsx
 import React, { useEffect } from 'react';
 import {
-  Home,
   ShoppingBag,
   ShoppingCart,
   User,
   Heart,
-  X,
-  LayoutDashboard,
-  HomeIcon,
-  Plus,
-  Minus,
 } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+
+void motion;
 import { luxuryEase } from '@em/ui/styles/animations';
 import { useAuthStore } from '@em/domain';
 import { useCartStore } from '../store/useCartStore';
@@ -21,33 +17,33 @@ import { useWishlistStore } from '../store/useWishlistStore';
 
 const BottomNavbar = () => {
   const location = useLocation();
-  const { isAdmin, isAuthReady } = useAuthStore();
+  const { isAuthReady } = useAuthStore();
   const { cart, getCart } = useCartStore();
   const { wishlist, getwishlist } = useWishlistStore();
 
   useEffect(() => {
-    if (isAuthReady && !isAdmin) {
+    if (isAuthReady) {
       getCart();
       getwishlist();
     }
-  }, [getCart, getwishlist, isAuthReady, isAdmin]);
+  }, [getCart, getwishlist, isAuthReady]);
 
   const navItems = [
     { name: 'Shop', icon: ShoppingBag, path: '/shop' },
     {
-      name: isAdmin ? 'Product' : 'Cart',
-      icon: isAdmin ? Plus : ShoppingCart,
-      path: isAdmin ? '/admin/products/new' : '/cart',
+      name: 'Cart',
+      icon: ShoppingCart,
+      path: '/cart',
     },
     {
-      name: isAdmin ? 'Collection' : 'Wishlist',
-      icon: isAdmin ? Plus : Heart,
-      path: isAdmin ? '/admin/collections/new' : '/wishlist',
+      name: 'Wishlist',
+      icon: Heart,
+      path: '/wishlist',
     },
     {
-      name: isAdmin ? 'Dashboard' : 'Profile',
-      icon: isAdmin ? LayoutDashboard : User,
-      path: isAdmin ? '/admin/dashboard' : '/profile',
+      name: 'Profile',
+      icon: User,
+      path: '/profile',
     },
   ];
 

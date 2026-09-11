@@ -42,8 +42,6 @@ const ProjectManagement = () => {
   };
 
   const { currentPage, totalPages } = pagination;
-  const startItem = totalCount > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
-  const endItem = Math.min(currentPage * itemsPerPage, totalCount);
 
   // Client-side filtering for search and category
   const filteredProjects = projects.filter((p) => {
@@ -76,7 +74,7 @@ const ProjectManagement = () => {
             {totalCount != null ? `${totalCount} total projects` : 'Loading...'}
           </p>
         </div>
-        <Button variant="primary" leftIcon={Plus} onClick={() => navigate('/admin/addproject')}>
+        <Button variant="primary" leftIcon={Plus} onClick={() => navigate('/admin/addProject')}>
           Add Project
         </Button>
       </div>

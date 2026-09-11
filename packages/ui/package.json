@@ -14,5 +14,8 @@
     "react": "*",
     "react-dom": "*",
     "react-router-dom": "*"
+  },
+  "dependencies": {
+    "dompurify": "^3.4.15"
   }
 }

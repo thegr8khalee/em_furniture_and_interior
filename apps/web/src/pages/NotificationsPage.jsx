@@ -35,7 +35,7 @@ const NotificationsPage = () => {
     try {
       await markAllRead();
       toast.success('All notifications marked as read');
-    } catch (error) {
+    } catch {
       toast.error('Failed to mark notifications');
     }
   };

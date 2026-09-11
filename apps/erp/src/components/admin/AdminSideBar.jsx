@@ -1,5 +1,5 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useAdminStore, useAuthStore } from '@em/domain';
+import { useAdminStore, useAdminAuthStore } from '@em/domain';
 import { PERMISSIONS } from '@em/shared/permissions';
 import {
   X,
@@ -108,9 +108,9 @@ const navGroups = [
 
 /* ── component ──────────────────────────────────────── */
 const AdminSidebar = () => {
-  const logout = useAuthStore((s) => s.logout);
-  const hasPermission = useAuthStore((s) => s.hasPermission);
-  const authUser = useAuthStore((s) => s.authUser);
+  const logout = useAdminAuthStore((s) => s.adminLogout);
+  const hasPermission = useAdminAuthStore((s) => s.hasPermission);
+  const authUser = useAdminAuthStore((s) => s.adminUser);
   const { isSidebarOpen, closeSidebar } = useAdminStore();
   const navigate = useNavigate();
   const location = useLocation();

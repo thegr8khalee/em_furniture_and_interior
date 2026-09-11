@@ -1,7 +1,7 @@
 // src/pages/AdminDashboard.jsx
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useAuthStore } from '@em/domain';
+import { useAdminAuthStore } from '@em/domain';
 import AdminDashboardContent from '../components/admin/AdminDashboardContent';
 import ProductManagement from '../components/admin/ProductManagement';
 import CollectionManagement from '../components/admin/CollectionManagement';
@@ -11,7 +11,7 @@ import FAQManagement from '../components/admin/FAQManagement';
 import { PERMISSIONS } from '@em/shared/permissions';
 
 const AdminDashboard = () => {
-    const { hasPermission } = useAuthStore();
+    const { hasPermission } = useAdminAuthStore();
     const [searchParams] = useSearchParams();
     const activeSection = useMemo(() => searchParams.get('section') || 'dashboard', [searchParams]);
 

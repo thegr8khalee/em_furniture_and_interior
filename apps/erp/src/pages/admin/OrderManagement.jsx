@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Package, 
@@ -16,6 +16,7 @@ import {
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
+import { ORDER_STATUS_COLORS } from '@em/shared';
 import { Badge, Button, EmptyState, Input, Modal, Pagination, Select, SkeletonBlock } from '@em/ui';
 
 const OrderManagement = () => {
@@ -43,11 +44,7 @@ const OrderManagement = () => {
     estimatedDeliveryDate: ''
   });
 
-  useEffect(() => {
-    fetchOrders();
-  }, [currentPage, filterStatus, filterPaymentStatus, searchQuery]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({
@@ -68,7 +65,11 @@ const OrderManagement = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, filterStatus, filterPaymentStatus, searchQuery]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   const openStatusModal = (order) => {
     setSelectedOrder(order);
@@ -198,7 +199,7 @@ const OrderManagement = () => {
     }
   };
 
-  const downloadInvoice = async (orderId) => {
+  const downloadInvoice = async (orderId, orderNumber) => {
     try {
       const response = await axiosInstance.get(`/orders/admin/${orderId}/invoice`, {
         responseType: 'blob'
@@ -207,17 +208,18 @@ const OrderManagement = () => {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `invoice-${orderId}.pdf`);
+      link.setAttribute('download', `invoice-${orderNumber || orderId}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
       toast.success('Invoice downloaded');
     } catch (error) {
       toast.error('Failed to download invoice');
     }
   };
 
-  const downloadReceipt = async (orderId) => {
+  const downloadReceipt = async (orderId, orderNumber) => {
     try {
       const response = await axiosInstance.get(`/orders/admin/${orderId}/receipt`, {
         responseType: 'blob'
@@ -226,17 +228,18 @@ const OrderManagement = () => {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `receipt-${orderId}.pdf`);
+      link.setAttribute('download', `receipt-${orderNumber || orderId}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
       toast.success('Receipt downloaded');
     } catch (error) {
       toast.error('Failed to download receipt');
     }
   };
 
-  const downloadQuotation = async (orderId) => {
+  const downloadQuotation = async (orderId, orderNumber) => {
     try {
       const response = await axiosInstance.get(`/orders/admin/${orderId}/quotation`, {
         responseType: 'blob'
@@ -245,10 +248,11 @@ const OrderManagement = () => {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `quotation-${orderId}.pdf`);
+      link.setAttribute('download', `quotation-${orderNumber || orderId}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
       toast.success('Quotation downloaded');
     } catch (error) {
       toast.error('Failed to download quotation');
@@ -277,28 +281,7 @@ const OrderManagement = () => {
     return icons[status] || <Package size={16} />;
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      pending: 'badge-warning',
-      confirmed: 'badge-info',
-      processing: 'badge-info',
-      shipped: 'badge-primary',
-      delivered: 'badge-success',
-      cancelled: 'badge-error',
-      refunded: 'badge-error'
-    };
-    return colors[status] || 'badge-ghost';
-  };
-
-  const getPaymentStatusColor = (status) => {
-    const colors = {
-      pending: 'badge-warning',
-      paid: 'badge-success',
-      failed: 'badge-error',
-      refunded: 'badge-error'
-    };
-    return colors[status] || 'badge-ghost';
-  };
+  const getStatusColor = (status) => ORDER_STATUS_COLORS[status] || 'badge-ghost';
 
   return (
     <AdminPageShell title="Order Management" subtitle="Manage and track customer orders">
@@ -481,13 +464,13 @@ const OrderManagement = () => {
                             <Undo2 size={14} />
                           </Button>
                         )}
-                        <Button variant="ghost" size="sm" onClick={() => downloadInvoice(order._id)} title="Download Invoice">
+                        <Button variant="ghost" size="sm" onClick={() => downloadInvoice(order._id, order.orderNumber)} title="Download Invoice">
                           <Download size={14} />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => downloadReceipt(order._id)} title="Download Receipt">
+                        <Button variant="ghost" size="sm" onClick={() => downloadReceipt(order._id, order.orderNumber)} title="Download Receipt">
                           <Download size={14} />
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => downloadQuotation(order._id)} title="Download Quotation">
+                        <Button variant="ghost" size="sm" onClick={() => downloadQuotation(order._id, order.orderNumber)} title="Download Quotation">
                           <Download size={14} />
                         </Button>
                         <Button

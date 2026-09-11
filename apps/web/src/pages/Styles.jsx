@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import FilterModal from '../components/FilterModal';
 import { useAuthStore, useCollectionStore, useProductsStore } from '@em/domain';
+import { PRODUCT_CATEGORIES } from '@em/shared';
 // import Hero1 from '../images/Hero1.png';
 // import whatsapp from '../images/whatsapp.png';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -272,16 +273,7 @@ const Styles = () => {
     setStyleSearchQuery('');
   };
 
-  const filteredCategories = [
-    'Living Room',
-    'Armchair',
-    'Bedroom',
-    'Dining Room',
-    'Center Table',
-    'Wardrobe',
-    'TV Unit',
-    'Carpet',
-  ];
+  const filteredCategories = PRODUCT_CATEGORIES;
 
   const filteredStyle = designs.filter((design) =>
     design.name.toLowerCase().includes(styleSearchQuery.toLowerCase())

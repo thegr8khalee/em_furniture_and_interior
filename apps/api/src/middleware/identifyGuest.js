@@ -2,12 +2,7 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { findCustomerById } from '../services/identity.js';
 import { logger } from '../lib/logger.js';
-
-const cookieOptions = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'Lax',
-};
+import { getCookieOptions, getClearCookieOptions } from '../lib/cookies.js';
 
 /**
  * Identifies the shopper behind a request: a signed-in principal on `req.user`,
@@ -35,17 +30,20 @@ export const identifyGuest = async (req, res, next) => {
         }
       } catch (jwtError) {
         logger.warn({ err: jwtError }, 'Invalid or expired JWT detected');
-        res.clearCookie('jwt', cookieOptions);
+        res.clearCookie('jwt', getClearCookieOptions());
       }
     }
 
     let anonymousId = req.cookies.anonymousId;
     if (!anonymousId) {
       anonymousId = uuidv4();
-      res.cookie('anonymousId', anonymousId, {
-        ...cookieOptions,
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+      res.cookie(
+        'anonymousId',
+        anonymousId,
+        getCookieOptions({
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        })
+      );
     }
 
     req.guestSession = { anonymousId };

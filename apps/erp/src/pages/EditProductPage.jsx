@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Loader2, Search, XCircle } from 'lucide-react';
 import { SkeletonBlock } from '@em/ui';
 import { useCollectionStore } from '@em/domain'; // Assuming this provides collections
 import { useAdminStore } from '@em/domain';
+import { PRODUCT_CATEGORIES, PRODUCT_STYLES } from '@em/shared';
 import AdminPageShell from '../components/admin/AdminPageShell'; // Assuming this provides updateProduct
 import { useProductsStore } from '@em/domain'; // Assuming this provides getProductById
 
@@ -473,15 +474,11 @@ const AdminEditProductPage = () => {
               required
             >
               <option value="">Select a category</option>
-              <option value="Living Room">Living Room</option>
-              <option value="Armchair">Armchair</option>
-              <option value="Bedroom">Bedroom</option>
-              <option value="Dining Room">Dining Room</option>
-              <option value="Center Table">Center Table</option>
-              <option value="Wardrobe">Wardrobe</option>
-              <option value="TV Unit">TV Unit</option>
-              <option value="Carpet">Carpet</option>
-              {/* Add more categories as needed */}
+              {PRODUCT_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -497,13 +494,11 @@ const AdminEditProductPage = () => {
               required
             >
               <option value="">Select a style</option>
-              <option value="Modern">Modern</option>
-              <option value="Contemporary">Contemporary</option>
-              <option value="Antique/Royal">Antique/Royal</option>
-              <option value="Bespoke">Bespoke</option>
-              <option value="Minimalist">Minimalist</option>
-              <option value="Glam">Glam</option>
-              {/* Add more categories as needed */}
+              {PRODUCT_STYLES.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
             </select>
           </div>
 

@@ -1,0 +1,91 @@
+# Render Blueprint Specification
+# Deploy with 1-click via Render Dashboard: "New" -> "Blueprint"
+version: "1"
+
+services:
+  - type: web
+    name: em-furniture-api
+    runtime: node
+    plan: starter
+    region: frankfurt
+    buildCommand: npm ci
+    startCommand: npm run start:prod
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+
+      # Database Connections
+      # DATABASE_URL should point to the pooled transaction connection (e.g. Supabase port 6543 or Render PostgreSQL)
+      - key: DATABASE_URL
+        sync: false
+      # DIRECT_DATABASE_URL connects directly (port 5432) for schema migrations
+      - key: DIRECT_DATABASE_URL
+        sync: false
+      - key: DB_POOL_MAX
+        value: "10"
+
+      # Authentication
+      - key: JWT_SECRET
+        generateValue: true
+
+      # CORS & Frontend Origins
+      # Set to your Vercel storefront URL (no trailing slash)
+      - key: STOREFRONT_URL
+        sync: false
+      # Set to your Vercel ERP URL (no trailing slash)
+      - key: ERP_URL
+        sync: false
+      # Legacy single-app deploy fallback (keep pointing to storefront)
+      - key: FRONTEND_URL
+        sync: false
+      # Optional: comma-separated list of additional allowed origins (e.g. custom apex domains, previews)
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # Optional: set to your shared parent domain (e.g. ".emfurniture.com") for unified first-party cookies
+      - key: COOKIE_DOMAIN
+        sync: false
+      # Set to "true" to automatically allow Vercel preview deployment URLs (*.vercel.app)
+      - key: ALLOW_VERCEL_PREVIEWS
+        value: "false"
+
+      # Payments (Paystack)
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+
+      # Media Storage (Cloudinary)
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      # Email Notifications (Gmail OAuth2)
+      - key: EMAIL_USER
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+
+      # Supabase Auth (Optional)
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+
+      # Operational Settings
+      - key: TAX_RATE_PERCENTAGE
+        value: "7.5"
+      - key: LOG_LEVEL
+        value: info
+      - key: LOG_FORMAT
+        value: json

@@ -1,4 +1,5 @@
 import { logger } from '../lib/logger.js';
+import { generatePayslipPDF } from '../lib/invoiceGenerator.js';
 import {
   PayrollError,
   addEmployee,
@@ -6,9 +7,12 @@ import {
   createPayRun,
   discardPayRun,
   getPayRun,
+  getPayslip,
   listEmployees,
   listPayRuns,
   payPayRun,
+  remitPaye,
+  remitPension,
   updateEmployee,
 } from '../services/payroll.js';
 
@@ -116,5 +120,58 @@ export const deletePayRun = async (req, res) => {
     res.json({ success: true, message: 'Draft discarded.' });
   } catch (error) {
     fail(error, res, 'Error discarding a pay run');
+  }
+};
+
+export const generatePayslipDocument = async (req, res) => {
+  try {
+    const { run, slip } = await getPayslip(req.params.runId, req.params.slipId);
+    await generatePayslipPDF(slip, run, res);
+  } catch (error) {
+    fail(error, res, 'generatePayslipDocument');
+  }
+};
+
+export const postPayRunTaxRemittance = async (req, res) => {
+  try {
+    const payRun = await remitPaye(
+      req.params.runId,
+      {
+        paymentMethod: req.body?.paymentMethod,
+        paidOn: req.body?.paidOn || null,
+        reference: req.body?.reference || null,
+      },
+      req.admin?.id ?? null
+    );
+
+    res.json({
+      success: true,
+      payRun,
+      message: 'PAYE tax remitted. Liability 2500 cleared.',
+    });
+  } catch (error) {
+    fail(error, res, 'Error remitting PAYE tax');
+  }
+};
+
+export const postPayRunPensionRemittance = async (req, res) => {
+  try {
+    const payRun = await remitPension(
+      req.params.runId,
+      {
+        paymentMethod: req.body?.paymentMethod,
+        paidOn: req.body?.paidOn || null,
+        reference: req.body?.reference || null,
+      },
+      req.admin?.id ?? null
+    );
+
+    res.json({
+      success: true,
+      payRun,
+      message: 'Pension contributions remitted. Liability 2600 cleared.',
+    });
+  } catch (error) {
+    fail(error, res, 'Error remitting pension');
   }
 };

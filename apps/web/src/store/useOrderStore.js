@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { axiosInstance } from '@em/domain';
 
-export const useOrderStore = create((set, get) => ({
+export const useOrderStore = create((set) => ({
   // State
   orders: [],
   currentOrder: null,

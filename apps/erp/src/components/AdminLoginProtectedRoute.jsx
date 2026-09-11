@@ -1,36 +1,20 @@
 import { useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuthStore } from '@em/domain';
-
-// A customer who lands on the console belongs on the storefront, which is now a
-// different origin — so this is a location change, not a route change.
-const STOREFRONT_URL = import.meta.env.VITE_STOREFRONT_URL || 'http://localhost:5173';
+import { useAdminAuthStore } from '@em/domain';
 
 const AdminLoginProtectedRoute = () => {
-  const { authUser, isCheckingAuth, isAdmin, checkAuth } = useAuthStore();
+  const { adminUser, isCheckingAdminAuth, checkAdminAuth } = useAdminAuthStore();
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    checkAdminAuth();
+  }, [checkAdminAuth]);
 
-  useEffect(() => {
-    if (!isCheckingAuth && authUser && !isAdmin) {
-      window.location.replace(STOREFRONT_URL);
-    }
-  }, [isCheckingAuth, authUser, isAdmin]);
-
-  if (isCheckingAuth) {
+  if (isCheckingAdminAuth) {
     return <div className="text-center p-4">Loading authentication...</div>;
   }
 
-  if (authUser && isAdmin) {
+  if (adminUser) {
     return <Navigate to="/admin/dashboard" replace />;
-  }
-
-  if (authUser && !isAdmin) {
-    // The effect above is sending them to the storefront; render nothing rather
-    // than flashing the sign-in form at a customer.
-    return null;
   }
 
   return <Outlet />;

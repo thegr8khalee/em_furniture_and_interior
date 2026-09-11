@@ -26,6 +26,7 @@ const routeLabels = {
   warehouse: 'Warehouse',
   purchasing: 'Purchasing',
   vendors: 'Vendors',
+  documents: 'Document Builder',
   analytics: 'Analytics',
   'security-logs': 'Security Logs',
   new: 'New',

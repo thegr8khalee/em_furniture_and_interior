@@ -4,6 +4,7 @@ import {
   getExpenses,
   getOneExpense,
   getOnePurchaseOrder,
+  generatePurchaseOrderDocument,
   getPayables,
   getPurchaseOrders,
   getVendors,
@@ -80,6 +81,7 @@ router.get('/payables', canRead, getPayables);
 // --- purchase orders -------------------------------------------------------
 router.get('/purchase-orders', canRead, getPurchaseOrders);
 router.get('/purchase-orders/:orderId', canRead, getOnePurchaseOrder);
+router.get('/purchase-orders/:orderId/pdf', canRead, generatePurchaseOrderDocument);
 
 router.post(
   '/purchase-orders',

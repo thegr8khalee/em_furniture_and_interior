@@ -3,6 +3,7 @@ import { useOrderStore } from '../store/useOrderStore';
 import { Search, Package, Truck, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { PageWrapper } from '@em/ui/animations';
+import { ORDER_STATUS_COLORS } from '@em/shared';
 import SEO from '../components/SEO';
 
 const TrackOrderPage = () => {
@@ -103,7 +104,9 @@ const TrackOrderPage = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   {getStatusIcon(order.status)}
-                  <span className="badge badge-outline">{order.status.toUpperCase()}</span>
+                  <span className={`badge ${ORDER_STATUS_COLORS[order.status] || 'badge-ghost'}`}>
+                    {order.status.toUpperCase()}
+                  </span>
                 </div>
               </div>
 

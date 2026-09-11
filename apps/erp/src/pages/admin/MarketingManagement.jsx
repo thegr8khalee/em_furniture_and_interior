@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit2, Trash2, Search, Megaphone } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
@@ -39,11 +39,7 @@ const MarketingManagement = () => {
     endDate: '',
   });
 
-  useEffect(() => {
-    fetchItems();
-  }, [activeTab]);
-
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     setIsLoading(true);
     try {
       const endpoint =
@@ -54,13 +50,16 @@ const MarketingManagement = () => {
       setItems(
         activeTab === 'banners' ? response.data.banners : response.data.flashSales
       );
-    } catch (error) {
-      toast.error(`Failed to load ${activeTab}`);
-      console.error(error);
+    } catch {
+      toast.error('Failed to load items');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
 
   const resetBannerForm = () => {
     setBannerForm({

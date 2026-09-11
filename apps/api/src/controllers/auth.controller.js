@@ -3,6 +3,7 @@ import { generateToken } from '../lib/utils.js';
 import { mergeGuestIntoCustomer } from '../services/cart.js';
 import { sendEmail } from '../services/gmail.service.js';
 import { logger } from '../lib/logger.js';
+import { getCookieOptions, getClearCookieOptions } from '../lib/cookies.js';
 import {
   IdentityError,
   authenticateCustomer,
@@ -28,11 +29,7 @@ import { signInCustomerWithSupabase } from '../services/supabaseAuth.js';
  * own tables; neither frontend read them. The cart is at GET /api/cart.
  */
 
-const cookieOptions = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-});
+const cookieOptions = () => getCookieOptions();
 
 const handleError = (error, res, where) => {
   if (error instanceof IdentityError) {

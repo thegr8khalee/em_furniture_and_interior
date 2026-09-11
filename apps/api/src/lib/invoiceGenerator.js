@@ -1,5 +1,10 @@
 import puppeteer from 'puppeteer';
-import { orderDocumentHTML, customDocumentHTML } from './documentTemplates.js';
+import {
+  orderDocumentHTML,
+  customDocumentHTML,
+  purchaseOrderHTML,
+  payslipHTML,
+} from './documentTemplates.js';
 
 /* ── shared: HTML → PDF buffer via Puppeteer ─────────── */
 
@@ -7,10 +12,14 @@ let browserInstance = null;
 
 const getBrowser = async () => {
   if (!browserInstance || !browserInstance.isConnected()) {
-    browserInstance = await puppeteer.launch({
+    const launchOptions = {
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    };
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
+    browserInstance = await puppeteer.launch(launchOptions);
   }
   return browserInstance;
 };
@@ -18,6 +27,7 @@ const getBrowser = async () => {
 const htmlToPdfBuffer = async (html) => {
   const browser = await getBrowser();
   const page = await browser.newPage();
+  await page.setJavaScriptEnabled(false);
   await page.setContent(html, { waitUntil: 'networkidle0' });
   const pdfBuffer = await page.pdf({
     format: 'A4',
@@ -31,7 +41,7 @@ const htmlToPdfBuffer = async (html) => {
 /* ── filename helper ─────────────────────────────────── */
 
 const getFilename = (documentType, identifier) => {
-  const type = documentType.toLowerCase();
+  const type = documentType.toLowerCase().replace(/_/g, '-');
   return `${type}-${identifier}.pdf`;
 };
 
@@ -51,6 +61,38 @@ export const generateInvoicePDF = async (order, res) => {
   await generateOrderDocumentPDF(order, res, 'invoice');
 };
 
+export const generateDeliveryNotePDF = async (order, res) => {
+  await generateOrderDocumentPDF(order, res, 'delivery_note');
+};
+
+/* ── purchase order document ─────────────────────────── */
+
+export const generatePurchaseOrderPDF = async (po, res) => {
+  const html = purchaseOrderHTML(po);
+  const pdfBuffer = await htmlToPdfBuffer(html);
+  const filename = `purchase-order-${po.poNumber}.pdf`;
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+  res.end(pdfBuffer);
+};
+
+/* ── employee payslip document ───────────────────────── */
+
+export const generatePayslipPDF = async (slip, run, res) => {
+  const html = payslipHTML(slip, run);
+  const pdfBuffer = await htmlToPdfBuffer(html);
+  const periodStr = String(run.period).slice(0, 7);
+  const employeeName = (slip.employee?.fullName || 'employee')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-');
+  const filename = `payslip-${periodStr}-${employeeName}.pdf`;
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+  res.end(pdfBuffer);
+};
+
 /* ── custom / manual document ────────────────────────── */
 
 export const generateCustomDocumentPDF = async (data, res) => {
@@ -62,3 +104,4 @@ export const generateCustomDocumentPDF = async (data, res) => {
   res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
   res.end(pdfBuffer);
 };
+

@@ -825,6 +825,112 @@ export const postPayRunPaid = async (db, runId, { transaction } = {}) => {
   );
 };
 
+/**
+ * Remitting PAYE tax deducted from wages to the tax authority.
+ *
+ *   DR  2500 PAYE Tax Payable   paye
+ *   CR  bank/cash               paye
+ *
+ * Settles the tax liability created when the pay run was approved.
+ */
+export const postPayeRemittance = async (
+  db,
+  runId,
+  { paymentMethod = 'bank_transfer', paidOn = null, reference = null } = {},
+  { transaction } = {}
+) => {
+  const run = await one(
+    db,
+    `SELECT r.id, r.period, r.status,
+            COALESCE(SUM(p.paye), 0) AS paye
+       FROM pay_runs r
+       LEFT JOIN payslips p ON p.pay_run_id = r.id
+      WHERE r.id = :runId
+      GROUP BY r.id, r.period, r.status`,
+    { runId },
+    transaction
+  );
+
+  if (!run) throw new LedgerError(`No pay run ${runId}`);
+  if (run.status === 'draft') return { posted: false, reason: 'still_a_draft' };
+
+  const paye = Number(run.paye);
+  if (paye === 0) return { posted: false, reason: 'zero_value' };
+
+  const account = SETTLEMENT_ACCOUNT[paymentMethod] || '1120';
+
+  const entryDate = paidOn || new Date().toISOString().slice(0, 10);
+  const refText = reference ? ` (ref: ${reference})` : '';
+
+  return postOnce(
+    db,
+    {
+      date: entryDate,
+      description: `PAYE tax remittance for ${String(run.period).slice(0, 7)}${refText}`,
+      source: 'paye_remittance',
+      sourceId: run.id,
+      lines: [
+        { account: '2500', debit: paye, description: 'PAYE tax liability settled' },
+        { account, credit: paye, description: `Remitted via ${paymentMethod}` },
+      ],
+    },
+    { transaction }
+  );
+};
+
+/**
+ * Remitting pension contributions (employee + employer) to the PFA.
+ *
+ *   DR  2600 Pension Payable    pension + employer_pension
+ *   CR  bank/cash               pension + employer_pension
+ *
+ * Settles the pension liability created when the pay run was approved.
+ */
+export const postPensionRemittance = async (
+  db,
+  runId,
+  { paymentMethod = 'bank_transfer', paidOn = null, reference = null } = {},
+  { transaction } = {}
+) => {
+  const run = await one(
+    db,
+    `SELECT r.id, r.period, r.status,
+            COALESCE(SUM(p.pension + p.employer_pension), 0) AS pension_total
+       FROM pay_runs r
+       LEFT JOIN payslips p ON p.pay_run_id = r.id
+      WHERE r.id = :runId
+      GROUP BY r.id, r.period, r.status`,
+    { runId },
+    transaction
+  );
+
+  if (!run) throw new LedgerError(`No pay run ${runId}`);
+  if (run.status === 'draft') return { posted: false, reason: 'still_a_draft' };
+
+  const pensionTotal = Number(run.pension_total);
+  if (pensionTotal === 0) return { posted: false, reason: 'zero_value' };
+
+  const account = SETTLEMENT_ACCOUNT[paymentMethod] || '1120';
+
+  const entryDate = paidOn || new Date().toISOString().slice(0, 10);
+  const refText = reference ? ` (ref: ${reference})` : '';
+
+  return postOnce(
+    db,
+    {
+      date: entryDate,
+      description: `Pension remittance for ${String(run.period).slice(0, 7)}${refText}`,
+      source: 'pension_remittance',
+      sourceId: run.id,
+      lines: [
+        { account: '2600', debit: pensionTotal, description: 'Pension liability settled' },
+        { account, credit: pensionTotal, description: `Remitted via ${paymentMethod}` },
+      ],
+    },
+    { transaction }
+  );
+};
+
 // What each kind of stock movement does to the books. Inventory (1300) is the
 // other side of every one of them.
 const STOCK_RULES = {

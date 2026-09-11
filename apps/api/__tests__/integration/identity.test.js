@@ -289,6 +289,30 @@ describe('who am I', () => {
     expect(res.body).toMatchObject({ role: 'admin', adminRole: 'editor' });
     expect(res.body.permissions).toEqual(['blog.manage', 'faq.manage']);
   });
+
+  it('verifies an operator on /api/admin/check using admin_jwt cookie', async () => {
+    const staff = await makeStaff({ role: 'editor' });
+
+    const loggedIn = await api('post', '/api/admin/login')
+      .send({ email: staff.email, password: staff.password });
+    const adminCookie = cookiesFrom(loggedIn).find((c) => c.startsWith('admin_jwt='));
+    expect(adminCookie).toBeDefined();
+
+    const res = await api('get', '/api/admin/check')
+      .set('Cookie', [adminCookie.split(';')[0]]);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ role: 'admin', adminRole: 'editor' });
+    expect(res.body.permissions).toEqual(['blog.manage', 'faq.manage']);
+  });
+
+  it('refuses a customer session cookie on /api/admin/check', async () => {
+    const signedUp = await signUp();
+    const res = await api('get', '/api/admin/check')
+      .set('Cookie', asCookie(signedUp));
+
+    expect(res.status).toBe(401);
+  });
 });
 
 describe('a shopper managing their own account', () => {

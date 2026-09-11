@@ -1,4 +1,5 @@
 import { logger } from '../lib/logger.js';
+import { generatePurchaseOrderPDF } from '../lib/invoiceGenerator.js';
 import {
   PurchasingError,
   approveExpense,
@@ -203,6 +204,15 @@ export const getOnePurchaseOrder = async (req, res) => {
     res.json({ success: true, purchaseOrder: await getPurchaseOrder(req.params.orderId) });
   } catch (error) {
     fail(error, res, 'Error loading a purchase order');
+  }
+};
+
+export const generatePurchaseOrderDocument = async (req, res) => {
+  try {
+    const po = await getPurchaseOrder(req.params.orderId);
+    await generatePurchaseOrderPDF(po, res);
+  } catch (error) {
+    fail(error, res, 'Error generating purchase order PDF');
   }
 };
 

@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useOrderStore } from '../store/useOrderStore';
-import { CheckCircle, Package, Truck, MapPin, CreditCard, Loader2, Download } from 'lucide-react';
+import { CheckCircle, Package, Truck, MapPin, CreditCard, Loader2, Download, MessageCircle } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import { PageWrapper } from '@em/ui/animations';
+import { ORDER_STATUS_COLORS } from '@em/shared';
 import SEO from '../components/SEO';
 
 const OrderConfirmationPage = () => {
   const { orderId } = useParams();
-  const navigate = useNavigate();
   const { currentOrder, getOrderById, isLoading } = useOrderStore();
   const [error, setError] = useState(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -18,7 +18,7 @@ const OrderConfirmationPage = () => {
     const fetchOrder = async () => {
       try {
         await getOrderById(orderId);
-      } catch (err) {
+      } catch {
         setError('Order not found or you do not have permission to view it');
       }
     };
@@ -42,6 +42,7 @@ const OrderConfirmationPage = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
       toast.success('Invoice downloaded');
     } catch (error) {
       toast.error('Failed to download invoice');
@@ -65,6 +66,7 @@ const OrderConfirmationPage = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
       toast.success('Receipt downloaded');
     } catch (error) {
       toast.error('Failed to download receipt');
@@ -118,18 +120,7 @@ const OrderConfirmationPage = () => {
     );
   }
 
-  const getStatusColor = (status) => {
-    const colors = {
-      pending: 'badge-warning',
-      confirmed: 'badge-info',
-      processing: 'badge-info',
-      shipped: 'badge-primary',
-      delivered: 'badge-success',
-      cancelled: 'badge-error',
-      refunded: 'badge-error'
-    };
-    return colors[status] || 'badge-ghost';
-  };
+  const getStatusColor = (status) => ORDER_STATUS_COLORS[status] || 'badge-ghost';
 
   const getStatusIcon = (status) => {
     if (status === 'delivered') return <CheckCircle size={24} />;
@@ -316,6 +307,36 @@ const OrderConfirmationPage = () => {
           </div>
         )}
 
+        {/* WhatsApp Order Action Banner */}
+        {currentOrder.paymentMethod === 'whatsapp' && (
+          <div className="card bg-emerald-50 border border-emerald-200 mb-6 shadow-sm">
+            <div className="card-body text-center items-center py-6">
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-emerald-600 text-white rounded-full mb-3">
+                <MessageCircle size={24} />
+              </div>
+              <h3 className="card-title text-emerald-900 text-xl font-bold">Complete Your Order on WhatsApp</h3>
+              <p className="text-sm text-emerald-800 max-w-md mt-1">
+                You selected WhatsApp Order. Click the button below to connect with our sales concierge and finalize your order directly.
+              </p>
+              <a
+                href={`https://wa.me/2349037691860?text=${encodeURIComponent(
+                  `Hello EM Furniture & Interior, I just placed order #${currentOrder.orderNumber}.\n\nCustomer: ${currentOrder.shippingAddress?.fullName || ''}\nTotal: ₦${Number(currentOrder.totalAmount || 0).toLocaleString('en-NG')}\n\nItems:\n${currentOrder.items?.map((item) => `- ${item.name} (x${item.quantity})`).join('\n') || ''}\n\nPlease confirm my order.`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn bg-emerald-600 hover:bg-emerald-700 text-white mt-4 gap-2 px-8 border-none text-base shadow"
+              >
+                <img
+                  src="https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png"
+                  alt="WhatsApp"
+                  className="w-5 h-5 object-contain"
+                />
+                Chat on WhatsApp to Confirm
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex flex-wrap gap-4 justify-center">
           {currentOrder.paymentStatus === 'paid' ? (
@@ -332,21 +353,36 @@ const OrderConfirmationPage = () => {
               Download Receipt
             </button>
           ) : (
-            <>
-              <button
-                onClick={downloadInvoice}
-                className="btn btn-outline"
-                disabled={isDownloading}
-              >
-                {isDownloading ? (
-                  <Loader2 className="animate-spin" size={20} />
-                ) : (
-                  <Download size={20} />
-                )}
-                Download Invoice
-              </button>
-            </>
+            <button
+              onClick={downloadInvoice}
+              className="btn btn-outline"
+              disabled={isDownloading}
+            >
+              {isDownloading ? (
+                <Loader2 className="animate-spin" size={20} />
+              ) : (
+                <Download size={20} />
+              )}
+              Download Invoice
+            </button>
           )}
+
+          <button
+            onClick={downloadQuotation}
+            className="btn btn-outline"
+            disabled={isDownloading}
+          >
+            {isDownloading ? (
+              <Loader2 className="animate-spin" size={20} />
+            ) : (
+              <Download size={20} />
+            )}
+            Download Quotation
+          </button>
+
+          <Link to="/shop" className="btn btn-primary">
+            Continue Shopping
+          </Link>
         </div>
       </div>
     </div>

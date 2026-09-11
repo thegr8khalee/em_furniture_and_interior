@@ -2,8 +2,11 @@
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+
+void motion;
 import { luxuryEase } from '@em/ui/styles/animations';
 import { PageWrapper, SectionReveal, SlideIn } from '@em/ui/animations';
+import { SafeHTML } from '@em/ui';
 import {
   Loader2,
   ShoppingCart,
@@ -11,12 +14,10 @@ import {
   ChevronLeft,
   Share,
   Share2,
-  Pen,
-  Trash2,
 } from 'lucide-react';
 // import { useAdminStore } from '@em/domain'; // To get collection details
 import { useProductsStore } from '@em/domain'; // To get all products and filter them
-import { axiosInstance, useAdminStore, useAuthStore, useCollectionStore } from '@em/domain';
+import { axiosInstance, useAuthStore, useCollectionStore } from '@em/domain';
 // import whatsapp from '../images/whatsapp.png';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
@@ -51,9 +52,8 @@ const CollectionDetailsPage = () => {
     isGettingProducts,
   } = useProductsStore();
 
-  const { isAdmin, authUser } = useAuthStore();
+  const { authUser } = useAuthStore();
 
-  const { delCollection, isDeletingCollection } = useAdminStore();
   const { banners, getActiveBanners } = useMarketingStore();
 
   const [reviews, setReviews] = React.useState([]);
@@ -68,11 +68,8 @@ const CollectionDetailsPage = () => {
     }
     // Ensure all products are fetched to filter them later
     getProducts();
-    if (!isAdmin) {
-      getwishlist();
-    }
+    getwishlist();
     getActiveBanners();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collectionId, getCollectionById, getProducts, getwishlist, getActiveBanners]);
 
   useEffect(() => {
@@ -129,21 +126,6 @@ const CollectionDetailsPage = () => {
     setTimeout(() => {
       window.scrollTo(0, 0);
     }, 10);
-  };
-
-  const handleEditCollection = async (collection) => {
-    navigate(`/admin/collections/edit/${collection}`);
-  };
-
-  const handleDeleteCollection = async (collectionId) => {
-    if (
-      window.confirm(
-        'Are you sure you want to delete this collection? This action cannot be undone.'
-      )
-    ) {
-      await delCollection(collectionId);
-      navigate(-1);
-    }
   };
 
   const isInWishlist = (id) =>
@@ -370,80 +352,58 @@ const CollectionDetailsPage = () => {
           </motion.div>
         </div>
       </div>
-      {isAdmin ? (
-        <div className="space-y-2 m-2">
-          <button
-            className="btn btn-sm btn-circle btn-elegant mr-2 w-full"
-            onClick={() => handleEditCollection(collectionId)}
-          >
-            <Pen /> Edit Collection
-          </button>
-          <button
-            className="btn btn-outline btn-error w-full"
-            onClick={() => handleDeleteCollection(collectionId)}
-          >
-            {isDeletingCollection ? (
-              <Loader2 className="animate-spin" />
-            ) : (
-              <Trash2 />
-            )}{' '}
-            Delete Collection
-          </button>
-        </div>
-      ) : null}
-      {!isAdmin ? (
-        <div className="px-4 mb-6 sm:flex space-x-2 space-y-2">
-          <a
-            className=" btn btn-md bg-green-600 hover:bg-green-700 text-white flex-1 w-full border-0 font-heading"
-            href={whatsappHref(collection)}
-          >
-            <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png"} alt="" className="size-6" />
-            Order Now
-          </a>
+      <div className="px-4 mb-6 sm:flex space-x-2 space-y-2">
+        <a
+          className=" btn btn-md bg-green-600 hover:bg-green-700 text-white flex-1 w-full border-0 font-heading"
+          href={whatsappHref(collection)}
+        >
+          <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png"} alt="" className="size-6" />
+          Order Now
+        </a>
 
+        <button
+          className="btn btn-md btn-elegant flex-1 w-full"
+          onClick={() => handleAddToCart(collectionId, 1, 'Collection')}
+        >
+          {isAddingToCart ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <ShoppingCart size={20} />
+          )}
+          Add to Cart
+        </button>
+        {isInWishlist(collectionId) ? (
           <button
-            className="btn btn-md btn-elegant flex-1 w-full"
-            onClick={() => handleAddToCart(collectionId, 1, 'Collection')}
+            className="btn btn-md btn-elegant-outline flex-1 w-full"
+            onClick={() =>
+              handleRemovefromWishlist(collectionId, 'Collection')
+            }
           >
-            {isAddingToCart ? (
+            {isRemovingFromwishlist ? (
               <Loader2 className="animate-spin" />
             ) : (
-              <ShoppingCart size={20} />
+              <Heart size={20} className="fill-white stroke-0" />
             )}
-            Add to Cart
           </button>
-          {isInWishlist(collectionId) ? (
-            <button
-              className="btn btn-md btn-elegant-outline flex-1 w-full"
-              onClick={() =>
-                handleRemovefromWishlist(collectionId, 'Collection')
-              }
-            >
-              {isRemovingFromwishlist ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <Heart size={20} className="fill-white stroke-0" />
-              )}
-            </button>
-          ) : (
-            <button
-              className="btn btn-md btn-elegant-outline flex-1 w-full"
-              onClick={() => handleAddToWishlist(collectionId, 'Collection')}
-            >
-              {isAddingTowishlist ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <Heart size={20} />
-              )}
-              Wishlist
-            </button>
-          )}
-        </div>
-      ) : null}
-      <p
+        ) : (
+          <button
+            className="btn btn-md btn-elegant-outline flex-1 w-full"
+            onClick={() => handleAddToWishlist(collectionId, 'Collection')}
+          >
+            {isAddingTowishlist ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Heart size={20} />
+            )}
+            Wishlist
+          </button>
+        )}
+      </div>
+      <SafeHTML
+        as="p"
         className="px-4 py-8 max-w-7xl mx-auto text-neutral/70 leading-relaxed text-base"
-        dangerouslySetInnerHTML={{ __html: collection.description }}
-      ></p>
+        html={collection.description}
+      />
       {/* Products in this Collection */}
       <h2 className=" mt-12 text-2xl font-heading font-semibold text-center mb-8 text-neutral">
         Products in this Collection
@@ -480,37 +440,35 @@ const CollectionDetailsPage = () => {
                 />
               </button>
 
-              {!isAdmin ? (
-                isInWishlist(product._id) ? (
-                  <button
-                    className="absolute top-3 right-3"
-                    aria-label="reomove from wishlist"
-                    onClick={() =>
-                      handleRemovefromWishlist(product._id, 'Collection')
-                    }
-                  >
-                    {isRemovingFromwishlist ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <Heart className="text-primary size-7 fill-primary" />
-                    )}
-                  </button>
-                ) : (
-                  <button
-                    className="absolute top-3 right-3"
-                    aria-label="Add to wishlist"
-                    onClick={() =>
-                      handleAddToWishlist(product._id, 'Collection')
-                    }
-                  >
-                    {isAddingTowishlist ? (
-                      <Loader2 className="animate-spin" />
-                    ) : (
-                      <Heart className="text-primary size-7" />
-                    )}
-                  </button>
-                )
-              ) : null}
+              {isInWishlist(product._id) ? (
+                <button
+                  className="absolute top-3 right-3"
+                  aria-label="reomove from wishlist"
+                  onClick={() =>
+                    handleRemovefromWishlist(product._id, 'Collection')
+                  }
+                >
+                  {isRemovingFromwishlist ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <Heart className="text-primary size-7 fill-primary" />
+                  )}
+                </button>
+              ) : (
+                <button
+                  className="absolute top-3 right-3"
+                  aria-label="Add to wishlist"
+                  onClick={() =>
+                    handleAddToWishlist(product._id, 'Collection')
+                  }
+                >
+                  {isAddingTowishlist ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <Heart className="text-primary size-7" />
+                  )}
+                </button>
+              )}
               <span className="absolute bottom-3 left-3 text-xs tracking-wider uppercase text-white/90 text-shadow-md font-medium">
                 {product.style}
               </span>
@@ -558,37 +516,34 @@ const CollectionDetailsPage = () => {
                     </span>
                   )}
                 </div>
-                {!isAdmin ? (
-                  <div className="space-x-1">
-                    <a
-                      className="btn btn-sm btn-circle bg-green-600 hover:bg-green-700 text-white border-0"
-                      href={whatsappHref(product)}
-                    >
-                      <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png"} alt="WhatsApp" className="size-5" />
-                    </a>
-                    <button
-                      className="btn btn-sm btn-circle btn-elegant"
-                      onClick={() => handleAddToCart(product._id, 1, 'Product')}
-                    >
-                      {isAddingToCart ? (
-                        <Loader2 className="animate-spin" />
-                      ) : (
-                        <ShoppingCart className="" />
-                      )}
-                    </button>
-                  </div>
-                ) : null}
+                <div className="space-x-1">
+                  <a
+                    className="btn btn-sm btn-circle bg-green-600 hover:bg-green-700 text-white border-0"
+                    href={whatsappHref(product)}
+                  >
+                    <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png"} alt="WhatsApp" className="size-5" />
+                  </a>
+                  <button
+                    className="btn btn-sm btn-circle btn-elegant"
+                    onClick={() => handleAddToCart(product._id, 1, 'Product')}
+                  >
+                    {isAddingToCart ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <ShoppingCart className="" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>
         ))}
       </div>
 
-      {!isAdmin && (
-        <div className="mt-12">
-          <h2 className="font-heading text-xl font-semibold text-neutral mb-4">
-            Reviews
-          </h2>
+      <div className="mt-12">
+        <h2 className="font-heading text-xl font-semibold text-neutral mb-4">
+          Reviews
+        </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="border border-base-300 p-4">
               <p className="text-sm text-neutral/60 mb-2">
@@ -675,7 +630,6 @@ const CollectionDetailsPage = () => {
             </div>
           </div>
         </div>
-      )}
       {/* ===== Collection Banners ===== */}
       {banners.filter((b) => b.position === 'collection').length > 0 && (
         <SectionReveal className="py-8 px-6 sm:px-10 lg:px-20">

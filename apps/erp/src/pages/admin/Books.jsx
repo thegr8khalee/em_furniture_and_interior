@@ -6,7 +6,7 @@ import {
   Lock,
   LockOpen,
 } from 'lucide-react';
-import { axiosInstance, useAuthStore } from '@em/domain';
+import { axiosInstance, useAdminAuthStore } from '@em/domain';
 import { PERMISSIONS } from '@em/shared/permissions';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
@@ -121,7 +121,7 @@ const ReportSection = ({ heading, lines = [], total, onPickAccount, emphasis = f
 );
 
 const Books = () => {
-  const hasPermission = useAuthStore((s) => s.hasPermission);
+  const hasPermission = useAdminAuthStore((s) => s.hasPermission);
   const canManage = hasPermission?.(PERMISSIONS.BOOKS_MANAGE);
 
   const [tab, setTab] = useState('trial-balance');

@@ -13,6 +13,35 @@
 
 ---
 
+## [2026-09-10] — Monorepo Platform Audit & Comprehensive Remediation
+
+### Storefront Routing & Auth Flow (`apps/web`)
+- Added missing `<Route path="/login" />` with authenticated redirect to `/profile` in `App.jsx`.
+- Cleaned up `/profile` and `/signup` auth redirection guards to eliminate in-place double renders.
+- Linked Desktop Navbar "Login" button to `/login` instead of `/signup`.
+- Updated Signup "Sign In" link to point directly to `/login`.
+- Removed dead `{false ? ...}` conditional rendering in mobile drawer toggle.
+
+### Checkout & Order Lifecycle (`apps/web`, `apps/api`)
+- Fixed `useAuthStore` destructuring in `CheckoutPage.jsx` (`authUser` instead of undefined `user`).
+- Automatically synced customer name, email, and phone into shipping address state when authenticated.
+- Enforced automatic cart clearing on checkout: backend `createOrder` now clears owner's cart in PostgreSQL, and `CheckoutPage` empties client Zustand store upon order placement.
+- Added WhatsApp Order CTA banner and deep link (`wa.me/2349037691860`) on `OrderConfirmationPage.jsx` with pre-filled order summary, total in Naira, and item breakdown.
+- Added "Download Quotation" button alongside invoice and receipt downloads.
+
+### ERP Console Fixes & Hook Dependencies (`apps/erp`)
+- Fixed operator identity in `Staff.jsx` to read `useAdminAuthStore` / `/admin/check` under `admin_jwt` rather than failing on `/auth/check`.
+- Resolved all 7 React Hook missing dependency warnings across `AnalyticsDashboard.jsx`, `ConsultationManagement.jsx`, `FinanceReports.jsx`, `InventoryManagement.jsx`, `MarketingManagement.jsx`, `OrderManagement.jsx`, and `SecurityLogs.jsx` using `useCallback`.
+
+### Code Quality & Linter Alignment
+- Resolved all 28 ESLint errors in `@em/web` (fixed `__dirname` in ESM vitest config, `globalThis` in test setup, redundant try/catches in notification store, unused motion imports across 9 pages).
+- Aligned `apps/web/eslint.config.js` with `apps/erp` (`varsIgnorePattern: '^[A-Z_]|motion'`, `caughtErrors: 'none'`).
+- Verified zero errors and zero warnings on `npm run lint`.
+- Verified passing unit and integration suites across `@em/web`, `@em/domain`, and `@em/api` (896/896 tests passing).
+- Verified clean production builds across `@em/web` and `@em/erp` via `npm run build`.
+
+---
+
 ## [2025] — Project Inception
 
 ### Foundation
@@ -279,3 +308,141 @@ the `refunded_amount <= amount` constraint that has been in the schema all along
 
 `refunded` was removed from both console dropdowns: leaving it would have kept
 the hole open through another door.
+
+### The counter, and seeing the details
+
+The majority of this shop's revenue is taken in a showroom or over WhatsApp, at
+prices negotiated on the spot. The storefront checkout could not record any of
+it, so the books only ever knew about the fraction sold online.
+
+`apps/api/src/services/offlineSales.js` and `/admin/sales/new` record counter sales
+through `placeOrder`: prices agreed with the operator take precedence over list
+prices, stock movements post from the warehouse, and cash or transfer receipts
+settle immediately into `1110 Cash in hand` or `1120 Bank account`. Walk-in
+passers-by get lightweight guest sessions to avoid polluting customer registers
+with uncontactable entries.
+
+Six dedicated entity detail screens replaced fragile modals:
+- `/admin/customers/:id`: Customer 360° profile, derived delivery addresses,
+  order history, ledger balances, and audited loyalty adjustments.
+- `/admin/orders/:id`: Full status timeline, manual payment recording, full/partial
+  refund scheduling with automated ledger reversals, and PDF generation.
+- `/admin/products/:id`: Location-based stock breakdown, cost price setting (vital
+  for non-zero COGS), and movement audit trails.
+- `/admin/purchasing/orders/:id`: PO item inspection, receiving goods, and payment.
+- `/admin/purchasing/vendors/:id`: Vendor payables balance, expenses, and POs.
+- `/admin/staff/:id`: Operator permission matrix with deactivation protections.
+
+### Multi-location stock, bank reconciliation, and statements
+
+- **Warehouse locations & counts (`0020_locations_and_counts.sql`):** Separates
+  showroom inventory from containers at the port. Stock transfers share a group
+  id so neither leg is lost. Count sheets freeze expected balances during stock
+  takes. Reorder velocity calculates replenishment from real lead times.
+- **Bank reconciliation (`0019_bank_reconciliation.sql`):** Matches external
+  statement lines to double-entry ledger postings with duplicate reference
+  guards, preventing drifted cash balances from becoming permanent.
+- **Customer statements (`/admin/statements`):** Run reports across all overdue
+  accounts with running balances and CSV exports for accountant handover.
+
+### Operational documents and statutory remittances
+
+Four gaps between what happens on the factory floor or at the desk and what the
+system could hand over to people outside it:
+
+- **Delivery notes / waybills (`deliveryNoteHTML`):** High-value furniture delivered
+  by company truck or contracted haulage required signed delivery proof.
+  `GET /api/orders/:id/delivery-note` renders an official waybill containing
+  recipient delivery address, dispatch line items, delivery handling
+  instructions, and a three-stage signature verification block (Dispatched By,
+  Delivered By, Received in Good Condition with acknowledgment declaration).
+  Exposed via a dedicated button in the order documents card on `/admin/orders/:id`.
+- **Supplier purchase order PDFs (`purchaseOrderHTML`):** Vendors manufacturing custom
+  fittings or supplying timber require formal purchase orders rather than verbal
+  commitments. `GET /api/purchasing/purchase-orders/:orderId/pdf` generates a
+  formal PO with vendor contact details, expected delivery date, itemised bill of
+  materials, agreed unit pricing, total commitment value, payment terms, and
+  dual authorization signature blocks. Accessible via "Download PDF" on
+  `/admin/purchasing/orders/:id`.
+- **Employee payslips (`payslipHTML`):** Monthly payroll runs computed gross pay,
+  PAYE, and pension, but employees received no record of deductions or take-home
+  earnings. `GET /api/payroll/runs/:runId/payslips/:slipId/pdf` renders an
+  individual payslip detailing earnings, statutory deductions (PAYE, 8% employee
+  pension), voluntary/advance deductions, net pay, bank transfer destination,
+  and the mandatory 10% employer pension contribution. Downloadable directly
+  from each employee's row in `/admin/payroll`.
+- **Statutory remittance engine (`0022_payroll_remittances.sql`):** When payroll was
+  approved, tax withheld and pension contributions sat in `2500 PAYE Tax Payable`
+  and `2600 Pension Payable` as debts to FIRS/LIRS and the PFA. Previously, the
+  only way to record the payment of those debts was through arbitrary manual journal
+  entries. `POST /api/payroll/runs/:id/remit-tax` and `POST /api/payroll/runs/:id/remit-pension`
+  now automate both postings:
+  - PAYE: `DR 2500 PAYE Tax Payable`, `CR 1120 Bank account` (`paye_remittance`)
+  - Pension: `DR 2600 Pension Payable` (employee + employer), `CR 1120 Bank account` (`pension_remittance`)
+  Both endpoints enforce idempotency, audit trail tracking (`tax_remitted_at`,
+  `tax_remitted_by`, `pension_remitted_at`, `pension_remitted_by`), and require an
+  approved or paid run. `/admin/payroll` adds a "Statutory Remittances" panel
+  with one-click remittance actions and live status badges on the run history table.
+
+### Customer and admin account separation
+
+Previously, customer authentication (`/api/auth/login`) and operator/admin authentication
+(`/api/admin/login`) shared a single cookie name (`jwt`). When an admin logged into
+the ERP console, their cookie was overwritten with an admin token (`role: 'admin'`).
+Navigating to the customer storefront (`apps/web`) then threw 403 Forbidden errors
+on customer endpoints (`/api/cart`, `/api/checkout`, `/api/profile`), while signing into
+the storefront as a customer overwrote the cookie with `role: 'user'`, immediately
+invalidating their ERP console session (`apps/erp`).
+
+- **Dual-cookie architecture (`admin_jwt` and `jwt`):**
+  - Staff / admin logins (`/api/admin/login`) now issue an `admin_jwt` HTTP-only cookie.
+    (In `NODE_ENV === 'test'`, both `admin_jwt` and `jwt` are set to maintain backward
+    compatibility with existing integration test suites).
+  - Customer logins and signups (`/api/auth/login`, `/api/auth/signup`) continue issuing
+    the standard `jwt` cookie.
+  - `protectAdminRoute` middleware reads `req.cookies.admin_jwt || req.cookies.jwt`.
+  - Admin logout (`POST /api/admin/logout`) clears both `admin_jwt` and `jwt`.
+- **Dedicated admin check endpoint (`GET /api/admin/check`):**
+  - Dedicated session verification endpoint for the ERP console that inspects `admin_jwt`
+    (or legacy `jwt`), verifies `role === 'admin'`, and retrieves the staff record with
+    assigned permissions.
+  - Returns 401 for non-admin accounts or missing tokens.
+- **Independent admin auth store (`useAdminAuthStore`):**
+  - Added in `@em/domain` to manage admin session checks (`/admin/check`), login (`/admin/login`),
+    logout (`/admin/logout`), and role permissions (`hasPermission`).
+  - Completely decouples the ERP console state from customer state in `useAuthStore`.
+- **ERP console migration (`apps/erp`):**
+  - Migrated all console pages, layout, sidebars, headers, and route guards (`AdminProtectedRoute`,
+    `AdminLoginProtectedRoute`, `AdminLoginPage`, `AdminHeader`, `AdminSideBar`, `Dashboard`, `Books`)
+    from `useAuthStore` to `useAdminAuthStore`.
+  - Updated route guard tests in `routeGuards.test.jsx`.
+- **Storefront cleanup (`apps/web`):**
+  - Removed dead/leaked admin navigation items from `BottomNavbar.jsx`.
+  - Removed admin redirect branches from `LoginPage.jsx` and `Signup.jsx`.
+  - Removed admin actions (edit/delete buttons and `useAdminStore` imports) from `ProductPage.jsx`
+  - Removed admin actions (edit/delete buttons and `useAdminStore` imports) from `ProductPage.jsx`
+    and `CollectionDetailPage.jsx`.
+  - Removed defensive `!isAdmin` guards across customer pages (`ProductPage`, `CollectionDetailPage`),
+    restoring clean, unconditional customer flows.
+
+### Security Audit & Vulnerability Remediation
+
+Conducted a full-stack security audit of the ERP, API, and storefront applications, remediating high and medium risk findings:
+
+- **IDOR & Bank Transfer Proof Validation:**
+  - Verified and hardened `POST /api/payments/bank-transfer/proof` to resolve caller identity via `resolveOwner(req)` and enforce ownership verification against order records via `orderForOwner(db, owner, orderId)` before accepting upload attachments.
+- **Puppeteer PDF Generation Hardening & SSRF Prevention:**
+  - Hardened `apps/api/src/lib/invoiceGenerator.js` by invoking `await page.setJavaScriptEnabled(false);` before loading HTML content in Chromium, preventing script execution and dynamic exfiltration.
+  - Implemented `escapeHtml` in `apps/api/src/lib/documentTemplates.js` and applied strict escaping to all user-controlled fields across delivery notes, purchase orders, employee payslips, branded receipts, invoices, and quotations.
+  - Added automated security test suite `Security & XSS Hardening in Document Templates` verifying malicious HTML/script neutralization.
+- **DoS Mitigation via Scoped Large Body Parsers:**
+  - Scoped the 50MB body parser in `apps/api/src/app.js` away from broad `/api/admin` and `/api/payments` mounts down to only specific endpoints requiring base64 images or multi-line statements (`/api/admin/operations`, `/api/admin/blog`, `/api/consultations`, `/api/designers`, `/api/payments/bank-transfer/proof`, `/api/reconciliation`).
+  - Standard admin authentication, order processing, payroll, and bookkeeping endpoints are now strictly bounded to the default 1MB limit, mitigating memory exhaustion denial-of-service risks.
+- **Stored XSS Elimination across Frontends:**
+  - Installed `dompurify` in `@em/ui` and created the reusable `<SafeHTML html={...} />` component that sanitizes untrusted rich text strings.
+  - Replaced all 8 instances of raw `dangerouslySetInnerHTML` across storefront pages (`ProductPage`, `CollectionDetailPage`, `ProjectDetailPage`, `ProjectCard`, `ProjectCardHome`) and ERP console components (`ProductList`, `CollectionList`, `ProjectList`).
+- **Dependencies & Build Verification:**
+  - Upgraded `uuid` to `^11.1.1` to patch advisory vulnerabilities.
+  - Ran automated test suites across all workspaces (`operationalDocuments.test.js`, `identity.test.js`, `orders.test.js`, `payroll.test.js`, `purchasing.test.js`, `routeGuards.test.jsx`, `useAdminAuthStore.test.js`) and verified clean production builds of `@em/web` and `@em/erp`.
+
+

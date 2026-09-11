@@ -1,11 +1,12 @@
-// controllers/adminAuthController.js
-
+import jwt from 'jsonwebtoken';
 import { generateToken } from '../lib/utils.js'; // Re-use the same token generation utility
 import { logger } from '../lib/logger.js';
+import { getCookieOptions, getClearCookieOptions } from '../lib/cookies.js';
 import { signInStaffWithSupabase } from '../services/supabaseAuth.js';
 import {
   IdentityError,
   authenticateStaff,
+  findStaffById,
   registerStaff,
 } from '../services/identity.js';
 import {
@@ -36,11 +37,7 @@ const handleIdentityError = (error, res, where) => {
   return res.status(500).json({ message: 'Internal Server Error' });
 };
 
-const cookieOptions = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-});
+const cookieOptions = () => getCookieOptions();
 
 /**
  * Creates another operator. Reachable only by an operator who already holds
@@ -100,7 +97,49 @@ export const adminSupabaseSession = async (req, res) => {
   }
 };
 
+export const checkAdminAuth = async (req, res) => {
+  try {
+    const token = req.cookies.admin_jwt || req.cookies.jwt;
+    if (!token) {
+      return res.status(401).json({ message: 'Not authenticated: No admin token provided.' });
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+      res.clearCookie('admin_jwt', cookieOptions());
+      res.clearCookie('jwt', cookieOptions());
+      return res.status(401).json({ message: 'Not authenticated: Invalid or expired admin token.' });
+    }
+
+    if (decoded.role !== 'admin') {
+      return res.status(401).json({ message: 'Not authenticated: Token is not an admin token.' });
+    }
+
+    const principal = await findStaffById(decoded.userId);
+    if (!principal) {
+      res.clearCookie('admin_jwt', cookieOptions());
+      res.clearCookie('jwt', cookieOptions());
+      return res.status(401).json({
+        message: 'Not authenticated: Admin account not found in database.',
+      });
+    }
+
+    if (principal.isActive === false) {
+      res.clearCookie('admin_jwt', cookieOptions());
+      res.clearCookie('jwt', cookieOptions());
+      return res.status(401).json({ message: 'Not authenticated: This account has been deactivated.' });
+    }
+
+    return res.status(200).json({ ...principal, role: 'admin' });
+  } catch (error) {
+    return handleIdentityError(error, res, 'checkAdminAuth');
+  }
+};
+
 export const adminLogout = (req, res) => {
+  res.cookie('admin_jwt', '', { ...cookieOptions(), maxAge: 0 });
   res.cookie('jwt', '', { ...cookieOptions(), maxAge: 0 });
   res.status(200).json({ message: 'Admin logged out successfully.' });
 };

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SafeHTML } from '@em/ui';
 import { luxuryEase } from '@em/ui/styles/animations';
 
 const ProjectCard = ({ project }) => {
@@ -90,9 +91,10 @@ const ProjectCard = ({ project }) => {
                   {project.title}
                 </motion.h3>
 
-                <motion.p
+                <SafeHTML
+                  as={motion.p}
+                  html={project.description}
                   className="text-sm leading-relaxed line-clamp-4 mb-3 opacity-90"
-                  dangerouslySetInnerHTML={{ __html: project.description }}
                   initial={{ y: 15, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.2, duration: 0.4, ease: luxuryEase }}
@@ -133,9 +135,10 @@ const ProjectCard = ({ project }) => {
             </h3>
 
             {/* Description */}
-            <p
+            <SafeHTML
+              as="p"
+              html={project.description}
               className="text-sm leading-relaxed line-clamp-4 mb-3 opacity-90"
-              dangerouslySetInnerHTML={{ __html: project.description }}
             />
 
             {/* Category Badge */}

@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { useProjectsStore } from '@em/domain';
 import { Loader2 } from 'lucide-react';
 import ProjectCard from '../components/ProjectCard';
-import { motion } from 'framer-motion';
 import { elegantEase, luxuryEase } from '@em/ui/styles/animations';
 import { PageWrapper, SectionReveal } from '@em/ui/animations';
 import SEO from '../components/SEO';

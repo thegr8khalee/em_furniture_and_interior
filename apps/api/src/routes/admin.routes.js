@@ -9,6 +9,7 @@ import {
   adminSupabaseSession,
   adminLogout,
   adminSignup,
+  checkAdminAuth,
   delCollection,
   delProduct,
   delProject,
@@ -16,7 +17,17 @@ import {
   updateProduct,
   updateProject,
 } from '../controllers/admin.controller.js';
-import { generateCustomDocument } from '../controllers/document.controller.js';
+import {
+  generateCustomDocument,
+  saveDocument,
+  issueReceipt,
+  getLinked,
+  listDocuments,
+  getDocument,
+  downloadSavedDocumentPDF,
+  updateDocumentStatus,
+  deleteDocument,
+} from '../controllers/document.controller.js';
 import { protectAdminRoute } from '../middleware/protectAdminRoute.js';
 import { requirePermissions } from '../middleware/requirePermissions.js';
 import { PERMISSIONS } from '@em/shared/permissions';
@@ -40,6 +51,7 @@ router.post('/login', authLimiter, adminLogin);
 // operator that already exists; it never creates one.
 router.post('/supabase', authLimiter, adminSupabaseSession);
 router.post('/logout', adminLogout);
+router.get('/check', checkAdminAuth);
 
 router.post(
   '/operations/addProduct',
@@ -110,7 +122,68 @@ router.post(
   '/documents/generate',
   protectAdminRoute,
   requirePermissions([PERMISSIONS.FINANCE_VIEW]),
+  createAuditLog('GENERATE', 'custom_document'),
   generateCustomDocument
+);
+
+router.post(
+  '/documents',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.FINANCE_VIEW]),
+  createAuditLog('CREATE', 'custom_document'),
+  saveDocument
+);
+
+router.get(
+  '/documents',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.FINANCE_VIEW]),
+  listDocuments
+);
+
+router.get(
+  '/documents/:id',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.FINANCE_VIEW]),
+  getDocument
+);
+
+router.get(
+  '/documents/:id/pdf',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.FINANCE_VIEW]),
+  downloadSavedDocumentPDF
+);
+
+router.post(
+  '/documents/:id/receipt',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.FINANCE_VIEW]),
+  createAuditLog('CREATE', 'custom_document_receipt'),
+  issueReceipt
+);
+
+router.get(
+  '/documents/:id/linked',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.FINANCE_VIEW]),
+  getLinked
+);
+
+router.patch(
+  '/documents/:id/status',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.FINANCE_VIEW]),
+  createAuditLog('UPDATE', 'custom_document'),
+  updateDocumentStatus
+);
+
+router.delete(
+  '/documents/:id',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.FINANCE_VIEW]),
+  createAuditLog('DELETE', 'custom_document'),
+  deleteDocument
 );
 
 export default router;

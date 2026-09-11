@@ -4,6 +4,7 @@
 export { axiosInstance } from './lib/axios.js';
 export { getSupabase, isSupabaseConfigured, currentSupabaseToken } from './lib/supabase.js';
 export { useAuthStore } from './store/useAuthStore.js';
+export { useAdminAuthStore } from './store/useAdminAuthStore.js';
 export { useAdminStore } from './store/useAdminStore.js';
 export { useProductsStore } from './store/useProductsStore.js';
 export { useCollectionStore } from './store/useCollectionStore.js';

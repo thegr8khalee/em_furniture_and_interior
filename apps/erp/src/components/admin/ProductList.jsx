@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminStore, useProductsStore } from '@em/domain';
 import { Eye, Pencil, Trash2, Star, X } from 'lucide-react';
-import { Badge, Modal } from '@em/ui';
+import { Badge, Modal, SafeHTML } from '@em/ui';
 
 const formatPrice = (val) =>
   '₦' + Number(val).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -203,7 +203,7 @@ const ProductDetailView = ({ item, onClose, onEdit }) => {
       {item.description && (
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-neutral/40">Description</p>
-          <div className="prose prose-sm max-h-40 overflow-y-auto text-neutral/70" dangerouslySetInnerHTML={{ __html: item.description }} />
+          <SafeHTML className="prose prose-sm max-h-40 overflow-y-auto text-neutral/70" html={item.description} />
         </div>
       )}
 

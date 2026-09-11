@@ -6,6 +6,7 @@ import { Editor } from '@tinymce/tinymce-react'; // Import TinyMCE Editor compon
 import { toast } from 'react-hot-toast';
 import { Loader2, XCircle } from 'lucide-react';
 import { useAdminStore, useCollectionStore } from '@em/domain';
+import { PRODUCT_CATEGORIES, PRODUCT_STYLES } from '@em/shared';
 import AdminPageShell from '../components/admin/AdminPageShell';
 
 const AdminAddProductPage = () => {
@@ -307,14 +308,11 @@ const AdminAddProductPage = () => {
               required
             >
               <option value="">Select a category</option>
-              <option value="Living Room">Living Room</option>
-              <option value="Armchair">Armchair</option>
-              <option value="Bedroom">Bedroom</option>
-              <option value="Dining Room">Dining Room</option>
-              <option value="Center Table">Center Table</option>
-              <option value="Wardrobe">Wardrobe</option>
-              <option value="TV Unit">TV Unit</option>
-              <option value="Carpet">Carpet</option>
+              {PRODUCT_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -330,12 +328,11 @@ const AdminAddProductPage = () => {
               required
             >
               <option value="">Select a style</option>
-              <option value="Modern">Modern</option>
-              <option value="Contemporay">Contemporay</option>
-              <option value="Antique/Royal">Antique/Royal</option>
-              <option value="Bespoke">Bespoke</option>
-              <option value="Minimalist">Minimalist</option>
-              <option value="Glam">Glam</option>
+              {PRODUCT_STYLES.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
             </select>
           </div>
 

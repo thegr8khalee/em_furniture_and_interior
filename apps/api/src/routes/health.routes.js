@@ -25,4 +25,26 @@ router.get('/readyz', async (req, res) => {
   res.status(503).json({ status: 'unavailable', database: 'disconnected' });
 });
 
+/**
+ * Root service status response. Gives an immediate signal when navigating
+ * to the API URL in a browser that the deployment is alive and reachable.
+ */
+const serviceInfo = (req, res) => {
+  res.json({
+    name: 'EM Furniture & Interior API',
+    status: 'online',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    uptime: Math.round(process.uptime()),
+    endpoints: {
+      health: '/healthz',
+      readiness: '/readyz',
+      documentation: '/api-docs',
+    },
+  });
+};
+
+router.get('/', serviceInfo);
+router.get('/api', serviceInfo);
+
 export default router;

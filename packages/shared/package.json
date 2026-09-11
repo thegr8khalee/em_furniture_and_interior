@@ -6,6 +6,8 @@
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
-    "./permissions": "./src/permissions.js"
+    "./permissions": "./src/permissions.js",
+    "./constants": "./src/constants.js",
+    "./formatters": "./src/formatters.js"
   }
 }

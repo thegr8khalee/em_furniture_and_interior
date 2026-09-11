@@ -766,4 +766,18 @@ describe('order documents', () => {
     const paid = await api('get', `/api/orders/${mine.body.order._id}/receipt`).set('Cookie', cookie);
     expect(paid.status).toBe(200);
   });
+
+  it('prints a delivery note / waybill for an order', async () => {
+    const adminCookie = await signInAsOperator();
+    const cookie = guest();
+    const mine = await place(cookie, { items: [{ item: itemId, quantity: 1 }] });
+
+    const userRes = await api('get', `/api/orders/${mine.body.order._id}/delivery-note`).set('Cookie', cookie);
+    expect(userRes.status).toBe(200);
+    expect(userRes.headers['content-type']).toContain('pdf');
+
+    const adminRes = await api('get', `/api/orders/admin/${mine.body.order._id}/delivery-note`).set('Cookie', adminCookie);
+    expect(adminRes.status).toBe(200);
+    expect(adminRes.headers['content-type']).toContain('pdf');
+  });
 });

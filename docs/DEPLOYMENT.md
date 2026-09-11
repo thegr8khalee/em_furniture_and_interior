@@ -1,128 +1,194 @@
-# Deployment
+# Production Deployment Guide
 
-Three deployables from one repository.
+EM Furniture & Interior is architected as an npm workspaces monorepo containing three production deployables:
 
-| Workspace | Deploys to | What it is |
-| --- | --- | --- |
-| `apps/api` | Render (web service) | Express API. Serves no HTML. |
-| `apps/web` | Vercel | Public storefront. |
-| `apps/erp` | Vercel (separate project) | Operations console. Access-restricted. |
+| Deployable | Workspace | Hosting Target | Description |
+| :--- | :--- | :--- | :--- |
+| **Backend API** | `apps/api` | **Render** (Web Service or Blueprint) | Node.js Express REST API & PDF engine |
+| **Storefront** | `apps/web` | **Vercel** (Project 1) | Public customer-facing e-commerce SPA |
+| **Operations Console** | `apps/erp` | **Vercel** (Project 2) | Protected administrative & ERP portal |
 
-`packages/shared`, `packages/domain`, `packages/ui` and `packages/config` are
-internal workspaces. They are not published and not deployed; npm links them
-into `node_modules/@em/*` at install time.
+Internal packages (`packages/shared`, `packages/domain`, `packages/ui`, `packages/config`) are linked automatically into `node_modules/@em/*` via workspace resolution.
 
-## Render — apps/api
+---
 
-| Setting | Value |
-| --- | --- |
-| Root directory | *(repository root, not `apps/api`)* |
-| Build command | `npm ci` |
-| Start command | `npm start` |
-| Health check path | `/healthz` |
+## 1. Backend API Deployment on Render (`apps/api`)
 
-The root directory is the repository root because npm workspaces resolve from
-there — installing inside `apps/api` alone would not link `@em/shared`.
+You can deploy the API to Render in one of two ways: using the automated **Render Blueprint (`render.yaml`)** or by manually creating a **Web Service**.
 
-Use `/healthz` as the health check, never `/readyz`. Liveness must not fail
-because the database blipped; restarting the container turns a database incident
-into an outage. `/readyz` exists for a load balancer to drain an instance, and
-reports 503 while PostgreSQL is unreachable.
+### Option A: 1-Click Blueprint (Recommended)
 
-Puppeteer's Chromium is cached at `<repo>/.cache/puppeteer` via the root
-`.puppeteerrc.cjs`, because Render wipes `~/.cache` between deploys. If PDF
-generation starts failing after a deploy, check that directory survived the
-build. `npm ci --ignore-scripts` skips the download entirely — correct for CI,
-wrong for Render.
+1. Push this repository to GitHub/GitLab.
+2. In the [Render Dashboard](https://dashboard.render.com/), click **New +** → **Blueprint**.
+3. Select your repository. Render will automatically detect [`render.yaml`](file:///c:/Users/USER/em_furniture_and_interior/em_furniture_and_interior/render.yaml) at the root.
+4. Render will prompt you to enter the required secrets (`DATABASE_URL`, `DIRECT_DATABASE_URL`, `STOREFRONT_URL`, `ERP_URL`, `PAYSTACK_SECRET_KEY`, etc.).
+5. Click **Apply**. Render will provision and launch the service with health checks and auto-migrations enabled.
 
-Note that PDF rendering holds a browser process in the API's memory for the
-lifetime of the service. On a small instance a document render competes with
-request handling; moving it to its own service is tracked as follow-up work.
+### Option B: Manual Web Service Setup
 
-### Required environment
+1. In the Render Dashboard, click **New +** → **Web Service**.
+2. Connect your Git repository.
+3. Configure the following settings:
+   - **Name**: `em-furniture-api`
+   - **Region**: Frankfurt (or nearest to your PostgreSQL database)
+   - **Root Directory**: *(leave blank — repository root is required for monorepo workspaces)*
+   - **Environment / Runtime**: `Node`
+   - **Build Command**: `npm ci`
+   - **Start Command**: `npm run start:prod`
+     *(This runs pending database migrations before starting the Express server)*
+   - **Health Check Path**: `/healthz`
+     *(Use `/healthz` for process liveness; do not use `/readyz` as liveness checks)*
+
+### Option C: Docker Container on Render
+
+If you prefer containerized deployment with bundled Chromium and system libraries, Render supports deploying via Docker:
+- Set **Runtime** to `Docker`
+- Set **DockerfilePath** to `./Dockerfile`
+- The bundled multi-stage Dockerfile includes pre-configured Chromium, non-root `node` user, and `dumb-init` signal handling.
+
+---
+
+### Backend Environment Variables (Render)
+
+Configure these in the Render Dashboard under **Environment**:
+
+| Variable | Required | Example / Description |
+| :--- | :--- | :--- |
+| `NODE_ENV` | Yes | `production` |
+| `PORT` | Auto | Set automatically by Render (default `10000`) |
+| `DATABASE_URL` | Yes | `postgres://...:6543/postgres?sslmode=require` (Pooled connection) |
+| `DIRECT_DATABASE_URL` | Yes | `postgres://...:5432/postgres?sslmode=require` (Direct connection for migrations) |
+| `DB_POOL_MAX` | No | `10` (Max database pool size) |
+| `JWT_SECRET` | Yes | Strong random secret (auto-generated in Blueprint) |
+| `STOREFRONT_URL` | Yes | `https://emfurniture.ng` or `https://your-storefront.vercel.app` |
+| `ERP_URL` | Yes | `https://erp.emfurniture.ng` or `https://your-erp.vercel.app` |
+| `FRONTEND_URL` | Yes | Same as `STOREFRONT_URL` (used for payment redirect callbacks) |
+| `ALLOWED_ORIGINS` | No | Comma-separated extra origins (e.g. `https://custom.com,https://preview.com`) |
+| `COOKIE_DOMAIN` | Recommended | `.emfurniture.ng` (when using custom root domain for apex & subdomains) |
+| `ALLOW_VERCEL_PREVIEWS` | No | `true` to allow Vercel PR branch preview deployments (`*.vercel.app`) |
+| `PAYSTACK_SECRET_KEY` | Yes | `sk_live_...` (Also validates webhook HMAC signatures) |
+| `CLOUDINARY_CLOUD_NAME`| Yes | Cloudinary cloud identifier for product & media uploads |
+| `CLOUDINARY_API_KEY`   | Yes | Cloudinary API key |
+| `CLOUDINARY_API_SECRET`| Yes | Cloudinary API secret |
+| `EMAIL_USER`           | No  | `emfurnitureandinterior@gmail.com` |
+| `GOOGLE_CLIENT_ID`     | No  | Google OAuth2 Client ID for Gmail sending |
+| `GOOGLE_CLIENT_SECRET` | No  | Google OAuth2 Client Secret |
+| `GOOGLE_REFRESH_TOKEN` | No  | Gmail OAuth2 Refresh Token |
+| `TAX_RATE_PERCENTAGE`  | No  | `7.5` (VAT rate in %) |
+| `LOG_LEVEL`            | No  | `info` |
+| `LOG_FORMAT`           | No  | `json` |
+
+---
+
+### Initial Staff Account Setup
+
+Once the API and database are running, create the first owner/operator account by running the bootstrap script against the production database:
+
+```bash
+# Locally with production credentials in .env:
+npm run bootstrap:staff --workspace=@em/api
+```
+*(Or invoke via the Render **Shell** tab: `npm run bootstrap:staff`)*
+
+### Paystack Webhook Configuration
+
+1. Log into your [Paystack Dashboard](https://dashboard.paystack.com/) → **Settings** → **API Keys & Webhooks**.
+2. Set the **Live Webhook URL** to:
+   ```
+   https://<your-render-api-host>/api/payments/paystack/webhook
+   ```
+3. Ensure `PAYSTACK_SECRET_KEY` in Render matches your Paystack Live Secret Key so HMAC-SHA512 webhook signatures verify correctly.
+
+---
+
+## 2. Frontend Deployments on Vercel (`apps/web` & `apps/erp`)
+
+Deploy both applications as **two separate projects** in Vercel pointing to the same Git repository.
+
+### Project 1: Storefront (`apps/web`)
+
+1. In [Vercel Dashboard](https://vercel.com/), click **Add New...** → **Project**.
+2. Select your repository.
+3. Configure the project:
+   - **Project Name**: `em-furniture-storefront`
+   - **Framework Preset**: `Vite`
+   - **Root Directory**: Click *Edit* and select **`apps/web`**
+   - **Build Command**: Defaults to `vite build` (or leave default with `apps/web/vercel.json`)
+   - **Output Directory**: Defaults to `dist`
+4. **Environment Variables**:
+   | Variable | Value |
+   | :--- | :--- |
+   | `VITE_API_URL` | `https://<your-render-api-host>/api` |
+   | `VITE_ERP_URL` | `https://<your-erp-vercel-host>/admin/dashboard` |
+   | `VITE_REACT_APP_GOOGLE_MAPS_API_KEY` | *(Optional: Google Maps Embed Key)* |
+   | `VITE_SUPABASE_URL` | *(Optional: Supabase Project URL)* |
+   | `VITE_SUPABASE_ANON_KEY` | *(Optional: Supabase Anon Key)* |
+5. Click **Deploy**.
+   *Note: `apps/web/vercel.json` automatically configures SPA routing rewrites to `/index.html` and 1-year immutable caching for `/assets/*`.*
+
+---
+
+### Project 2: Operations Console ERP (`apps/erp`)
+
+1. In Vercel Dashboard, click **Add New...** → **Project** again.
+2. Select the same repository.
+3. Configure the project:
+   - **Project Name**: `em-furniture-erp`
+   - **Framework Preset**: `Vite`
+   - **Root Directory**: Click *Edit* and select **`apps/erp`**
+   - **Build Command**: Defaults to `vite build`
+   - **Output Directory**: Defaults to `dist`
+4. **Environment Variables**:
+   | Variable | Value |
+   | :--- | :--- |
+   | `VITE_API_URL` | `https://<your-render-api-host>/api` |
+   | `VITE_STOREFRONT_URL` | `https://<your-storefront-vercel-host>` |
+   | `VITE_SUPABASE_URL` | *(Optional: Supabase Project URL)* |
+   | `VITE_SUPABASE_ANON_KEY` | *(Optional: Supabase Anon Key)* |
+5. Click **Deploy**.
+   *Note: `apps/erp/vercel.json` includes `X-Robots-Tag: noindex, nofollow` and SPA rewrites.*
+
+> [!TIP]
+> **Recommended ERP Console Protection**:
+> In Vercel Project Settings for `em-furniture-erp` → **Deployment Protection**, enable **Vercel Authentication** or **Password Protection** to restrict external public access to your internal operations portal.
+
+---
+
+## 3. Domain Topology & First-Party Authentication Cookies
+
+Both frontends use `withCredentials: true` and the backend uses `httpOnly` secure cookies for authentication.
+
+### Modern Browser Third-Party Cookie Policy
+If you run on default free subdomains (e.g. `store.vercel.app` calling `api.onrender.com`), browsers treat the cookies as **third-party cookies**, which are blocked by default in Safari and restricted in Chrome.
+
+### Solution: Unified Parent Custom Domain
+Configure custom domains under one root domain:
 
 ```
-NODE_ENV=production
-DATABASE_URL=...                 # the pooled connection the app serves on
-DIRECT_DATABASE_URL=...          # session mode; migrations only
-JWT_SECRET=...
-PAYSTACK_SECRET_KEY=...          # also the webhook HMAC key
-STOREFRONT_URL=https://<storefront domain>
-ERP_URL=https://<console domain>
-FRONTEND_URL=https://<storefront domain>   # payment callback URLs still read this
-CLOUDINARY_CLOUD_NAME= / _API_KEY= / _API_SECRET=
+emfurniture.ng           ──► Vercel (apps/web Storefront)
+erp.emfurniture.ng       ──► Vercel (apps/erp Console)
+api.emfurniture.ng       ──► Render (apps/api Web Service)
 ```
 
-`STOREFRONT_URL` and `ERP_URL` are the CORS allowlist. An origin that is not
-listed is refused — not reflected back — so a missing value shows up as every
-browser request failing, and the API logs `Blocked a cross-origin request from
-an unlisted origin` with the origin it saw. No trailing slashes.
+1. In your DNS provider (e.g. Cloudflare, Namecheap):
+   - Add `CNAME` or `A` records pointing `emfurniture.ng` to Vercel.
+   - Add `CNAME` pointing `erp.emfurniture.ng` to Vercel.
+   - Add `CNAME` pointing `api.emfurniture.ng` to Render (`<service-id>.onrender.com`).
+2. Set `COOKIE_DOMAIN=.emfurniture.ng` in the Render environment variables.
+3. Cookies will now be scoped as **first-party cookies** across all three endpoints with `SameSite=None; Secure`.
 
-The service **exits non-zero** if it cannot reach the database at startup.
-A failed deploy is the intended outcome; the previous version keeps serving.
+---
 
-### Paystack webhook
+## 4. Verification & Health Probes
 
-Register `https://<api domain>/api/payments/paystack/webhook` in the Paystack
-dashboard under Settings → API Keys & Webhooks. Until that is done the webhook
-exists but is never called, and payment confirmation falls back to depending on
-the customer's browser completing the redirect.
+Once deployed, verify the installation:
 
-## Vercel — apps/web and apps/erp
-
-Two projects, both with the repository root as the root directory.
-
-| | Storefront | Console |
-| --- | --- | --- |
-| Build command | `npm run build:web` | `npm run build:erp` |
-| Output directory | `apps/web/dist` | `apps/erp/dist` |
-| Install command | `npm ci` | `npm ci` |
-
-Both are single-page apps: add a rewrite of `/(.*)` to `/index.html` so a
-refresh on a deep link does not 404.
-
-### Storefront environment
-
-```
-VITE_API_URL=https://<api domain>/api
-VITE_ERP_URL=https://<console domain>/admin/dashboard
-```
-
-### Console environment
-
-```
-VITE_API_URL=https://<api domain>/api
-VITE_STOREFRONT_URL=https://<storefront domain>
-```
-
-Everything `VITE_`-prefixed is compiled into the bundle and readable by any
-visitor. Never put a secret in one.
-
-The console should also be access-restricted at the platform level — Vercel
-password protection or an IP allowlist. It is `noindex, nofollow` and its login
-is gated, but a console reachable by anyone on the internet is a larger attack
-surface than it needs to be.
-
-## The cookie problem — decide before going live
-
-Sessions are still httpOnly cookies signed with `JWT_SECRET`. That worked when
-Express served the frontend from the same origin. It does not survive
-`*.vercel.app` calling `*.onrender.com`: those are unrelated registrable
-domains, so the session cookie is a **third-party cookie**, which Safari blocks
-by default and Chrome restricts. Staff will appear to sign in successfully and
-then be signed out on the next request.
-
-Two ways out:
-
-1. **One parent domain.** Point `api.emfurniture.com`, `erp.emfurniture.com` and
-   the storefront apex at the three deployments via custom domains, and scope
-   the cookie to `.emfurniture.com`. The cookie becomes first-party and nothing
-   in the auth code has to change. Both platforms support custom domains.
-2. **Bearer tokens.** Move the session out of a cookie into an `Authorization`
-   header held by each app. This works regardless of domain topology, but trades
-   CSRF exposure for XSS token-theft exposure and is a real change to the auth
-   path — it belongs with the Supabase migration, not before it.
-
-Until one is chosen, run the three deployments under one parent domain. The
-`withCredentials: true` in `packages/domain/src/lib/axios.js` and
-`credentials: true` in the API's CORS config both assume it.
+| Check | URL | Expected Result |
+| :--- | :--- | :--- |
+| **API Root Status** | `GET https://<api-host>/` | JSON summary with `status: "online"` |
+| **API Liveness** | `GET https://<api-host>/healthz` | `{"status":"ok","uptime":...}` |
+| **API Readiness** | `GET https://<api-host>/readyz` | `{"status":"ok","database":"connected"}` |
+| **API Documentation** | `GET https://<api-host>/api-docs` | Interactive Swagger UI |
+| **Storefront Deep Link** | `GET https://<web-host>/products` | 200 OK (Rendered via SPA rewrite) |
+| **ERP Deep Link** | `GET https://<erp-host>/admin/dashboard` | 200 OK (Rendered via SPA rewrite) |
+| **CORS Validation** | Browser DevTools Network tab | No CORS header errors |

@@ -105,31 +105,50 @@ app.post(
 // the body, and any later one is a no-op.
 const largeBodyParser = express.json({ limit: '50mb' });
 const largeUrlencoded = express.urlencoded({ limit: '50mb', extended: true });
-app.use('/api/admin', largeBodyParser, largeUrlencoded);
+app.use('/api/admin/operations', largeBodyParser, largeUrlencoded);
+app.use('/api/admin/blog', largeBodyParser, largeUrlencoded);
 app.use('/api/consultations', largeBodyParser, largeUrlencoded);
 app.use('/api/designers', largeBodyParser, largeUrlencoded);
-app.use('/api/payments', largeBodyParser, largeUrlencoded);
+app.use('/api/payments/bank-transfer/proof', largeBodyParser, largeUrlencoded);
 // A bank statement can carry hundreds of lines in one request.
 app.use('/api/reconciliation', largeBodyParser, largeUrlencoded);
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
-// CORS. Two browser applications now call this API from their own origins, so
+// CORS. Two browser applications call this API from their own origins, so
 // a single FRONTEND_URL is no longer enough. The allowlist is explicit: an
-// unlisted origin is refused rather than reflected back, which is what
-// `origin: true` did and what makes credentialed CORS unsafe.
-const allowedOrigins = [
+// unlisted origin is refused rather than reflected back.
+const parseOrigins = (...values) =>
+  values
+    .filter(Boolean)
+    .flatMap((val) => val.split(','))
+    .map((origin) => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean);
+
+const configuredOrigins = parseOrigins(
   process.env.STOREFRONT_URL,
   process.env.ERP_URL,
   process.env.FRONTEND_URL, // legacy single-app deploys
-]
-  .filter(Boolean)
-  .map((value) => value.replace(/\/$/, ''));
+  process.env.ALLOWED_ORIGINS
+);
+
+const allowedOrigins = [...new Set(configuredOrigins)];
 
 if (process.env.NODE_ENV !== 'production') {
   allowedOrigins.push('http://localhost:5173', 'http://localhost:5174');
 }
+
+const isVercelPreviewAllowed = process.env.ALLOW_VERCEL_PREVIEWS === 'true';
+
+const isOriginAllowed = (origin) => {
+  const normalized = origin.replace(/\/$/, '');
+  if (allowedOrigins.includes(normalized)) return true;
+  if (isVercelPreviewAllowed && /^https:\/\/[a-zA-Z0-9-]+(\.vercel\.app)$/.test(normalized)) {
+    return true;
+  }
+  return false;
+};
 
 app.use(
   cors({
@@ -138,7 +157,7 @@ app.use(
       // callers such as the payment gateway. CORS does not apply to them.
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin.replace(/\/$/, ''))) {
+      if (isOriginAllowed(origin)) {
         return callback(null, true);
       }
 
@@ -146,13 +165,21 @@ app.use(
       return callback(null, false);
     },
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-request-id',
+      'x-requested-with',
+      'Accept',
+    ],
     exposedHeaders: ['Content-Disposition'],
   })
 );
 
 if (process.env.NODE_ENV === 'production' && allowedOrigins.length === 0) {
   logger.error(
-    'No allowed origins configured — set STOREFRONT_URL and ERP_URL, or every browser request will be blocked'
+    'No allowed origins configured — set STOREFRONT_URL and ERP_URL (or ALLOWED_ORIGINS), or every browser request will be blocked'
   );
 }
 

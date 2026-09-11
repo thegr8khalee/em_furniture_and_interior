@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { elegantEase, luxuryEase } from '@em/ui/styles/animations';
 import { FadeIn, PageWrapper, SectionReveal } from '@em/ui/animations';
 import { useAuthStore, useCollectionStore, useProductsStore } from '@em/domain';
+import { PRODUCT_CATEGORIES } from '@em/shared';
 import { useCartStore } from '../store/useCartStore';
 import { useWishlistStore } from '../store/useWishlistStore';
 import { useCompareStore } from '../store/useCompareStore';
@@ -284,16 +285,7 @@ const Shop = () => {
   };
 
   // Filter categories displayed in the dropdown based on search query
-  const filteredCategories = [
-    'Living Room',
-    'Armchair',
-    'Bedroom',
-    'Dining Room',
-    'Center Table',
-    'Wardrobe',
-    'TV Unit',
-    'Carpet',
-  ];
+  const filteredCategories = PRODUCT_CATEGORIES;
 
   // --- Product Filter Modal Handlers ---
   const handleOpenProductFilterModal = () => setIsProductFilterModalOpen(true);

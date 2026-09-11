@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useBlogStore } from '@em/domain';
-import { motion } from 'framer-motion';
 import { luxuryEase } from '@em/ui/styles/animations';
 import { FadeIn, PageWrapper } from '@em/ui/animations';
 import SEO from '../components/SEO';

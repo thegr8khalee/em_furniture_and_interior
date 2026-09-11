@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, Pencil, Trash2, Star, Gift, Tag } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useAdminStore, useCollectionStore } from '@em/domain';
-import { Badge, Modal } from '@em/ui';
+import { Badge, Modal, SafeHTML } from '@em/ui';
 
 const formatPrice = (val) =>
   '₦' + Number(val).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -204,7 +204,7 @@ const CollectionDetailView = ({ item, onClose, onEdit }) => {
       {item.description && (
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-neutral/40">Description</p>
-          <div className="prose prose-sm max-h-40 overflow-y-auto text-neutral/70" dangerouslySetInnerHTML={{ __html: item.description }} />
+          <SafeHTML className="prose prose-sm max-h-40 overflow-y-auto text-neutral/70" html={item.description} />
         </div>
       )}
 

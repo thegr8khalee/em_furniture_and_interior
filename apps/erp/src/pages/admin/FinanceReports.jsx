@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Download, Banknote, TrendingUp, Loader2 } from 'lucide-react';
 import { axiosInstance } from '@em/domain';
 import { toast } from 'react-hot-toast';
@@ -9,14 +9,13 @@ const FinanceReports = () => {
   const [summary, setSummary] = useState(null);
   const [daily, setDaily] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [range, setRange] = useState({ start: '', end: '' });
   const [includeUnpaid, setIncludeUnpaid] = useState(false);
   const [includeRefunded, setIncludeRefunded] = useState(false);
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const fetchRevenue = async () => {
+  const fetchRevenue = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -28,14 +27,13 @@ const FinanceReports = () => {
       const response = await axiosInstance.get(`/finance/admin/revenue?${params}`);
       setSummary(response.data.summary);
       setDaily(response.data.daily);
-      setRange(response.data.range);
     } catch (error) {
       toast.error('Failed to load revenue data');
       console.error(error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [startDate, endDate, includeUnpaid, includeRefunded]);
 
   const downloadCsv = async () => {
     try {
@@ -64,7 +62,7 @@ const FinanceReports = () => {
 
   useEffect(() => {
     fetchRevenue();
-  }, []);
+  }, [fetchRevenue]);
 
   return (
     <AdminPageShell

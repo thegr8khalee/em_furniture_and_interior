@@ -624,6 +624,7 @@ const PO_SELECT = `
          po.paid_on, po.payment_method,
          po.created_by, po.received_by, po.created_at, po.updated_at,
          v.id AS vendor_id, v.name AS vendor_name,
+         v.email AS vendor_email, v.phone AS vendor_phone, v.address AS vendor_address,
          COALESCE(items.list, '[]'::json) AS items,
          COALESCE(items.total, 0)::bigint AS total
     FROM purchase_orders po
@@ -643,7 +644,13 @@ const PO_SELECT = `
 const publicPurchaseOrder = (row) => ({
   _id: row.id,
   poNumber: row.po_number,
-  vendor: { _id: row.vendor_id, name: row.vendor_name },
+  vendor: {
+    _id: row.vendor_id,
+    name: row.vendor_name,
+    email: row.vendor_email,
+    phone: row.vendor_phone,
+    address: row.vendor_address,
+  },
   status: row.status,
   expectedOn: row.expected_on,
   receivedOn: row.received_on,

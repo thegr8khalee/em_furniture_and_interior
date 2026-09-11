@@ -12,6 +12,7 @@ import {
   generateInvoice,
   generateReceipt,
   generateQuotation,
+  generateDeliveryNote,
   getOrderRefunds,
   postOfflineSale,
   postOrderPayment,
@@ -38,6 +39,7 @@ router.get('/:orderId', identifyGuest, getOrderById); // Get single order detail
 router.get('/:orderId/invoice', identifyGuest, generateInvoice); // Download invoice for own order
 router.get('/:orderId/receipt', identifyGuest, generateReceipt); // Download receipt for own order
 router.get('/:orderId/quotation', identifyGuest, generateQuotation); // Download quotation for own order
+router.get('/:orderId/delivery-note', identifyGuest, generateDeliveryNote); // Download delivery note for own order
 
 // Admin routes
 router.get(
@@ -141,6 +143,13 @@ router.get(
   protectAdminRoute,
   requirePermissions([PERMISSIONS.ORDERS_VIEW]),
   generateQuotation
+);
+
+router.get(
+  '/admin/:orderId/delivery-note',
+  protectAdminRoute,
+  requirePermissions([PERMISSIONS.ORDERS_VIEW]),
+  generateDeliveryNote
 );
 
 export default router;

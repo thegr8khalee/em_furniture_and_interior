@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { elegantEase, luxuryEase } from '@em/ui/styles/animations';
 import { FadeIn, PageWrapper } from '@em/ui/animations';
 import SEO from '../components/SEO';

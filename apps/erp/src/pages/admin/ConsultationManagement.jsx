@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { axiosInstance } from '@em/domain';
 import { Loader2, Calendar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -24,7 +24,7 @@ const ConsultationManagement = () => {
     adminNotes: '',
   });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       const [consultRes, designerRes] = await Promise.all([
@@ -33,16 +33,16 @@ const ConsultationManagement = () => {
       ]);
       setConsultations(consultRes.data.consultations || []);
       setDesigners(designerRes.data.designers || []);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load consultation data');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filterStatus]);
 
   useEffect(() => {
     fetchData();
-  }, [filterStatus]);
+  }, [fetchData]);
 
   const naira = (value) =>
     `₦${Number(value ?? 0).toLocaleString('en-NG', { maximumFractionDigits: 2 })}`;

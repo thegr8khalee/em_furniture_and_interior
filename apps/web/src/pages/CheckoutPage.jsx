@@ -11,22 +11,33 @@ import SEO from '../components/SEO';
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { cart } = useCartStore();
-  const { user } = useAuthStore();
-  const { appliedCoupon, discount, couponCode, validateCoupon, removeCoupon } = useCouponStore();
-  const { createOrder, isCreatingOrder, clearCurrentOrder } = useOrderStore();
+  const { cart, clearCart } = useCartStore();
+  const { authUser } = useAuthStore();
+  const { appliedCoupon, discount, validateCoupon, removeCoupon } = useCouponStore();
+  const { createOrder, isCreatingOrder } = useOrderStore();
 
   // Form state
   const [shippingAddress, setShippingAddress] = useState({
-    fullName: user ? `${user.firstName} ${user.lastName}` : '',
-    phone: '',
-    email: user?.email || '',
+    fullName: authUser ? (authUser.username || authUser.fullName || '') : '',
+    phone: authUser?.phoneNumber || '',
+    email: authUser?.email || '',
     address: '',
     city: '',
     state: '',
     country: 'Nigeria',
     postalCode: ''
   });
+
+  useEffect(() => {
+    if (authUser) {
+      setShippingAddress((prev) => ({
+        ...prev,
+        fullName: prev.fullName || authUser.username || authUser.fullName || '',
+        phone: prev.phone || authUser.phoneNumber || '',
+        email: prev.email || authUser.email || '',
+      }));
+    }
+  }, [authUser]);
 
   const [billingAddress, setBillingAddress] = useState({
     fullName: '',
@@ -112,7 +123,7 @@ const CheckoutPage = () => {
         subtotal
       );
     }
-  }, [detailedCartItems, subtotal]);
+  }, [detailedCartItems, subtotal, appliedCoupon, validateCoupon]);
 
   // Calculate tax when address or cart changes
   useEffect(() => {
@@ -219,7 +230,8 @@ const CheckoutPage = () => {
 
       toast.success('Order created successfully!');
 
-      // Remove coupon
+      // Clear cart and remove coupon
+      await clearCart();
       removeCoupon();
 
       if (paymentMethod === 'paystack') {

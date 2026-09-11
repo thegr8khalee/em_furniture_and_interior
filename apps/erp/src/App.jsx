@@ -2,7 +2,7 @@ import { useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
-import { useAuthStore } from '@em/domain';
+import { useAdminAuthStore } from '@em/domain';
 import AdminProtectedRoute from './components/AdminProtectedRoutes';
 import AdminLoginProtectedRoute from './components/AdminLoginProtectedRoute';
 
@@ -60,12 +60,12 @@ const RouteFallback = () => (
 );
 
 function App() {
-  const checkAuth = useAuthStore((s) => s.checkAuth);
+  const checkAdminAuth = useAdminAuthStore((s) => s.checkAdminAuth);
   const location = useLocation();
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    checkAdminAuth();
+  }, [checkAdminAuth]);
 
   return (
     <div className="min-h-screen bg-base-100">
@@ -92,6 +92,8 @@ function App() {
               <Route path="/admin/collections/new" element={<AddCollection />} />
               <Route path="/admin/collections/edit/:collectionId" element={<EditCollection />} />
               <Route path="/admin/addProject" element={<AddProject />} />
+              <Route path="/admin/addproject" element={<Navigate to="/admin/addProject" replace />} />
+              <Route path="/admin/projects/new" element={<Navigate to="/admin/addProject" replace />} />
               <Route path="/admin/editProject/:projectId" element={<EditProject />} />
               <Route path="/admin/coupons" element={<CouponManagement />} />
               <Route path="/admin/orders" element={<OrderManagement />} />

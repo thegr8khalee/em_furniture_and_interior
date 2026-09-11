@@ -1,6 +1,6 @@
 import { resolveOwner } from '../lib/owner.js';
 import { CartError, clearCart } from '../services/cart.js';
-import { generateInvoicePDF, generateOrderDocumentPDF } from '../lib/invoiceGenerator.js';
+import { generateDeliveryNotePDF, generateInvoicePDF, generateOrderDocumentPDF } from '../lib/invoiceGenerator.js';
 import { createNotification } from './notification.controller.js';
 import { sendEmail } from '../services/gmail.service.js';
 import { logger } from '../lib/logger.js';
@@ -106,7 +106,10 @@ export const createOrder = async (req, res) => {
       idempotencyKey: req.get('idempotency-key') || req.body?.idempotencyKey || null,
     });
 
-    if (!duplicate) await announceOrder(order);
+    if (!duplicate) {
+      await clearCart(owner).catch((err) => logger.error({ err }, 'Failed to clear cart after order'));
+      await announceOrder(order);
+    }
 
     res.status(201).json({
       success: true,
@@ -332,6 +335,15 @@ export const generateQuotation = async (req, res) => {
     await generateOrderDocumentPDF(await orderForDocument(req), res, 'quotation');
   } catch (error) {
     fail(error, res, 'generateQuotation');
+  }
+};
+
+// Generate delivery note / waybill PDF
+export const generateDeliveryNote = async (req, res) => {
+  try {
+    await generateDeliveryNotePDF(await orderForDocument(req), res);
+  } catch (error) {
+    fail(error, res, 'generateDeliveryNote');
   }
 };
 

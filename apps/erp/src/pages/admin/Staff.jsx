@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, UserPlus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { axiosInstance } from '@em/domain';
+import { axiosInstance, useAdminAuthStore } from '@em/domain';
 import { toast } from 'react-hot-toast';
 import AdminPageShell from '../../components/admin/AdminPageShell';
 import { Badge, Button, EmptyState, Input, Modal, Select, SkeletonBlock } from '@em/ui';
@@ -57,15 +57,21 @@ const Staff = () => {
     }
   }, []);
 
+  const currentAdmin = useAdminAuthStore((s) => s.adminUser);
+
   useEffect(() => {
     load();
     // Who I am, so the screen can say "you" and explain why some controls are
     // absent — rather than offering a button the API will refuse.
-    axiosInstance
-      .get('/auth/check')
-      .then(({ data }) => setMe(data))
-      .catch(() => {});
-  }, [load]);
+    if (currentAdmin) {
+      setMe(currentAdmin);
+    } else {
+      axiosInstance
+        .get('/admin/check')
+        .then(({ data }) => setMe(data))
+        .catch(() => {});
+    }
+  }, [load, currentAdmin]);
 
   const save = async (event) => {
     event.preventDefault();

@@ -474,6 +474,14 @@ describe('purchase orders', () => {
     expect(order.total).toBe(200000);
   });
 
+  it('generates a downloadable purchase order PDF', async () => {
+    const order = await anOrder();
+
+    const res = await get(`/api/purchasing/purchase-orders/${order._id}/pdf`);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('pdf');
+  });
+
   it('needs a vendor and at least one line', async () => {
     expect((await post('/api/purchasing/purchase-orders', { items: [] })).status).toBe(400);
     expect((await post('/api/purchasing/purchase-orders', { vendorId, items: [] })).status).toBe(

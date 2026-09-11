@@ -516,6 +516,9 @@ const OrderDetail = () => {
               <Button variant="ghost" leftIcon={Download} onClick={() => download('quotation')}>
                 Quotation
               </Button>
+              <Button variant="ghost" leftIcon={Download} onClick={() => download('delivery-note')}>
+                Delivery note
+              </Button>
             </div>
           </Section>
 

@@ -14,6 +14,16 @@ const __dirname = path.dirname(__filename);
 
 /* ── helpers ─────────────────────────────────────────── */
 
+export const escapeHtml = (value) => {
+  if (value == null) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
 const formatCurrency = (amount) =>
   `₦${Number(amount).toLocaleString('en-NG', { minimumFractionDigits: 2 })}`;
 
@@ -465,9 +475,34 @@ const receiptStyles = `
   }
 `;
 
+const formatPaymentMethod = (method) => {
+  if (!method) return '';
+  const map = {
+    bank_transfer: 'Bank Transfer',
+    transfer: 'Bank Transfer',
+    pos: 'POS / Card',
+    cash: 'Cash',
+    cheque: 'Cheque',
+    online: 'Online Payment',
+  };
+  return map[String(method).toLowerCase()] || method;
+};
+
 /* ── BRANDED DOCUMENT HTML GENERATOR ──────────────────── */
 
-const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, summaryRows, notes }) => {
+const brandedDocumentHTML = ({
+  title,
+  clientName,
+  invoiceNumber,
+  receiptNumber,
+  forInvoiceNumber,
+  paymentMethod,
+  paymentReference,
+  date,
+  items,
+  summaryRows,
+  notes,
+}) => {
   const bgDiv = docConfig.bgImageUrl
     ? `<div class="receipt-bg" style="background-image: url('${docConfig.bgImageUrl}');"></div>`
     : `<div class="receipt-bg lines-pattern"></div>`;
@@ -485,7 +520,7 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
 
     return `
     <tr>
-      <td>${item.description}</td>
+      <td>${escapeHtml(item.description)}</td>
       <td class="center">${quantity}</td>
       <td class="right">${formatReceiptAmount(unitPrice)}</td>
       <td class="right">${formatReceiptAmount(lineTotal)}</td>
@@ -495,7 +530,7 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
 
   const summaryHTML = summaryRows.map(row => `
     <tr>
-      <td>${row.label}</td>
+      <td>${escapeHtml(row.label)}</td>
       <td class="right">${formatReceiptAmount(row.amount)}</td>
     </tr>
   `).join('');
@@ -520,16 +555,20 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
       <span class="brand">EM</span> <span class="fancy">Furniture &amp; interior</span>&#169;
     </div>
 
-    <h1 class="receipt-title">${title}</h1>
+    <h1 class="receipt-title">${escapeHtml(title)}</h1>
 
     <div class="meta-section">
       <div class="issued-to">
         <div class="label">Issued To:</div>
-        <div class="name">${clientName}</div>
+        <div class="name">${escapeHtml(clientName)}</div>
       </div>
       <div class="invoice-meta">
-        <p><span class="label">Invoice No:</span>&nbsp;&nbsp;&nbsp;${invoiceNumber}</p>
-        <p><span class="label">Date:</span>&nbsp;&nbsp;&nbsp;${dateStr}</p>
+        ${receiptNumber ? `<p><span class="label">Receipt No:</span>&nbsp;&nbsp;&nbsp;${escapeHtml(receiptNumber)}</p>` : ''}
+        ${forInvoiceNumber ? `<p><span class="label">For Invoice:</span>&nbsp;&nbsp;&nbsp;${escapeHtml(forInvoiceNumber)}</p>` : ''}
+        ${!receiptNumber && invoiceNumber ? `<p><span class="label">Invoice No:</span>&nbsp;&nbsp;&nbsp;${escapeHtml(invoiceNumber)}</p>` : ''}
+        <p><span class="label">Date:</span>&nbsp;&nbsp;&nbsp;${escapeHtml(dateStr)}</p>
+        ${paymentMethod ? `<p><span class="label">Payment Method:</span>&nbsp;&nbsp;&nbsp;${escapeHtml(formatPaymentMethod(paymentMethod))}</p>` : ''}
+        ${paymentReference ? `<p><span class="label">Payment Ref:</span>&nbsp;&nbsp;&nbsp;${escapeHtml(paymentReference)}</p>` : ''}
         <p><span class="label">RC:</span>&nbsp;&nbsp;&nbsp;${docConfig.rcNumber}</p>
       </div>
     </div>
@@ -552,7 +591,7 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
       ${summaryHTML}
     </table>
 
-    ${notes && String(notes).trim() ? `<div class="notes-block"><h4>Notes</h4><p>${String(notes).trim().replace(/</g, '&lt;')}</p></div>` : ''}
+    ${notes && String(notes).trim() ? `<div class="notes-block"><h4>Notes</h4><p>${escapeHtml(String(notes).trim())}</p></div>` : ''}
 
     <div class="receipt-footer">
       <div class="bank-details">
@@ -578,7 +617,21 @@ const brandedDocumentHTML = ({ title, clientName, invoiceNumber, date, items, su
 </html>`;
 };
 
-const receiptHTML = ({ clientName, invoiceNumber, date, items, total, amountPaid, notes, discountType, discountValue }) => {
+const receiptHTML = ({
+  clientName,
+  receiptNumber,
+  invoiceNumber,
+  forInvoiceNumber,
+  paymentMethod,
+  paymentReference,
+  date,
+  items,
+  total,
+  amountPaid,
+  notes,
+  discountType,
+  discountValue,
+}) => {
   const totalAmount = Number(total) || 0;
   
   let discountAmount = 0;
@@ -590,27 +643,45 @@ const receiptHTML = ({ clientName, invoiceNumber, date, items, total, amountPaid
   const grandTotal = Math.max(0, totalAmount - discountAmount);
 
   const paid = amountPaid != null ? Number(amountPaid) : grandTotal;
-  const balance = grandTotal - paid;
+  const balance = Math.max(0, grandTotal - paid);
   const balancePct = grandTotal > 0 ? Math.round((balance / grandTotal) * 100) : 0;
   
-  const summaryRows = [{ label: discountAmount > 0 ? 'Subtotal' : 'Total', amount: totalAmount }];
+  const summaryRows = [{ label: discountAmount > 0 ? 'Subtotal' : (forInvoiceNumber ? 'Invoice Total' : 'Total'), amount: totalAmount }];
   if (discountAmount > 0) {
     summaryRows.push({ label: 'Discount', amount: discountAmount });
     summaryRows.push({ label: 'Grand Total', amount: grandTotal });
   }
   summaryRows.push(
-      { label: 'Paid', amount: paid },
-      { label: `Balance (${balancePct}%)`, amount: balance }
+    { label: forInvoiceNumber ? 'Amount Received (This Receipt)' : 'Paid', amount: paid },
+    { label: `Remaining Balance (${balancePct}%)`, amount: balance }
   );
 
   return brandedDocumentHTML({
     title: 'Payment Receipt',
-    clientName, invoiceNumber, date, items, notes,
+    clientName,
+    receiptNumber: receiptNumber || invoiceNumber,
+    forInvoiceNumber: forInvoiceNumber || null,
+    paymentMethod,
+    paymentReference,
+    date,
+    items,
+    notes,
     summaryRows,
   });
 };
 
-const invoiceHTML = ({ clientName, invoiceNumber, date, items, total, depositPercent, notes, discountType, discountValue }) => {
+const invoiceHTML = ({
+  clientName,
+  invoiceNumber,
+  date,
+  items,
+  total,
+  amountPaid,
+  depositPercent,
+  notes,
+  discountType,
+  discountValue,
+}) => {
   const pct = depositPercent != null && !isNaN(Number(depositPercent))
     ? Number(depositPercent)
     : docConfig.depositPercent;
@@ -629,15 +700,25 @@ const invoiceHTML = ({ clientName, invoiceNumber, date, items, total, depositPer
     summaryRows.push({ label: 'Grand Total', amount: grandTotal });
   }
 
-  if (pct > 0 && pct < 100) {
+  const paid = Number(amountPaid) || 0;
+  if (paid > 0) {
+    const balance = Math.max(0, grandTotal - paid);
+    summaryRows.push({ label: 'Amount Paid', amount: paid });
+    summaryRows.push({ label: 'Balance Due', amount: balance });
+  } else if (pct > 0 && pct < 100) {
     const deposit = Math.round(grandTotal * pct / 100);
     const balance = grandTotal - deposit;
     summaryRows.push({ label: `Deposit (${pct}%)`, amount: deposit });
     summaryRows.push({ label: `Balance (${100 - pct}%)`, amount: balance });
   }
+
   return brandedDocumentHTML({
     title: 'Payment Invoice',
-    clientName, invoiceNumber, date, items, notes,
+    clientName,
+    invoiceNumber,
+    date,
+    items,
+    notes,
     summaryRows,
   });
 };
@@ -1062,11 +1143,11 @@ const quotationHTML = ({
     const rows = section.items.map(item => {
       const amt = Number(item.price) || 0;
       sectionTotal += amt;
-      return `<tr><td>${item.description}</td><td class="right">${Number(amt).toLocaleString('en-NG')}</td></tr>`;
+      return `<tr><td>${escapeHtml(item.description)}</td><td class="right">${Number(amt).toLocaleString('en-NG')}</td></tr>`;
     }).join('');
 
     return `
-      <h2 class="q-section-title">${section.name}</h2>
+      <h2 class="q-section-title">${escapeHtml(section.name)}</h2>
       <table class="q-items-table">
         <thead><tr><th>Items Description</th><th class="right">Total Cost</th></tr></thead>
         <tbody>${rows}</tbody>
@@ -1081,7 +1162,7 @@ const quotationHTML = ({
   let summaryRows = sections.map(section => {
     const cost = section.items.reduce((sum, it) => sum + (Number(it.price) || 0), 0);
     subtotal += cost;
-    return `<tr><td>${section.name}</td><td class="right">${Number(cost).toLocaleString('en-NG')}</td></tr>`;
+    return `<tr><td>${escapeHtml(section.name)}</td><td class="right">${Number(cost).toLocaleString('en-NG')}</td></tr>`;
   });
 
   let discountAmount = 0;
@@ -1190,8 +1271,8 @@ const quotationHTML = ({
         <div class="q-title-block">
           <div class="q-title">Quotation</div>
           <div class="q-ref">
-            <span class="label">Reference Number:</span>&nbsp;&nbsp;${referenceNumber}<br>
-            <span class="label">Date:</span>&nbsp;&nbsp;${dateStr}
+            <span class="label">Reference Number:</span>&nbsp;&nbsp;${escapeHtml(referenceNumber)}<br>
+            <span class="label">Date:</span>&nbsp;&nbsp;${escapeHtml(dateStr)}
           </div>
         </div>
       </div>
@@ -1199,8 +1280,8 @@ const quotationHTML = ({
       <div class="q-client-box">
         <h4>Client Information:</h4>
         <p>
-          <span class="lbl">Name:</span> ${clientName}
-          ${clientPhone ? `<br><span class="lbl">Phone Number:</span> ${clientPhone}` : ''}
+          <span class="lbl">Name:</span> ${escapeHtml(clientName)}
+          ${clientPhone ? `<br><span class="lbl">Phone Number:</span> ${escapeHtml(clientPhone)}` : ''}
         </p>
       </div>
 
@@ -1271,11 +1352,650 @@ const quotationHTML = ({
 </html>`;
 };
 
+/* ── DELIVERY NOTE / WAYBILL TEMPLATE ────────────────── */
+
+export const deliveryNoteHTML = (order) => {
+  const bgDiv = docConfig.bgImageUrl
+    ? `<div class="receipt-bg" style="background-image: url('${docConfig.bgImageUrl}');"></div>`
+    : `<div class="receipt-bg lines-pattern"></div>`;
+
+  const logoImg = docConfig.logoUrl
+    ? `<img src="${docConfig.logoUrl}" alt="EM Furniture">`
+    : '';
+
+  const clientName = escapeHtml(order.shippingAddress?.fullName || order.customer?.name || 'Customer');
+  const street = escapeHtml(order.shippingAddress?.streetAddress || '');
+  const cityState = escapeHtml([order.shippingAddress?.city, order.shippingAddress?.state].filter(Boolean).join(', '));
+  const phone = escapeHtml(order.shippingAddress?.phone || order.customer?.phone || '—');
+  const email = escapeHtml(order.shippingAddress?.email || order.customer?.email || '—');
+  const dateStr = escapeHtml(formatDate(order.createdAt || new Date()));
+  const deliveryNotes = escapeHtml(order.shippingAddress?.notes || order.notes || '');
+  const orderNumber = escapeHtml(order.orderNumber || '');
+  const shippingMethod = escapeHtml(order.shippingMethod || 'Standard Delivery');
+  const trackingNumber = escapeHtml(order.trackingNumber || 'Direct Dispatch');
+
+  const itemsHTML = (order.items || []).map((item, idx) => {
+    const qty = Number(item.quantity) || 1;
+    const name = escapeHtml(item.name || 'Furniture Item');
+    const variant = item.variant ? `<br><small style="color: #666;">Variant: ${escapeHtml(item.variant)}</small>` : '';
+    return `
+      <tr>
+        <td style="text-align: center; width: 40px; color: #777;">${idx + 1}</td>
+        <td><strong>${name}</strong>${variant}</td>
+        <td style="text-align: center; width: 80px; font-weight: 600; font-size: 15px;">${qty}</td>
+        <td style="text-align: center; width: 140px; color: #555; font-size: 11px;">[ &nbsp; ] Verified Good</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    ${receiptStyles}
+    .dispatch-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .info-card {
+      border: 1px solid #e5e5e5;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 14px 16px;
+      border-radius: 4px;
+    }
+    .info-card h4 {
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: #777;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+    }
+    .dn-items {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      font-size: 12px;
+    }
+    .dn-items th {
+      background: #222;
+      color: #fff;
+      padding: 10px 12px;
+      font-weight: 600;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .dn-items td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      background: rgba(255, 255, 255, 0.7);
+    }
+    .sign-blocks {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-top: 30px;
+    }
+    .sign-card {
+      border: 1px solid #ddd;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      line-height: 1.8;
+    }
+    .sign-card h5 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #222;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #e5e5e5;
+      padding-bottom: 4px;
+    }
+    .sign-line {
+      margin-top: 24px;
+      border-bottom: 1px solid #999;
+      height: 1px;
+    }
+  </style>
+</head>
+<body>
+  ${bgDiv}
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead><tr><td><div style="height: 30px;"></div></td></tr></thead>
+    <tbody><tr><td style="padding: 0 45px;">
+      <div class="receipt-content">
+        <div class="logo-section">${logoImg}</div>
+        <div class="company-name">
+          <span class="brand">EM</span> <span class="fancy">Furniture &amp; interior</span>&#169;
+        </div>
+        <h1 class="receipt-title" style="font-size: 24px; letter-spacing: 6px;">DELIVERY NOTE / WAYBILL</h1>
+
+        <div class="dispatch-info">
+          <div class="info-card">
+            <h4>Deliver To (Consignee)</h4>
+            <div style="font-weight: 600; font-size: 14px; color: #111;">${clientName}</div>
+            ${street ? `<div>${street}</div>` : ''}
+            ${cityState ? `<div>${cityState}</div>` : ''}
+            <div><strong>Phone:</strong> ${phone}</div>
+            ${email && email !== '—' ? `<div><strong>Email:</strong> ${email}</div>` : ''}
+          </div>
+          <div class="info-card">
+            <h4>Waybill Details</h4>
+            <div><strong>Waybill / Order No:</strong> ${orderNumber}</div>
+            <div><strong>Dispatch Date:</strong> ${dateStr}</div>
+            <div><strong>Delivery Method:</strong> ${shippingMethod}</div>
+            <div><strong>Tracking / Courier:</strong> ${trackingNumber}</div>
+            <div><strong>Company RC:</strong> ${docConfig.rcNumber}</div>
+          </div>
+        </div>
+
+        <table class="dn-items">
+          <thead>
+            <tr>
+              <th style="text-align: center; width: 40px;">#</th>
+              <th>Description &amp; Specifications</th>
+              <th style="text-align: center; width: 80px;">Quantity</th>
+              <th style="text-align: center; width: 140px;">Check Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHTML}
+          </tbody>
+        </table>
+
+        ${deliveryNotes ? `
+          <div class="info-card" style="margin-bottom: 20px;">
+            <h4>Delivery Instructions / Notes</h4>
+            <p style="font-size: 11px; color: #444;">${deliveryNotes}</p>
+          </div>
+        ` : ''}
+
+        <div class="sign-blocks">
+          <div class="sign-card">
+            <h5>1. Dispatched By</h5>
+            <div>Warehouse / Production</div>
+            <div class="sign-line"></div>
+            <div>Name: _____________________</div>
+            <div>Signature: ________________</div>
+            <div>Date: ____________________</div>
+          </div>
+          <div class="sign-card">
+            <h5>2. Delivered By</h5>
+            <div>Logistics / Driver</div>
+            <div class="sign-line"></div>
+            <div>Name: _____________________</div>
+            <div>Vehicle: __________________</div>
+            <div>Date: ____________________</div>
+          </div>
+          <div class="sign-card" style="border-color: #333;">
+            <h5>3. Received in Good Condition</h5>
+            <div style="font-size: 10px; color: #555; line-height: 1.3;">I confirm receipt of the goods in complete and undamaged condition.</div>
+            <div class="sign-line"></div>
+            <div>Recipient: ________________</div>
+            <div>Signature: ________________</div>
+            <div>Date: ____________________</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #777;">
+          ${docConfig.companyAddress} &bull; Tel: ${docConfig.companyPhone} &bull; ${docConfig.companyWebsite}
+        </div>
+      </div>
+    </td></tr></tbody>
+    <tfoot><tr><td><div style="height: 30px;"></div></td></tr></tfoot>
+  </table>
+</body>
+</html>`;
+};
+
+/* ── PURCHASE ORDER TEMPLATE ─────────────────────────── */
+
+export const purchaseOrderHTML = (po) => {
+  const bgDiv = docConfig.bgImageUrl
+    ? `<div class="receipt-bg" style="background-image: url('${docConfig.bgImageUrl}');"></div>`
+    : `<div class="receipt-bg lines-pattern"></div>`;
+
+  const logoImg = docConfig.logoUrl
+    ? `<img src="${docConfig.logoUrl}" alt="EM Furniture">`
+    : '';
+
+  const poDate = escapeHtml(formatDate(po.createdAt || new Date()));
+  const expectedDate = escapeHtml(po.expectedOn ? formatDate(po.expectedOn) : 'As agreed');
+  const vendorName = escapeHtml(po.vendor?.name || 'Supplier');
+  const vendorPhone = escapeHtml(po.vendor?.phone || '—');
+  const vendorEmail = escapeHtml(po.vendor?.email || '—');
+  const vendorAddress = escapeHtml(po.vendor?.address || '—');
+  const poNumber = escapeHtml(po.poNumber || '');
+  const poStatus = escapeHtml(String(po.status || 'draft').toUpperCase());
+  const poNotes = escapeHtml(po.notes || '');
+
+  const itemsHTML = (po.items || []).map((item, idx) => {
+    const qty = Number(item.quantity) || 1;
+    const unitCost = Number(item.unitCost) || 0;
+    const lineTotal = Number(item.lineTotal) || (qty * unitCost);
+
+    return `
+      <tr>
+        <td style="text-align: center; width: 40px; color: #777;">${idx + 1}</td>
+        <td><strong>${escapeHtml(item.name || 'Materials / Stock Item')}</strong></td>
+        <td style="text-align: center; width: 70px;">${qty}</td>
+        <td style="text-align: right; width: 110px;">${formatCurrency(unitCost)}</td>
+        <td style="text-align: right; width: 120px; font-weight: 600;">${formatCurrency(lineTotal)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    ${receiptStyles}
+    .po-parties {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .party-card {
+      border: 1px solid #e5e5e5;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 14px 16px;
+      border-radius: 4px;
+    }
+    .party-card h4 {
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: #777;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+    }
+    .po-items {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+    .po-items th {
+      background: #1e293b;
+      color: #fff;
+      padding: 10px 12px;
+      font-weight: 600;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .po-items td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      background: rgba(255, 255, 255, 0.7);
+    }
+    .po-total-card {
+      width: 280px;
+      margin-left: auto;
+      margin-bottom: 24px;
+      border: 1px solid #222;
+      background: #fff;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    .po-signatures {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 30px;
+    }
+    .sign-box {
+      border: 1px solid #ddd;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 14px;
+      border-radius: 4px;
+      font-size: 11px;
+      line-height: 1.8;
+    }
+    .sign-box h5 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #222;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #e5e5e5;
+      padding-bottom: 4px;
+    }
+    .line {
+      margin-top: 30px;
+      border-bottom: 1px solid #999;
+      height: 1px;
+    }
+  </style>
+</head>
+<body>
+  ${bgDiv}
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead><tr><td><div style="height: 30px;"></div></td></tr></thead>
+    <tbody><tr><td style="padding: 0 45px;">
+      <div class="receipt-content">
+        <div class="logo-section">${logoImg}</div>
+        <div class="company-name">
+          <span class="brand">EM</span> <span class="fancy">Furniture &amp; interior</span>&#169;
+        </div>
+        <h1 class="receipt-title" style="font-size: 24px; letter-spacing: 6px;">PURCHASE ORDER</h1>
+
+        <div class="po-parties">
+          <div class="party-card">
+            <h4>Vendor / Supplier</h4>
+            <div style="font-weight: 600; font-size: 14px; color: #111;">${vendorName}</div>
+            ${vendorAddress && vendorAddress !== '—' ? `<div>${vendorAddress}</div>` : ''}
+            <div><strong>Phone:</strong> ${vendorPhone}</div>
+            <div><strong>Email:</strong> ${vendorEmail}</div>
+          </div>
+          <div class="party-card">
+            <h4>Order Information</h4>
+            <div><strong>PO Number:</strong> ${poNumber}</div>
+            <div><strong>Date Issued:</strong> ${poDate}</div>
+            <div><strong>Expected Delivery:</strong> ${expectedDate}</div>
+            <div><strong>Status:</strong> ${poStatus}</div>
+            <div><strong>Company RC:</strong> ${docConfig.rcNumber}</div>
+          </div>
+        </div>
+
+        <table class="po-items">
+          <thead>
+            <tr>
+              <th style="text-align: center; width: 40px;">#</th>
+              <th>Item / Material Description</th>
+              <th style="text-align: center; width: 70px;">Qty</th>
+              <th style="text-align: right; width: 110px;">Unit Cost</th>
+              <th style="text-align: right; width: 120px;">Line Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHTML}
+          </tbody>
+        </table>
+
+        <div class="po-total-card">
+          <span style="font-weight: 600; text-transform: uppercase; font-size: 12px;">Total Order Value:</span>
+          <span style="font-weight: 700; font-size: 16px; color: #111;">${formatCurrency(po.total || 0)}</span>
+        </div>
+
+        ${poNotes ? `
+          <div class="party-card" style="margin-bottom: 20px;">
+            <h4>Terms &amp; Instructions</h4>
+            <p style="font-size: 11px; color: #444;">${poNotes}</p>
+          </div>
+        ` : ''}
+
+        <div class="po-signatures">
+          <div class="sign-box">
+            <h5>Authorized Procurement</h5>
+            <div style="font-size: 10px; color: #666;">EM Modern Furniture and Interior Ltd</div>
+            <div class="line"></div>
+            <div>Authorized Signature: __________________</div>
+            <div>Date: _________________________________</div>
+          </div>
+          <div class="sign-box">
+            <h5>Supplier Acceptance</h5>
+            <div style="font-size: 10px; color: #666;">Acknowledged &amp; Agreed</div>
+            <div class="line"></div>
+            <div>Supplier Signature: ____________________</div>
+            <div>Date: _________________________________</div>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #777;">
+          Delivery Address: ${docConfig.companyAddress} &bull; Tel: ${docConfig.companyPhone} &bull; ${docConfig.companyWebsite}
+        </div>
+      </div>
+    </td></tr></tbody>
+    <tfoot><tr><td><div style="height: 30px;"></div></td></tr></tfoot>
+  </table>
+</body>
+</html>`;
+};
+
+/* ── EMPLOYEE PAYSLIP TEMPLATE ───────────────────────── */
+
+export const payslipHTML = (slip, run) => {
+  const bgDiv = docConfig.bgImageUrl
+    ? `<div class="receipt-bg" style="background-image: url('${docConfig.bgImageUrl}');"></div>`
+    : `<div class="receipt-bg lines-pattern"></div>`;
+
+  const logoImg = docConfig.logoUrl
+    ? `<img src="${docConfig.logoUrl}" alt="EM Furniture">`
+    : '';
+
+  const periodDate = new Date(run.period);
+  const periodStr = escapeHtml(periodDate.toLocaleDateString('en-NG', { month: 'long', year: 'numeric' }));
+  const dateGenerated = escapeHtml(formatDate(new Date()));
+
+  const employeeName = escapeHtml(slip.employee?.fullName || 'Staff Member');
+  const jobTitle = escapeHtml(slip.employee?.jobTitle || 'Employee');
+  const rawBankInfo = slip.employee?.bankAccount
+    ? `${slip.employee.bankName ? slip.employee.bankName + ' · ' : ''}${slip.employee.bankAccount}`
+    : 'Cash / Direct';
+  const bankInfo = escapeHtml(rawBankInfo);
+
+  const gross = Number(slip.gross) || 0;
+  const paye = Number(slip.paye) || 0;
+  const pension = Number(slip.pension) || 0;
+  const otherDeductions = Number(slip.otherDeductions) || 0;
+  const totalDeductions = paye + pension + otherDeductions;
+  const net = Number(slip.net) || (gross - totalDeductions);
+  const employerPension = Number(slip.employerPension) || 0;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    ${receiptStyles}
+    .slip-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .slip-card {
+      border: 1px solid #e5e5e5;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 14px 16px;
+      border-radius: 4px;
+    }
+    .slip-card h4 {
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: #777;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+    }
+    .breakdown-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      font-size: 12px;
+    }
+    .breakdown-table th {
+      background: #1e293b;
+      color: #fff;
+      padding: 10px 14px;
+      font-weight: 600;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .breakdown-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #eee;
+      background: rgba(255, 255, 255, 0.7);
+    }
+    .net-banner {
+      background: #f8fafc;
+      border: 2px solid #0f172a;
+      border-radius: 6px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .net-label {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #0f172a;
+    }
+    .net-val {
+      font-size: 22px;
+      font-weight: 800;
+      color: #0f172a;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  ${bgDiv}
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead><tr><td><div style="height: 30px;"></div></td></tr></thead>
+    <tbody><tr><td style="padding: 0 45px;">
+      <div class="receipt-content">
+        <div class="logo-section">${logoImg}</div>
+        <div class="company-name">
+          <span class="brand">EM</span> <span class="fancy">Furniture &amp; interior</span>&#169;
+        </div>
+        <h1 class="receipt-title" style="font-size: 24px; letter-spacing: 6px;">EMPLOYEE PAYSLIP</h1>
+
+        <div class="slip-grid">
+          <div class="slip-card">
+            <h4>Employee Details</h4>
+            <div style="font-weight: 600; font-size: 14px; color: #111;">${employeeName}</div>
+            <div><strong>Designation:</strong> ${jobTitle}</div>
+            <div><strong>Payment Account:</strong> ${bankInfo}</div>
+          </div>
+          <div class="slip-card">
+            <h4>Payroll Summary</h4>
+            <div><strong>Pay Period:</strong> ${periodStr}</div>
+            <div><strong>Payslip Ref:</strong> PAY-${String(run.period).slice(0, 7).replace('-', '')}-${(slip._id || slip.id || '0000').slice(0, 8).toUpperCase()}</div>
+            <div><strong>Issue Date:</strong> ${dateGenerated}</div>
+            <div><strong>Company RC:</strong> ${docConfig.rcNumber}</div>
+          </div>
+        </div>
+
+        <table class="breakdown-table">
+          <thead>
+            <tr>
+              <th>Earnings (Gross)</th>
+              <th style="text-align: right; width: 140px;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Basic Wages &amp; Allowances</td>
+              <td style="text-align: right; font-family: monospace; font-weight: 600;">${formatCurrency(gross)}</td>
+            </tr>
+            <tr style="background: #f1f5f9; font-weight: 600;">
+              <td>Total Gross Earnings</td>
+              <td style="text-align: right; font-family: monospace;">${formatCurrency(gross)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table class="breakdown-table">
+          <thead>
+            <tr>
+              <th>Statutory &amp; Voluntary Deductions</th>
+              <th style="text-align: right; width: 140px;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>PAYE Tax Withheld</td>
+              <td style="text-align: right; font-family: monospace; color: #b91c1c;">${formatCurrency(paye)}</td>
+            </tr>
+            <tr>
+              <td>Employee Pension (8%)</td>
+              <td style="text-align: right; font-family: monospace; color: #b91c1c;">${formatCurrency(pension)}</td>
+            </tr>
+            ${otherDeductions > 0 ? `
+              <tr>
+                <td>Other Deductions / Advances</td>
+                <td style="text-align: right; font-family: monospace; color: #b91c1c;">${formatCurrency(otherDeductions)}</td>
+              </tr>
+            ` : ''}
+            <tr style="background: #f1f5f9; font-weight: 600;">
+              <td>Total Deductions</td>
+              <td style="text-align: right; font-family: monospace; color: #b91c1c;">${formatCurrency(totalDeductions)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="net-banner">
+          <div>
+            <div class="net-label">Net Take-Home Pay</div>
+            <div style="font-size: 11px; color: #64748b;">Disbursed to employee bank account</div>
+          </div>
+          <div class="net-val">${formatCurrency(net)}</div>
+        </div>
+
+        <div class="slip-card" style="margin-bottom: 20px; font-size: 11px;">
+          <h4>Employer Statutory Contribution (Informational)</h4>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+            <span>Employer Pension Contribution (10%):</span>
+            <strong style="font-family: monospace;">${formatCurrency(employerPension)}</strong>
+          </div>
+          <div style="font-size: 10px; color: #666; margin-top: 2px;">Contributed by the company directly to the employee pension fund administrator (PFA).</div>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; font-size: 10px; color: #777;">
+          Private &amp; Confidential &bull; Generated by ${docConfig.accountName} Payroll System &bull; ${docConfig.companyAddress}
+        </div>
+      </div>
+    </td></tr></tbody>
+    <tfoot><tr><td><div style="height: 30px;"></div></td></tr></tfoot>
+  </table>
+</body>
+</html>`;
+};
+
 /* ── ORDER-BASED TEMPLATE ────────────────────────────── */
 
 export const orderDocumentHTML = (order, documentType = 'invoice') => {
+  const docType = (documentType || 'invoice').toLowerCase();
+
+  if (docType === 'delivery_note' || docType === 'delivery-note' || docType === 'waybill') {
+    return deliveryNoteHTML(order);
+  }
+
   const titleMap = { invoice: 'Invoice', receipt: 'Receipt', quotation: 'Quotation' };
-  const title = titleMap[documentType.toLowerCase()] || 'Invoice';
+  const title = titleMap[docType] || 'Invoice';
 
   const brandedItems = order.items.map(item => ({
     description: item.name + (item.quantity > 1 ? ` (\u00d7${item.quantity})` : ''),
@@ -1287,7 +2007,7 @@ export const orderDocumentHTML = (order, documentType = 'invoice') => {
     price: item.subtotal,
   }));
 
-  if (documentType.toLowerCase() === 'receipt') {
+  if (docType === 'receipt') {
     return receiptHTML({
       clientName: order.shippingAddress?.fullName || '',
       invoiceNumber: order.orderNumber,
@@ -1298,7 +2018,7 @@ export const orderDocumentHTML = (order, documentType = 'invoice') => {
     });
   }
 
-  if (documentType.toLowerCase() === 'invoice') {
+  if (docType === 'invoice') {
     return invoiceHTML({
       clientName: order.shippingAddress?.fullName || '',
       invoiceNumber: order.orderNumber,
@@ -1345,6 +2065,9 @@ export const customDocumentHTML = (data) => {
     projectFeeValue,
     depositType,
     depositValue,
+    relatedDocumentNumber,
+    paymentMethod,
+    paymentReference,
   } = data;
 
   const titleMap = { invoice: 'Invoice', receipt: 'Receipt', quotation: 'Quotation' };
@@ -1363,7 +2086,10 @@ export const customDocumentHTML = (data) => {
   if (documentType.toLowerCase() === 'receipt') {
     return receiptHTML({
       clientName: clientName || '',
-      invoiceNumber: documentNumber,
+      receiptNumber: documentNumber,
+      forInvoiceNumber: relatedDocumentNumber || null,
+      paymentMethod,
+      paymentReference,
       date: formatDate(new Date()),
       items: brandedItems,
       total: data.totalAmount || calcTotal,
@@ -1381,6 +2107,7 @@ export const customDocumentHTML = (data) => {
       date: formatDate(new Date()),
       items: brandedItems,
       total: data.totalAmount || calcTotal,
+      amountPaid: data.amountPaid,
       depositPercent: data.depositPercent,
       notes,
       discountType,
