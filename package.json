@@ -10,6 +10,8 @@
     "build": "npm run build --workspace=@em/web && npm run build --workspace=@em/erp",
     "build:web": "npm run build --workspace=@em/web",
     "build:erp": "npm run build --workspace=@em/erp",
+    "deploy:web": "vercel build --prod --cwd apps/web && vercel deploy --prebuilt --prod --cwd apps/web",
+    "deploy:erp": "vercel build --prod --cwd apps/erp && vercel deploy --prebuilt --prod --cwd apps/erp",
     "start": "npm run start --workspace=@em/api",
     "start:prod": "npm run migrate --workspace=@em/api && npm run start --workspace=@em/api",
     "migrate": "npm run migrate --workspace=@em/api",
