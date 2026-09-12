@@ -11,7 +11,11 @@ import {
 let browserInstance = null;
 
 const getBrowser = async () => {
-  if (!browserInstance || !browserInstance.isConnected()) {
+  const isConnected = browserInstance
+    ? (typeof browserInstance.connected === 'boolean' ? browserInstance.connected : (typeof browserInstance.isConnected === 'function' ? browserInstance.isConnected() : true))
+    : false;
+
+  if (!browserInstance || !isConnected) {
     const launchOptions = {
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
