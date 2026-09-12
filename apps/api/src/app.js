@@ -126,11 +126,22 @@ const parseOrigins = (...values) =>
     .map((origin) => origin.trim().replace(/\/$/, ''))
     .filter(Boolean);
 
+const defaultOrigins = [
+  'https://emfurnitureandinterior.vercel.app',
+  'https://emfurnitureandinterior-erp.vercel.app',
+  'https://emfurnitureandinterior.com',
+  'https://www.emfurnitureandinterior.com',
+  'https://erp.emfurnitureandinterior.com',
+  'https://emfurniture.ng',
+  'https://erp.emfurniture.ng',
+];
+
 const configuredOrigins = parseOrigins(
   process.env.STOREFRONT_URL,
   process.env.ERP_URL,
   process.env.FRONTEND_URL, // legacy single-app deploys
-  process.env.ALLOWED_ORIGINS
+  process.env.ALLOWED_ORIGINS,
+  ...defaultOrigins
 );
 
 const allowedOrigins = [...new Set(configuredOrigins)];
@@ -139,7 +150,7 @@ if (process.env.NODE_ENV !== 'production') {
   allowedOrigins.push('http://localhost:5173', 'http://localhost:5174');
 }
 
-const isVercelPreviewAllowed = process.env.ALLOW_VERCEL_PREVIEWS === 'true';
+const isVercelPreviewAllowed = process.env.ALLOW_VERCEL_PREVIEWS !== 'false';
 
 const isOriginAllowed = (origin) => {
   const normalized = origin.replace(/\/$/, '');

@@ -1,17 +1,25 @@
 import axios from 'axios';
 
 /**
- * The API runs on its own host (Render) while both frontends are served from
- * Vercel, so the base URL has to be configured per deployment. It was
- * previously a bare '/api' in any non-development build, which only ever
- * resolved when Express served the frontend itself.
+ * The API base URL configuration:
+ * 1. If VITE_API_URL is explicitly configured, use it (e.g. direct external host or proxy).
+ * 2. In production browser environments, default to '/api' so requests route via Vercel rewrites
+ *    to the backend on Render, preserving first-party cookies and avoiding third-party cookie blocks.
+ * 3. In local development or tests, default to 'http://localhost:5000/api'.
  */
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const getBaseURL = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (typeof window !== 'undefined' && import.meta.env.PROD) {
+    return '/api';
+  }
+  return 'http://localhost:5000/api';
+};
+
+const baseURL = getBaseURL();
 
 export const axiosInstance = axios.create({
   baseURL,
-  // Session cookies are cross-origin now, so this is required rather than
-  // incidental. See docs/DEPLOYMENT.md on why the origins must share a parent
-  // domain in production.
   withCredentials: true,
 });
