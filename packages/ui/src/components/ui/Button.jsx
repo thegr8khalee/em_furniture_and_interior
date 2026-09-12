@@ -4,13 +4,13 @@ import { Link } from 'react-router-dom';
 const cn = (...classes) => classes.filter(Boolean).join(' ');
 
 const variantClasses = {
-  elegant: 'btn-elegant',
-  'elegant-outline': 'btn-elegant-outline',
-  primary: 'btn btn-primary rounded-none shadow-none',
-  secondary: 'btn btn-secondary rounded-none shadow-none',
-  ghost: 'btn btn-ghost rounded-none shadow-none',
-  danger: 'btn btn-error text-white rounded-none shadow-none',
-  icon: 'inline-flex items-center justify-center border border-base-300 bg-white text-primary transition-all duration-300 hover:border-secondary hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 rounded-none',
+  elegant: 'btn-elegant font-body',
+  'elegant-outline': 'btn-elegant-outline font-body',
+  primary: 'btn btn-primary rounded-none shadow-none font-body',
+  secondary: 'btn btn-secondary rounded-none shadow-none font-body',
+  ghost: 'btn btn-ghost rounded-none shadow-none font-body',
+  danger: 'btn btn-error text-white rounded-none shadow-none font-body',
+  icon: 'inline-flex items-center justify-center border border-base-300 bg-white text-primary transition-all duration-300 hover:border-secondary hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 rounded-none font-body',
 };
 
 const sizeClasses = {

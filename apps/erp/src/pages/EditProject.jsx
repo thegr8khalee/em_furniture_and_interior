@@ -372,7 +372,7 @@ const AdminEditProjectPage = () => {
           <div className="form-control mt-6">
             <button
               type="submit"
-              className="btn btn-primary w-full text-lg font-semibold py-3 rounded-full shadow-md hover:shadow-lg transition duration-200 text-white font-heading"
+              className="btn btn-primary w-full py-3.5 rounded-none font-body font-semibold tracking-wider uppercase text-white shadow-md hover:shadow-lg transition duration-200"
               disabled={isUpdatingProject}
             >
               {isUpdatingProject ? (
@@ -387,7 +387,7 @@ const AdminEditProjectPage = () => {
           <div className="form-control mt-4">
             <button
               type="button"
-              className="btn btn-ghost w-full text-lg font-semibold py-3 rounded-full"
+              className="btn btn-ghost w-full py-3.5 rounded-none font-body font-semibold tracking-wider uppercase border border-base-300"
               onClick={() => navigate('/admin/dashboard?section=projects')}
               disabled={isUpdatingProject}
             >

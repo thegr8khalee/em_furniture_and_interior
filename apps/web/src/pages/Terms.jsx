@@ -38,7 +38,7 @@ const Terms = () => {
               Order & Payment
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
-              <li>50â€“80% deposit to confirm order</li>
+              <li>50–80% deposit to confirm order</li>
               <li>For foreign products, only full deposits are accepted.</li>
               <li>Balance must be paid before delivery</li>
               <li>Production starts after payment & design confirmation</li>
@@ -61,7 +61,7 @@ const Terms = () => {
               Custom Furniture
             </h3>
             <p className="mb-2 text-sm">
-              All items are custom-built based on the clientâ€™s preferences and
+              All items are custom-built based on the client’s preferences and
               measurements.
             </p>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
@@ -82,8 +82,8 @@ const Terms = () => {
               Production Time
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
-              <li>Production timeline: 3â€“6 weeks depending on the product</li>
-              <li>Shipping takes 5â€“6 weeks</li>
+              <li>Production timeline: 3–6 weeks depending on the product</li>
+              <li>Shipping takes 5–6 weeks</li>
               <li>Urgent jobs may attract extra charges</li>
             </ul>
           </div>
@@ -126,7 +126,7 @@ const Terms = () => {
             <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
               <li>Delivery through suggested 3rd party drivers</li>
               <li>Shipping fee is to be discussed on order</li>
-              <li>Optional insured delivery available â€” extra charges apply</li>
+              <li>Optional insured delivery available — extra charges apply</li>
               <li>
                 We are not responsible for any damage that occurs during
                 delivery

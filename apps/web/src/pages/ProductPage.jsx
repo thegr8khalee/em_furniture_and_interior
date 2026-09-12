@@ -596,7 +596,7 @@ const ProductPage = () => {
           </p>
           <Button
             href={whatsappHref(product)}
-            className="my-4 w-full border-0 bg-green-600 font-heading text-white hover:bg-green-700 hover:text-white"
+            className="my-4 w-full border-0 bg-green-600 font-body font-semibold tracking-wide text-white hover:bg-green-700 hover:text-white"
           >
             Order Now
           </Button>

@@ -284,7 +284,7 @@ const ProfilePage = () => {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={oldPassword}
-                      placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                      placeholder="••••••••"
                       onChange={(e) => setOldPassword(e.target.value)}
                       className="w-full"
                       required
@@ -322,7 +322,7 @@ const ProfilePage = () => {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={newPassword}
-                      placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                      placeholder="••••••••"
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="w-full"
                       required
@@ -360,7 +360,7 @@ const ProfilePage = () => {
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={confirmNewPassword}
-                      placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                      placeholder="••••••••"
                       onChange={(e) => setConfirmNewPassword(e.target.value)}
                       className="w-full"
                       required

@@ -354,7 +354,7 @@ const CollectionDetailsPage = () => {
       </div>
       <div className="px-4 mb-6 sm:flex space-x-2 space-y-2">
         <a
-          className=" btn btn-md bg-green-600 hover:bg-green-700 text-white flex-1 w-full border-0 font-heading"
+          className="btn btn-md bg-green-600 hover:bg-green-700 text-white flex-1 w-full border-0 font-body font-semibold tracking-wide"
           href={whatsappHref(collection)}
         >
           <img src={"https://res.cloudinary.com/dnwppcwec/image/upload/v1753786996/whatsapp_4401461_vssasq.png"} alt="" className="size-6" />

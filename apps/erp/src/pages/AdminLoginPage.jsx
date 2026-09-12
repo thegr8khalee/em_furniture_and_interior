@@ -39,9 +39,11 @@ const AdminLoginPage = () => {
     <div className="p-4 flex justify-center items-center h-screen bg-base-300">
       <div className="card w-md bg-base-100 shadow-xl rounded-none">
         <div className="card-body p-8">
-          <h2 className="card-title text-center text-3xl font-bold mb-6">
-            Admin Login
-          </h2>
+          <div className="mb-6 text-center">
+            <div className="w-10 h-0.5 bg-secondary mx-auto mb-4"></div>
+            <h2 className="font-heading text-3xl font-medium text-neutral">Admin Sign In</h2>
+            <p className="text-neutral/50 text-sm mt-2">Operations Console</p>
+          </div>
 
           <form onSubmit={handleSubmit}>
             <div className="form-control mb-4">
@@ -134,7 +136,7 @@ const AdminLoginPage = () => {
             <div className="form-control">
               <button
                 type="submit"
-                className="btn btn-primary w-full border-0 font-semibold py-3 rounded-none shadow-md hover:shadow-lg transition duration-200 text-sm font-['poppins']"
+                className="btn-elegant w-full py-3.5 text-center flex items-center justify-center"
                 disabled={isLoading} // Disable button while loading
               >
                 {isLoading ? (

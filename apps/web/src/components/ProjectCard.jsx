@@ -148,7 +148,7 @@ const ProjectCard = ({ project }) => {
 
             {/* Tap to close indicator */}
             <div className="mt-3 text-xs opacity-75">
-              Tap info button to close â€¢ Tap anywhere else to view project
+              Tap info button to close • Tap anywhere else to view project
             </div>
           </div>
         </div>

@@ -29,6 +29,12 @@
   --rounded-badge: 0rem;
 }
 
+@theme {
+  --font-sans: 'Montserrat', sans-serif;
+  --font-heading: 'Playfair Display', serif;
+  --font-body: 'Montserrat', sans-serif;
+}
+
 :root {
   --section-x: clamp(1.5rem, 4vw, 5rem);
   --section-y: clamp(4rem, 7vw, 5.5rem);
@@ -85,6 +91,11 @@ input,
 select,
 textarea {
   transition: color 0.25s ease, background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+button,
+.btn {
+  font-family: 'Montserrat', sans-serif;
 }
 
 h1, h2, h3, h4, h5, h6 {
