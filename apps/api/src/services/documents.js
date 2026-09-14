@@ -36,10 +36,10 @@ export const mapDocument = (row) => ({
   projectFeeValue: row.project_fee_value != null ? Number(row.project_fee_value) : undefined,
   discountType: row.discount_type,
   discountValue: row.discount_value != null ? Number(row.discount_value) : undefined,
-  subtotal: toMajor(row.subtotal_kobo),
-  totalAmount: toMajor(row.total_kobo),
-  amountPaid: toMajor(row.amount_paid_kobo),
-  balance: toMajor(row.balance_kobo),
+  subtotal: toMajor(Number(row.subtotal_kobo) || 0),
+  totalAmount: toMajor(Number(row.total_kobo) || 0),
+  amountPaid: toMajor(Number(row.amount_paid_kobo) || 0),
+  balance: toMajor(Number(row.balance_kobo) || 0),
   status: row.status,
   relatedDocumentId: row.related_document_id || null,
   relatedDocumentNumber: row.related_document_number || null,
@@ -448,6 +448,8 @@ export const issueReceiptForInvoice = async (
       customerId: invoice.customerId,
       items: invoice.items,
       sections: invoice.sections,
+      discountType: invoice.discountType,
+      discountValue: invoice.discountValue,
       totalAmount: invoice.totalAmount,
       amountPaid: paymentNum,
       paymentMethod,
@@ -474,7 +476,7 @@ export const getLinkedDocuments = async (id, db = getSequelize()) => {
 
   if (doc.documentType === 'invoice') {
     const receipts = await db.query(
-      `SELECT d.*, s.full_name AS created_by_name
+      `SELECT d.*, s.username AS created_by_name
        FROM custom_documents d
        LEFT JOIN staff s ON s.id = d.created_by
        WHERE d.related_document_id = :id AND d.document_type = 'receipt'
@@ -540,7 +542,7 @@ export const listCustomDocuments = async (
   );
 
   const rows = await db.query(
-    `SELECT d.*, s.full_name AS created_by_name,
+    `SELECT d.*, s.username AS created_by_name,
             (SELECT count(*)::int FROM custom_documents r WHERE r.related_document_id = d.id AND r.document_type = 'receipt') AS linked_receipt_count
      FROM custom_documents d
      LEFT JOIN staff s ON s.id = d.created_by
@@ -569,7 +571,7 @@ export const getCustomDocumentById = async (id, db = getSequelize()) => {
 
   const row = await selectOne(
     db,
-    `SELECT d.*, s.full_name AS created_by_name,
+    `SELECT d.*, s.username AS created_by_name,
             (SELECT count(*)::int FROM custom_documents r WHERE r.related_document_id = d.id AND r.document_type = 'receipt') AS linked_receipt_count
      FROM custom_documents d
      LEFT JOIN staff s ON s.id = d.created_by

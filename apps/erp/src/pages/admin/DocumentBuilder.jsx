@@ -296,7 +296,7 @@ const DocumentBuilder = () => {
     }
 
     if (isReceipt) {
-      payload.totalAmount = grandTotal;
+      payload.subtotal = subtotal;
       payload.amountPaid = paid;
       payload.relatedDocumentId = relatedDocumentId || undefined;
       payload.relatedDocumentNumber = relatedDocumentNumber?.trim() || undefined;
@@ -364,6 +364,7 @@ const DocumentBuilder = () => {
       // Reset editing ID since new generation completed
       setEditingDocId(null);
       setEditingDocNumber('');
+      fetchSavedDocs();
     } catch (error) {
       console.error(error);
       toast.error('Failed to generate document');
@@ -388,6 +389,7 @@ const DocumentBuilder = () => {
       toast.success(
         `${documentType.charAt(0).toUpperCase() + documentType.slice(1)} saved as draft (${data.document.documentNumber})`
       );
+      fetchSavedDocs();
     } catch (error) {
       console.error(error);
       toast.error(error?.response?.data?.message || 'Failed to save draft');
@@ -540,10 +542,14 @@ const DocumentBuilder = () => {
   }, [docPage, docTypeFilter, docStatusFilter, docSearch]);
 
   useEffect(() => {
+    fetchSavedDocs();
+  }, [fetchSavedDocs]);
+
+  useEffect(() => {
     if (activeTab === 'history') {
       fetchSavedDocs();
     }
-  }, [activeTab, fetchSavedDocs]);
+  }, [activeTab]);
 
   /* ── Download Saved Document PDF ── */
   const handleDownloadSaved = async (doc) => {
@@ -669,6 +675,40 @@ const DocumentBuilder = () => {
               </button>
             ))}
           </div>
+
+          {/* Quick Access to Recent Documents */}
+          {savedDocs.length > 0 && !editingDocId && (
+            <div className="border border-base-300 bg-base-100/60 p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold uppercase tracking-wider text-neutral/60 flex items-center gap-1.5">
+                  <Clock size={13} className="text-secondary" />
+                  Recent Documents:
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {savedDocs.slice(0, 4).map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => handleLoadIntoBuilder(d)}
+                      className="px-2.5 py-1 bg-white border border-base-300 hover:border-secondary hover:text-secondary transition-colors font-medium flex items-center gap-1.5 shadow-sm"
+                      title={`Load ${d.documentNumber} (${d.clientName})`}
+                    >
+                      <span className="font-mono">{d.documentNumber}</span>
+                      <span className="text-neutral/50 font-sans">({d.clientName})</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('history')}
+                className="text-secondary font-semibold hover:underline flex items-center gap-1"
+              >
+                <span>View all ({savedDocs.length})</span>
+                <span>→</span>
+              </button>
+            </div>
+          )}
 
           {/* Linked Invoice indicator for receipts */}
           {isReceipt && (

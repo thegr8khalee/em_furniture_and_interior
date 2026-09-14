@@ -2083,6 +2083,10 @@ export const customDocumentHTML = (data) => {
   let calcTotal = 0;
   items.forEach(item => { calcTotal += (item.quantity || 1) * (item.price || 0); });
 
+  const computedSubtotal = (data.subtotal != null && Number(data.subtotal) > 0)
+    ? Number(data.subtotal)
+    : (calcTotal > 0 ? calcTotal : Number(data.totalAmount) || 0);
+
   if (documentType.toLowerCase() === 'receipt') {
     return receiptHTML({
       clientName: clientName || '',
@@ -2092,7 +2096,7 @@ export const customDocumentHTML = (data) => {
       paymentReference,
       date: formatDate(new Date()),
       items: brandedItems,
-      total: data.totalAmount || calcTotal,
+      total: computedSubtotal,
       amountPaid: data.amountPaid,
       notes,
       discountType,
@@ -2106,7 +2110,7 @@ export const customDocumentHTML = (data) => {
       invoiceNumber: documentNumber,
       date: formatDate(new Date()),
       items: brandedItems,
-      total: data.totalAmount || calcTotal,
+      total: computedSubtotal,
       amountPaid: data.amountPaid,
       depositPercent: data.depositPercent,
       notes,

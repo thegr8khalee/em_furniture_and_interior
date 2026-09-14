@@ -5,6 +5,7 @@ import {
   saveCustomDocument,
   issueReceiptForInvoice,
   getLinkedDocuments,
+  listCustomDocuments,
 } from '../../src/services/documents.js';
 import { customDocumentHTML } from '../../src/lib/documentTemplates.js';
 
@@ -170,6 +171,85 @@ describe('Document Service Unit Tests', () => {
       expect(html).toContain('INV-2026-101');
       expect(html).toContain('Amount Paid');
       expect(html).toContain('Balance Due');
+    });
+
+    it('applies discount only once in invoice HTML without double discounting', () => {
+      const html = customDocumentHTML({
+        documentType: 'invoice',
+        documentNumber: 'INV-2026-DISC',
+        clientName: 'Alhaji Bello',
+        items: [{ description: 'Custom Sofa', quantity: 1, price: 400000 }],
+        subtotal: 400000,
+        totalAmount: 360000,
+        discountType: 'percentage',
+        discountValue: 10,
+      });
+
+      expect(html).toContain('Payment Invoice');
+      expect(html).toContain('Subtotal');
+      expect(html).toContain('400,000');
+      expect(html).toContain('40,000');
+      expect(html).toContain('360,000');
+      expect(html).not.toContain('324,000');
+    });
+
+    it('applies discount only once in receipt HTML without double discounting', () => {
+      const html = customDocumentHTML({
+        documentType: 'receipt',
+        documentNumber: 'REC-2026-DISC',
+        clientName: 'Alhaji Bello',
+        items: [{ description: 'Custom Sofa', quantity: 1, price: 400000 }],
+        subtotal: 400000,
+        totalAmount: 360000,
+        amountPaid: 360000,
+        discountType: 'percentage',
+        discountValue: 10,
+      });
+
+      expect(html).toContain('Payment Receipt');
+      expect(html).toContain('Subtotal');
+      expect(html).toContain('400,000');
+      expect(html).toContain('40,000');
+      expect(html).toContain('360,000');
+      expect(html).not.toContain('324,000');
+    });
+  });
+
+  describe('listCustomDocuments and Staff Join', () => {
+    it('queries staff username as created_by_name and not non-existent full_name', async () => {
+      let capturedSql = '';
+      const mockDb = {
+        query: jest.fn(async (sql) => {
+          capturedSql += sql + '\n';
+          if (sql.trim().startsWith('SELECT count(*)')) {
+            return [{ count: 1 }];
+          }
+          return [
+            {
+              id: '11111111-1111-4111-8111-111111111111',
+              document_number: 'INV-2026-001',
+              document_type: 'invoice',
+              client_name: 'Test Client',
+              subtotal_kobo: 10000000,
+              total_kobo: 10000000,
+              amount_paid_kobo: 0,
+              balance_kobo: 10000000,
+              status: 'issued',
+              created_by: 'staff-1',
+              created_by_name: 'admin_operator',
+              created_at: new Date(),
+              updated_at: new Date(),
+            },
+          ];
+        }),
+      };
+
+      const result = await listCustomDocuments({ page: 1, limit: 10 }, mockDb);
+      expect(mockDb.query).toHaveBeenCalled();
+      expect(capturedSql).toContain('s.username AS created_by_name');
+      expect(capturedSql).not.toContain('s.full_name');
+      expect(result.documents).toHaveLength(1);
+      expect(result.documents[0].createdByName).toBe('admin_operator');
     });
   });
 
